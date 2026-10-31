@@ -148,3 +148,32 @@ export interface GeneratedFile {
   downloadUrl: string;
   createdAt: string; // ISO 8601
 }
+
+/** Where a job came from: posted on this site, or pulled from an external provider. */
+export type JobSource = "native" | "adzuna" | "mock";
+
+/** A job listing. "mock" jobs are demo data, not real openings. */
+export interface JobPosting {
+  id: string;
+  title: string;
+  company: string;
+  location: string; // e.g. "Berlin, Germany" or "Remote"
+  description: string; // full job description; can be used directly for gap analysis
+  applyUrl: string; // http(s) link to the application page
+  source: JobSource;
+  createdAt: string; // ISO 8601
+}
+
+/** Input for posting a job directly on the site (POST /api/jobs). */
+export interface CreateJobPostingRequest {
+  title: string;
+  company: string;
+  location: string;
+  description: string; // 50-20,000 characters, same limits as gap analysis
+  applyUrl: string; // must start with http:// or https://
+}
+
+/** Returned by GET /api/jobs: native and external jobs, newest first. */
+export interface JobListResponse {
+  jobs: JobPosting[];
+}

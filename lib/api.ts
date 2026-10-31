@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AiError } from "@/lib/ai";
 import type {
   GeneratedFile as GeneratedFileRow,
+  JobPosting as JobPostingRow,
   Resume as ResumeRow,
   TailoredResume as TailoredResumeRow,
   User as UserRow,
@@ -10,6 +11,8 @@ import type {
   ApiError,
   Education,
   GeneratedFile,
+  JobPosting,
+  JobSource,
   Resume,
   ResumeContact,
   TailoredResume,
@@ -81,6 +84,20 @@ export function toTailoredResume(row: TailoredResumeRow): TailoredResume {
     workExperience: row.workExperience as unknown as WorkExperience[],
     education: row.education as unknown as Education[],
     skills: row.skills as unknown as string[],
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+/** Maps a database job to the JobPosting type (drops externalId and postedById). */
+export function toJobPosting(row: JobPostingRow): JobPosting {
+  return {
+    id: row.id,
+    title: row.title,
+    company: row.company,
+    location: row.location,
+    description: row.description,
+    applyUrl: row.applyUrl,
+    source: row.source as JobSource,
     createdAt: row.createdAt.toISOString(),
   };
 }
