@@ -1,3 +1,15 @@
 .env
 node_modules
 .next
+
+# Prisma
+/lib/generated/prisma
+*.db
+*.db-journal
+
+# Uploaded resumes
+/uploads
+
+# TypeScript / Next.js
+*.tsbuildinfo
+next-env.d.ts
