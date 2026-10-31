@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { matchPercent, withAddedSkills } from "@/lib/skills";
 import type { GapAnalysisResponse, Resume, SuggestedBullet } from "@/lib/types";
+
+/** The score the skill picker nudges people toward. */
+const TARGET_PERCENT = 90;
 
 type Props = {
   analysis: GapAnalysisResponse;
@@ -13,6 +17,14 @@ type Props = {
   tailorError: string | null;
   /** The job description was edited after this analysis ran. */
   outdated: boolean;
+  /** Missing keywords the user has picked to add to their skills. */
+  selectedSkills: string[];
+  onSkillsChange: (skills: string[]) => void;
+  onAddSkills: () => void;
+  addingSkills: boolean;
+  skillsError: string | null;
+  /** A new analysis is running. */
+  busy: boolean;
 };
 
 export function AnalysisResults({
@@ -24,13 +36,34 @@ export function AnalysisResults({
   tailoring,
   tailorError,
   outdated,
+  selectedSkills,
+  onSkillsChange,
+  onAddSkills,
+  addingSkills,
+  skillsError,
+  busy,
 }: Props) {
   const { matchedKeywords, missingKeywords, suggestedBullets } = analysis;
+  const preview = withAddedSkills(analysis, selectedSkills);
+  const pickingLocked = outdated || tailoring || addingSkills || busy;
+  const showSkillsBar = selectedSkills.length > 0 || addingSkills;
+
+  function toggleSkill(skill: string) {
+    onSkillsChange(
+      selectedSkills.includes(skill) ? selectedSkills.filter((s) => s !== skill) : [...selectedSkills, skill],
+    );
+  }
 
   return (
     <div className="space-y-6">
       <h2 className="sr-only">Analysis results</h2>
-      <MatchSummary matched={matchedKeywords.length} missing={missingKeywords.length} />
+      <MatchSummary
+        matched={matchedKeywords.length}
+        missing={missingKeywords.length}
+        projected={preview}
+        adding={selectedSkills.length}
+        updating={addingSkills}
+      />
 
       <div className="grid gap-6 md:grid-cols-2">
         <KeywordCard
@@ -46,10 +79,14 @@ export function AnalysisResults({
           description="In the job description but not on your resume."
           keywords={missingKeywords}
           empty="Nice. Your resume covers every keyword we found."
+          selected={selectedSkills}
+          onToggle={toggleSkill}
+          locked={pickingLocked}
           footer={
             missingKeywords.length > 0 && (
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Only add the ones that are true for you, in your skills or bullets on the{" "}
+                Tap the ones you have to add them to your skills. Only pick skills that are true for you. You can also
+                work them into your bullets on the{" "}
                 <Link href="/dashboard/review" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
                   review page
                 </Link>
@@ -65,18 +102,134 @@ export function AnalysisResults({
         resume={resume}
         accepted={accepted}
         onAcceptedChange={onAcceptedChange}
-        disabled={tailoring}
+        disabled={tailoring || addingSkills}
       />
 
-      <TailorBar
+      {showSkillsBar ? (
+        <SkillsBar
+          count={selectedSkills.length}
+          from={matchPercent(matchedKeywords.length, missingKeywords.length)}
+          to={preview.matchPercent}
+          onAdd={onAddSkills}
+          onClear={() => onSkillsChange([])}
+          adding={addingSkills}
+          error={skillsError}
+        />
+      ) : (
+        <TailorBar
         selected={accepted.length}
         total={suggestedBullets.length}
         outdated={outdated}
         onTailor={onTailor}
         tailoring={tailoring}
-        error={tailorError}
+        error={tailorError ?? skillsError}
       />
+      )}
     </div>
+  );
+}
+
+/** Fewest extra skills that would lift the score to the target, or null if it can't get there. */
+function skillsToReach(matched: number, missing: number, target: number): number | null {
+  for (let n = 1; n <= missing; n++) {
+    if (matchPercent(matched + n, missing - n) >= target) return n;
+  }
+  return null;
+}
+
+const STICKY_BAR =
+  "sticky bottom-3 z-10 rounded-2xl px-4 py-3 text-white shadow-2xl ring-1 ring-white/10 sm:bottom-4 sm:rounded-3xl sm:px-8 sm:py-5";
+
+function Spinner() {
+  return (
+    <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+      <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SkillsBar({
+  count,
+  from,
+  to,
+  onAdd,
+  onClear,
+  adding,
+  error,
+}: {
+  count: number;
+  from: number;
+  to: number;
+  onAdd: () => void;
+  onClear: () => void;
+  adding: boolean;
+  error: string | null;
+}) {
+  const noun = count === 1 ? "skill" : "skills";
+  return (
+    <section
+      aria-busy={adding || undefined}
+      className={`${STICKY_BAR} bg-gradient-to-br from-emerald-600 to-emerald-900 shadow-emerald-900/30`}
+    >
+      <div className="flex items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <p className="hidden text-lg font-semibold sm:block">
+            {adding ? "Saving your skills…" : `${count} ${noun} selected`}
+          </p>
+          <p className="text-xs leading-snug text-emerald-100 sm:mt-0.5 sm:text-sm" aria-live="polite">
+            {adding ? (
+              "Adding them to your resume and re-running the match."
+            ) : (
+              <>
+                Match goes from {from}% to <span className="font-semibold text-white">{to}%</span>
+                <span className="hidden sm:inline">
+                  {" "}·{" "}
+                  <button
+                    type="button"
+                    onClick={onClear}
+                    className="font-medium underline underline-offset-2 hover:text-white"
+                  >
+                    Clear selection
+                  </button>
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={adding || count === 0}
+          aria-busy={adding || undefined}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 font-display text-sm font-medium uppercase tracking-wider text-emerald-800 shadow-sm transition outline-none hover:bg-emerald-50 focus-visible:ring-4 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-[15px]"
+        >
+          {adding ? (
+            <>
+              <Spinner />
+              Updating…
+            </>
+          ) : (
+            <>
+              <span className="sm:hidden">Add {count} &amp; update</span>
+              <span className="hidden sm:inline">
+                Add {count} selected {noun} and update score
+              </span>
+            </>
+          )}
+        </button>
+      </div>
+      {adding && (
+        <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-white/25 sm:mt-5" aria-hidden="true">
+          <div className="absolute inset-y-0 left-0 w-2/5 animate-indeterminate rounded-full bg-white motion-reduce:w-full motion-reduce:animate-pulse" />
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="mt-3 max-h-32 overflow-y-auto rounded-xl bg-white px-4 py-3 text-sm font-medium text-rose-700 sm:mt-4">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -118,7 +271,7 @@ function TailorBar({
       aria-busy={tailoring || undefined}
       // Sticks to the bottom of the screen while the results are in view, so the next step is always reachable.
       // Compact on phones so it covers as little of the suggestions as possible.
-      className="sticky bottom-3 z-10 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 px-4 py-3 text-white shadow-2xl shadow-brand-900/30 ring-1 ring-white/10 sm:bottom-4 sm:rounded-3xl sm:px-8 sm:py-5"
+      className={`${STICKY_BAR} bg-gradient-to-br from-brand-600 to-brand-900 shadow-brand-900/30`}
     >
       <div className="flex items-center justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
@@ -137,10 +290,7 @@ function TailorBar({
         >
           {tailoring ? (
             <>
-              <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-                <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-              </svg>
+              <Spinner />
               Tailoring…
             </>
           ) : (
@@ -167,9 +317,24 @@ function TailorBar({
   );
 }
 
-function MatchSummary({ matched, missing }: { matched: number; missing: number }) {
+function MatchSummary({
+  matched,
+  missing,
+  projected,
+  adding,
+  updating,
+}: {
+  matched: number;
+  missing: number;
+  /** Keywords and score if the selected skills were added. */
+  projected: { matchedKeywords: string[]; missingKeywords: string[]; matchPercent: number };
+  adding: number;
+  updating: boolean;
+}) {
   const total = matched + missing;
-  const percent = total === 0 ? 0 : Math.round((matched / total) * 100);
+  const current = matchPercent(matched, missing);
+  const percent = projected.matchPercent;
+  const gain = percent - current;
   const level =
     total === 0
       ? { label: "No keywords found", ring: "stroke-neutral-300 dark:stroke-neutral-600", text: "text-neutral-500" }
@@ -179,14 +344,36 @@ function MatchSummary({ matched, missing }: { matched: number; missing: number }
           ? { label: "Partial match", ring: "stroke-amber-500", text: "text-amber-600 dark:text-amber-400" }
           : { label: "Weak match", ring: "stroke-rose-500", text: "text-rose-600 dark:text-rose-400" };
 
+  const toGoal =
+    percent < TARGET_PERCENT
+      ? skillsToReach(projected.matchedKeywords.length, projected.missingKeywords.length, TARGET_PERCENT)
+      : 0;
+
   const radius = 34;
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <section className="flex flex-col gap-6 rounded-3xl border border-neutral-200/80 bg-white px-5 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 dark:border-neutral-800 dark:bg-neutral-900/60">
+    <section
+      aria-busy={updating || undefined}
+      className="flex flex-col gap-6 rounded-3xl border border-neutral-200/80 bg-white px-5 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 dark:border-neutral-800 dark:bg-neutral-900/60"
+    >
       <div className="relative size-24 shrink-0">
         <svg viewBox="0 0 80 80" className="size-24 -rotate-90" aria-hidden="true">
           <circle cx="40" cy="40" r={radius} fill="none" strokeWidth="8" className="stroke-neutral-100 dark:stroke-neutral-800" />
+          {gain > 0 && (
+            // The current score stays visible underneath, so the gain reads as the lighter extra arc.
+            <circle
+              cx="40"
+              cy="40"
+              r={radius}
+              fill="none"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference * (1 - percent / 100)}
+              className="stroke-emerald-300 transition-[stroke-dashoffset] duration-700 dark:stroke-emerald-500/50"
+            />
+          )}
           <circle
             cx="40"
             cy="40"
@@ -195,21 +382,43 @@ function MatchSummary({ matched, missing }: { matched: number; missing: number }
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - percent / 100)}
+            strokeDashoffset={circumference * (1 - current / 100)}
             className={`${level.ring} transition-[stroke-dashoffset] duration-700`}
           />
         </svg>
-        <span className="absolute inset-0 grid place-items-center text-xl font-semibold text-neutral-900 dark:text-white">
+        <span
+          className={`absolute inset-0 grid place-items-center text-xl font-semibold text-neutral-900 dark:text-white ${updating ? "animate-pulse" : ""}`}
+        >
           {percent}%
         </span>
       </div>
-      <div>
-        <p className={`text-sm font-semibold tracking-wide uppercase ${level.text}`}>{level.label}</p>
+      <div className="min-w-0">
+        <p className={`flex flex-wrap items-center gap-2 text-sm font-semibold tracking-wide uppercase ${level.text}`}>
+          {level.label}
+          {gain > 0 && (
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs tracking-normal text-emerald-700 normal-case dark:bg-emerald-500/15 dark:text-emerald-300">
+              +{gain}% with {adding} {adding === 1 ? "skill" : "skills"}
+            </span>
+          )}
+        </p>
         <p className="mt-1 text-lg font-semibold text-neutral-900 dark:text-white">
           {total === 0
             ? "We couldn't pick out keywords from this posting."
-            : `Your resume covers ${matched} of ${total} keywords from this job.`}
+            : gain > 0
+              ? `Your resume would cover ${projected.matchedKeywords.length} of ${total} keywords from this job.`
+              : `Your resume covers ${matched} of ${total} keywords from this job.`}
         </p>
+        {total > 0 && (
+          <p className="mt-2 text-sm font-medium" aria-live="polite">
+            {toGoal === 0 ? (
+              <span className="text-emerald-600 dark:text-emerald-400">You&apos;re at {TARGET_PERCENT}% or above. Nice work.</span>
+            ) : toGoal ? (
+              <span className="text-neutral-700 dark:text-neutral-300">
+                Click to reach {TARGET_PERCENT}%: pick {toGoal} more missing {toGoal === 1 ? "keyword" : "keywords"} you have.
+              </span>
+            ) : null}
+          </p>
+        )}
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
           Keyword coverage is a rough guide to how screening tools read your resume, not a verdict on your fit.
         </p>
@@ -225,6 +434,9 @@ function KeywordCard({
   keywords,
   empty,
   footer,
+  selected,
+  onToggle,
+  locked = false,
 }: {
   tone: "matched" | "missing";
   title: string;
@@ -232,6 +444,10 @@ function KeywordCard({
   keywords: string[];
   empty: string;
   footer?: React.ReactNode;
+  /** Makes each keyword a toggle button. */
+  selected?: string[];
+  onToggle?: (keyword: string) => void;
+  locked?: boolean;
 }) {
   const matched = tone === "matched";
   return (
@@ -256,7 +472,17 @@ function KeywordCard({
         </p>
       ) : (
         <ul className="mt-5 flex flex-wrap gap-2" aria-label={title}>
-          {keywords.map((keyword) => (
+          {keywords.map((keyword) =>
+            onToggle ? (
+              <li key={keyword}>
+                <SkillToggle
+                  keyword={keyword}
+                  on={selected?.includes(keyword) ?? false}
+                  onToggle={() => onToggle(keyword)}
+                  disabled={locked}
+                />
+              </li>
+            ) : (
             <li
               key={keyword}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium ${
@@ -276,11 +502,50 @@ function KeywordCard({
               )}
               {keyword}
             </li>
-          ))}
+            ),
+          )}
         </ul>
       )}
       {footer && <div className="mt-5">{footer}</div>}
     </section>
+  );
+}
+
+function SkillToggle({
+  keyword,
+  on,
+  onToggle,
+  disabled,
+}: {
+  keyword: string;
+  on: boolean;
+  onToggle: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onToggle}
+      disabled={disabled}
+      title={on ? `Remove ${keyword} from the skills to add` : `Add ${keyword} to your skills`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition outline-none focus-visible:ring-4 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 ${
+        on
+          ? "border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-600/30 hover:bg-emerald-600 focus-visible:ring-emerald-500/30 dark:border-emerald-400 dark:bg-emerald-500"
+          : "border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-300 hover:bg-rose-100 focus-visible:ring-rose-500/20 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
+      }`}
+    >
+      {on ? (
+        <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
+          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
+          <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+        </svg>
+      )}
+      {keyword}
+    </button>
   );
 }
 

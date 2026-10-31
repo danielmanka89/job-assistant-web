@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { GapAnalysisResponse, Resume } from "@/lib/types";
-import { analyzeGap, logout, tailorResume } from "@/lib/client/api";
+import type { GapAnalysisResponse, Resume, SuggestedBullet } from "@/lib/types";
+import { addSkills, analyzeGap, logout, tailorResume } from "@/lib/client/api";
 import { readStoredAnalysis, storeAnalysis, storeTailoring } from "@/lib/client/analysis-storage";
 import { clearPendingJob, readPendingJob } from "@/lib/client/jobs";
+import { storeResume } from "@/lib/client/resume-storage";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { TextArea } from "@/components/ui/text-area";
@@ -37,6 +38,15 @@ function tailorErrorMessage(code: string, message: string, fieldErrors?: Record<
   return message;
 }
 
+/**
+ * A re-run gives the suggestions new ids, so keep the user's ticks on
+ * suggestions that came back with the same wording.
+ */
+function carryOverAccepted(previous: SuggestedBullet[], accepted: string[], next: SuggestedBullet[]): string[] {
+  const ticked = new Set(previous.filter((b) => accepted.includes(b.id)).map((b) => `${b.originalText}\n${b.text}`));
+  return next.filter((b) => accepted.includes(b.id) || ticked.has(`${b.originalText}\n${b.text}`)).map((b) => b.id);
+}
+
 export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   const router = useRouter();
   // The workspace only mounts in the browser (the loader waits for storage), so reading it here is safe.
@@ -60,6 +70,11 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   const [tailorError, setTailorError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string>();
   const [error, setError] = useState<string | null>(null);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [addingSkills, setAddingSkills] = useState(false);
+  const [skillsError, setSkillsError] = useState<string | null>(null);
+  // Skills were saved but the follow-up analysis failed, so these results no longer match the resume.
+  const [needsRefresh, setNeedsRefresh] = useState(false);
   const [scrollToResults, setScrollToResults] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +87,7 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   async function onAnalyze() {
     setError(null);
     setTailorError(null);
+    setSkillsError(null);
     const problem = validateJobDescription(jobDescription);
     setFieldError(problem);
     if (problem) return;
@@ -107,6 +123,8 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
     setAnalysis(result.data);
     setAnalyzedText(text);
     setAccepted([]);
+    setSelectedSkills([]);
+    setNeedsRefresh(false);
     storeAnalysis({ resumeId: resume.id, jobDescription: text, analysis: result.data, acceptedBulletIds: [] });
     setScrollToResults((n) => n + 1);
   }
@@ -140,6 +158,52 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
     router.push("/dashboard/download");
   }
 
+  async function onAddSkills() {
+    if (!analysis || selectedSkills.length === 0) return;
+    setSkillsError(null);
+    setTailorError(null);
+    setAddingSkills(true);
+
+    const saved = await addSkills(resume.id, selectedSkills);
+    if (!saved.ok) {
+      setAddingSkills(false);
+      const { code, message, fieldErrors } = saved.error;
+      if (code === "UNAUTHORIZED" || code === "HTTP_401") {
+        await logout();
+        router.replace("/login");
+        return;
+      }
+      if (code === "RESUME_NOT_FOUND" || code === "HTTP_404") {
+        setSkillsError("We couldn't find this resume on the server anymore. Please upload it again from the dashboard.");
+        return;
+      }
+      setSkillsError(fieldErrors?.newSkills ?? Object.values(fieldErrors ?? {})[0] ?? message);
+      return;
+    }
+    storeResume(saved.data);
+
+    // The resume changed, so run the match again to get a score (and suggestions) for the new version.
+    const rerun = await analyzeGap({ resumeId: resume.id, jobDescription: analyzedText });
+    setAddingSkills(false);
+    setSelectedSkills([]);
+    if (!rerun.ok) {
+      setNeedsRefresh(true);
+      setSkillsError("Your skills were added, but we couldn't update the score. Click Analyze Again to refresh it.");
+      return;
+    }
+
+    const kept = carryOverAccepted(analysis.suggestedBullets, accepted, rerun.data.suggestedBullets);
+    setAnalysis(rerun.data);
+    setAccepted(kept);
+    setNeedsRefresh(false);
+    storeAnalysis({ resumeId: resume.id, jobDescription: analyzedText, analysis: rerun.data, acceptedBulletIds: kept });
+  }
+
+  function onSkillsChange(skills: string[]) {
+    setSelectedSkills(skills);
+    setSkillsError(null);
+  }
+
   function onAcceptedChange(ids: string[]) {
     setAccepted(ids);
     setTailorError(null);
@@ -149,7 +213,8 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   }
 
   const length = jobDescription.length;
-  const outdated = analysis !== null && jobDescription.trim() !== analyzedText;
+  const textChanged = analysis !== null && jobDescription.trim() !== analyzedText;
+  const outdated = textChanged || needsRefresh;
 
   return (
     <div className="space-y-8">
@@ -204,11 +269,11 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
             }}
             placeholder={"Paste the full posting here: responsibilities, requirements, nice-to-haves…"}
             error={fieldError}
-            disabled={analyzing}
+            disabled={analyzing || addingSkills}
           />
           <div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-neutral-500 dark:text-neutral-400" aria-live="polite">
-              {outdated ? (
+              {textChanged ? (
                 <span className="font-medium text-amber-600 dark:text-amber-400">
                   You&apos;ve changed the text since the last analysis. Analyze again to update the results.
                 </span>
@@ -218,8 +283,8 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
                 </>
               )}
             </p>
-            <Button type="button" loading={analyzing} disabled={tailoring} onClick={onAnalyze} className="min-w-44">
-              {analyzing ? "Analyzing…" : analysis && !outdated ? "Analyze Again" : "Analyze Match"}
+            <Button type="button" loading={analyzing} disabled={tailoring || addingSkills} onClick={onAnalyze} className="min-w-44">
+              {analyzing ? "Analyzing…" : analysis && !textChanged ? "Analyze Again" : "Analyze Match"}
             </Button>
           </div>
         </div>
@@ -243,6 +308,12 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
             onTailor={onTailor}
             tailoring={tailoring}
             tailorError={tailorError}
+            selectedSkills={selectedSkills}
+            onSkillsChange={onSkillsChange}
+            onAddSkills={onAddSkills}
+            addingSkills={addingSkills}
+            skillsError={skillsError}
+            busy={analyzing}
           />
         </div>
       )}
