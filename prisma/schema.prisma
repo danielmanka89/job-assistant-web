@@ -1,0 +1,39 @@
+// Database schema. Row shapes are mapped to the API types in lib/types.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique // stored lowercased
+  name         String
+  passwordHash String // bcrypt hash; never returned by the API
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  resumes      Resume[]
+}
+
+model Resume {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceFileName String? // original upload name, e.g. "Jane_Doe_CV.pdf"
+  storedFileName String // file name inside /uploads
+  mimeType       String // application/pdf or DOCX
+  fileSize       Int // bytes
+  contact        Json // ResumeContact
+  summary        String?
+  workExperience Json // WorkExperience[]
+  education      Json // Education[]
+  skills         Json // string[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}

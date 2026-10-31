@@ -1,25 +1,28 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-
-# next.js
-/.next/
-/out/
-/build
-next-env.d.ts
-*.tsbuildinfo
-
-# env files (.env.example is committed)
 .env
-.env*
-!.env.example
+node_modules
+.next
 
-# database
+# Prisma
+/lib/generated/prisma
 *.db
 *.db-journal
 
-# misc
+# Uploaded resumes
+uploads/
+
+# TypeScript / Next.js
+*.tsbuildinfo
+next-env.d.ts
+
+# Next.js build output
+/out/
+/build
+
+# Local env files (.env.example is committed)
+.env*
+!.env.example
+
+# Misc
 .DS_Store
 *.pem
 .vercel
