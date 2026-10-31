@@ -34,6 +34,17 @@ export function setSessionCookie(response: NextResponse, userId: string): void {
   });
 }
 
+/** Expires the session cookie on a response. */
+export function clearSessionCookie(response: NextResponse): void {
+  response.cookies.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
 /** Returns the user id from a valid, unexpired session cookie, or null. */
 export function verifySessionToken(token: string | undefined): string | null {
   if (!token) return null;
