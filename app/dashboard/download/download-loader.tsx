@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Resume } from "@/lib/types";
 import { NoResume } from "@/components/dashboard/no-resume";
-import { readStoredAnalysis } from "@/lib/client/analysis-storage";
+import { readStoredAnalysis, readStoredTailoring } from "@/lib/client/analysis-storage";
 import { useStoredResume } from "@/lib/client/use-stored-resume";
 import { TailorView } from "./tailor-view";
 
@@ -20,22 +20,28 @@ export function DownloadLoader() {
       </NoResume>
     );
   }
-  return <WithAnalysis key={resume.id} resume={resume} />;
+  return <WithTailoring key={resume.id} resume={resume} />;
 }
 
-function WithAnalysis({ resume }: { resume: Resume }) {
+function WithTailoring({ resume }: { resume: Resume }) {
   // Only mounts in the browser (the loader waits for storage), so reading sessionStorage here is safe.
   const [stored] = useState(() => {
-    const value = readStoredAnalysis();
-    return value && value.resumeId === resume.id ? value : null;
+    const tailoring = readStoredTailoring();
+    if (!tailoring || tailoring.resumeId !== resume.id) return null;
+    const analysis = readStoredAnalysis();
+    return {
+      response: tailoring.response,
+      // Used only to highlight changed bullets; the preview still works without it.
+      suggestions: analysis?.analysis.id === tailoring.gapAnalysisId ? analysis.analysis.suggestedBullets : [],
+    };
   });
 
   if (!stored) {
     return (
-      <NoResume title="Match a job first" href="/dashboard/analyze" action="Paste a job description">
-        Run a job match and pick the bullet changes you want, then we&apos;ll build your tailored resume.
+      <NoResume title="Nothing to download yet" href="/dashboard/analyze" action="Go to job match">
+        Run a job match, pick the bullet changes you want, and click Tailor Resume. Your files will appear here.
       </NoResume>
     );
   }
-  return <TailorView resume={resume} stored={stored} />;
+  return <TailorView original={resume} response={stored.response} suggestions={stored.suggestions} />;
 }

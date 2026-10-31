@@ -1,133 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { GeneratedFile, Resume, TailoredResumeResponse } from "@/lib/types";
-import { logout, tailorResume, type ApiResult } from "@/lib/client/api";
-import type { StoredAnalysis } from "@/lib/client/analysis-storage";
-import { Button } from "@/components/ui/button";
-import { ErrorAlert } from "@/components/ui/alert";
+import type { GeneratedFile, Resume, SuggestedBullet, TailoredResumeResponse } from "@/lib/types";
 import { ResumePreview } from "./resume-preview";
 
-type State =
-  | { status: "loading" }
-  | { status: "error"; message: string; next: NextStep }
-  | { status: "done"; data: TailoredResumeResponse };
+type Props = {
+  original: Resume;
+  response: TailoredResumeResponse;
+  suggestions: SuggestedBullet[];
+};
 
-/** What the user should do after an error: retrying only helps for temporary failures. */
-type NextStep = "retry" | "analyze" | "upload";
-
-function describeError(code: string, message: string, fieldErrors?: Record<string, string>): { message: string; next: NextStep } {
-  if (code === "RESUME_CHANGED") {
-    return {
-      message: "You edited your resume after running the job match, so the suggestions may not fit anymore. Run the match again to continue.",
-      next: "analyze",
-    };
-  }
-  if (code === "ANALYSIS_NOT_FOUND" || fieldErrors?.gapAnalysisId || fieldErrors?.acceptedBulletIds) {
-    return { message: "We couldn't find that job match anymore. Please run it again.", next: "analyze" };
-  }
-  if (code === "RESUME_NOT_FOUND" || fieldErrors?.resumeId) {
-    return { message: "We couldn't find this resume on the server anymore. Please upload it again.", next: "upload" };
-  }
-  if (code === "HTTP_404") {
-    return { message: "Resume generation isn't available yet. Please try again once the service is running.", next: "retry" };
-  }
-  return { message, next: "retry" };
-}
-
-// React runs effects twice in development. Sharing the in-flight request per
-// selection means we only ask the server to generate the files once.
-const inflight = new Map<string, Promise<ApiResult<TailoredResumeResponse>>>();
-
-function requestTailoring(stored: StoredAnalysis, attempt: number) {
-  const key = [stored.analysis.id, ...[...stored.acceptedBulletIds].sort(), attempt].join("|");
-  let promise = inflight.get(key);
-  if (!promise) {
-    promise = tailorResume({
-      resumeId: stored.resumeId,
-      gapAnalysisId: stored.analysis.id,
-      jobDescription: stored.jobDescription,
-      acceptedBulletIds: stored.acceptedBulletIds,
-      formats: ["docx", "pdf"],
-    });
-    inflight.set(key, promise);
-    // Forget it once settled, so a later visit generates fresh files.
-    void promise.finally(() => setTimeout(() => inflight.delete(key), 1000));
-  }
-  return promise;
-}
-
-export function TailorView({ resume, stored }: { resume: Resume; stored: StoredAnalysis }) {
-  const router = useRouter();
-  const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<State>({ status: "loading" });
-
-  useEffect(() => {
-    let active = true;
-    requestTailoring(stored, attempt).then(async (result) => {
-      if (!active) return;
-      if (result.ok) {
-        setState({ status: "done", data: result.data });
-        return;
-      }
-      const { code, message, fieldErrors } = result.error;
-      if (code === "UNAUTHORIZED" || code === "HTTP_401") {
-        await logout();
-        router.replace("/login");
-        return;
-      }
-      setState({ status: "error", ...describeError(code, message, fieldErrors) });
-    });
-    return () => {
-      active = false;
-    };
-  }, [stored, attempt, router]);
-
-  function retry() {
-    setState({ status: "loading" });
-    setAttempt((n) => n + 1);
-  }
-
-  if (state.status === "loading") return <Generating />;
-
-  if (state.status === "error") {
-    return (
-      <div className="mx-auto max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-        <ErrorAlert>{state.message}</ErrorAlert>
-        <div className="flex flex-col justify-center gap-3 sm:flex-row">
-          {state.next === "retry" ? (
-            <Button type="button" onClick={retry}>
-              Try again
-            </Button>
-          ) : (
-            <Link
-              href={state.next === "analyze" ? "/dashboard/analyze" : "/dashboard"}
-              className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-[15px] font-semibold text-white shadow-sm shadow-indigo-600/30 transition hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-            >
-              {state.next === "analyze" ? "Run the job match again" : "Upload your resume"}
-            </Link>
-          )}
-          {state.next !== "analyze" && (
-            <Link
-              href="/dashboard/analyze"
-              className="rounded-xl px-4 py-2.5 text-[15px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-            >
-              Back to job match
-            </Link>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const { tailoredResume, files } = state.data;
-  const accepted = stored.analysis.suggestedBullets.filter((b) => stored.acceptedBulletIds.includes(b.id));
+export function TailorView({ original, response, suggestions }: Props) {
+  const { tailoredResume, files } = response;
+  const acceptedIds = new Set(tailoredResume.acceptedBulletIds);
+  const accepted = suggestions.filter((b) => acceptedIds.has(b.id));
+  const changes = tailoredResume.acceptedBulletIds.length;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-      <ResumePreview original={resume} tailored={tailoredResume} accepted={accepted} />
+      <ResumePreview original={original} tailored={tailoredResume} accepted={accepted} />
 
       <aside className="space-y-4 lg:sticky lg:top-24">
         <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
@@ -141,12 +32,10 @@ export function TailorView({ resume, stored }: { resume: Resume; stored: StoredA
 
         <section className="rounded-3xl border border-slate-200/80 bg-white p-5 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <p className="font-semibold text-slate-900 dark:text-white">
-            {accepted.length === 0
-              ? "No bullet changes"
-              : `${accepted.length} ${accepted.length === 1 ? "bullet" : "bullets"} updated`}
+            {changes === 0 ? "No bullet changes" : `${changes} ${changes === 1 ? "bullet" : "bullets"} updated`}
           </p>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Everything else is exactly as you wrote it.
+            Everything else is as you wrote it. Skills that match the job are listed first.
           </p>
           <div className="mt-4 flex flex-col gap-2">
             <Link href="/dashboard/analyze" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
@@ -209,50 +98,5 @@ function DownloadButton({ file, format }: { file?: GeneratedFile; format: "docx"
     <a href={file.downloadUrl} download={file.fileName} className={`${base} ${config.className}`} title={config.hint}>
       {content}
     </a>
-  );
-}
-
-const GENERATING_STEPS = ["Applying your selected bullets…", "Formatting your resume…", "Creating Word and PDF files…"];
-
-function Generating() {
-  const [step, setStep] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => setStep((s) => Math.min(s + 1, GENERATING_STEPS.length - 1)), 2500);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]" aria-busy="true">
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-8 py-16 shadow-sm sm:px-14 dark:border-slate-800 dark:bg-slate-900/60">
-        <div className="mx-auto max-w-sm text-center">
-          <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
-            <svg className="size-7 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
-              <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-          </span>
-          <p className="mt-5 text-lg font-semibold text-slate-900 dark:text-white">Building your tailored resume</p>
-          <p className="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400" aria-hidden="true">
-            {GENERATING_STEPS[step]}
-          </p>
-          <span className="sr-only" role="status">
-            Building your tailored resume. This can take a few seconds.
-          </span>
-          <div className="relative mt-6 h-2 overflow-hidden rounded-full bg-indigo-100 dark:bg-indigo-500/15">
-            <div className="absolute inset-y-0 left-0 w-2/5 animate-indeterminate rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 motion-reduce:w-full motion-reduce:animate-pulse" />
-          </div>
-        </div>
-        <div className="mt-12 space-y-3" aria-hidden="true">
-          {[90, 75, 82, 60, 70].map((w, i) => (
-            <div key={i} className="h-3 animate-pulse rounded bg-slate-100 dark:bg-slate-800" style={{ width: `${w}%` }} />
-          ))}
-        </div>
-      </div>
-      <div className="space-y-3" aria-hidden="true">
-        <div className="h-[76px] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/60" />
-        <div className="h-[76px] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800/60" />
-      </div>
-    </div>
   );
 }
