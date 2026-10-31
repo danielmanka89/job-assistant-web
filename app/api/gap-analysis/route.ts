@@ -1,14 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { analyzeGap } from "@/lib/ai";
-import { aiErrorResponse, apiError, readJsonObject, toResume } from "@/lib/api";
+import { aiErrorResponse, apiError, jobDescriptionError, readJsonObject, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { matchPercent } from "@/lib/skills";
 import type { GapAnalysisResponse } from "@/lib/types";
-
-// Same limits as the job description field in the UI.
-const MIN_JD_CHARS = 50;
-const MAX_JD_CHARS = 20_000;
 
 /**
  * POST /api/gap-analysis — compares one of the user's resumes with a pasted job description.
@@ -25,12 +21,8 @@ export async function POST(request: NextRequest) {
   const jobDescription = typeof body.jobDescription === "string" ? body.jobDescription.trim() : "";
   const fieldErrors: Record<string, string> = {};
   if (!resumeId) fieldErrors.resumeId = "Required";
-  if (!jobDescription) fieldErrors.jobDescription = "Paste a job description to analyze.";
-  else if (jobDescription.length < MIN_JD_CHARS) {
-    fieldErrors.jobDescription = `That looks too short. Paste the full job description (at least ${MIN_JD_CHARS} characters).`;
-  } else if (jobDescription.length > MAX_JD_CHARS) {
-    fieldErrors.jobDescription = `Job descriptions can be at most ${MAX_JD_CHARS.toLocaleString("en-US")} characters.`;
-  }
+  const jdError = jobDescriptionError(jobDescription);
+  if (jdError) fieldErrors.jobDescription = jdError;
   if (Object.keys(fieldErrors).length) {
     return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", fieldErrors);
   }

@@ -9,13 +9,15 @@ import type {
   LoginRequest,
   RegisterRequest,
   Resume,
+  SummaryGenerateRequest,
+  SummaryGenerateResponse,
   TailoredResumeRequest,
   TailoredResumeResponse,
+  UpdateSummaryRequest,
 } from "@/lib/types";
 import { clearUser } from "./current-user";
 import { toJobList } from "./jobs";
 import { mockApi } from "./mock";
-import { toSummaryOptions, type SaveSummaryRequest, type SummaryGenerateRequest, type SummaryOption } from "./summary";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
@@ -137,19 +139,21 @@ export function addSkills(resumeId: string, newSkills: string[]): Promise<ApiRes
   return sendJson<AddSkillsRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}`, { newSkills });
 }
 
-/** Asks the AI for professional summary options with POST /api/summary-generate. */
-export async function generateSummaryOptions(
-  request: SummaryGenerateRequest,
-): Promise<ApiResult<SummaryOption[]>> {
-  if (USE_MOCK_API) return mockApi.generateSummaryOptions(request);
-  const result = await postJson<SummaryGenerateRequest, unknown>("/api/summary-generate", request);
-  return result.ok ? { ok: true, data: toSummaryOptions(result.data) } : result;
+/**
+ * Asks POST /api/summary-generate for three summary options (leadership, technical depth,
+ * industry fit, in that order). Nothing is saved until saveSummary is called.
+ */
+export function generateSummaries(request: SummaryGenerateRequest): Promise<ApiResult<SummaryGenerateResponse>> {
+  if (USE_MOCK_API) return mockApi.generateSummaries(request);
+  return postJson<SummaryGenerateRequest, SummaryGenerateResponse>("/api/summary-generate", request);
 }
 
-/** Saves the chosen professional summary with PATCH /api/resumes/:id and returns the stored resume. */
-export function saveSummary(resumeId: string, summary: string): Promise<ApiResult<Resume>> {
-  if (USE_MOCK_API) return mockApi.saveSummary(resumeId, summary);
-  return sendJson<SaveSummaryRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}`, { summary });
+/** Replaces the resume's summary with PATCH /api/resumes/:id/summary and returns the stored version. */
+export function saveSummary(resumeId: string, newSummary: string): Promise<ApiResult<Resume>> {
+  if (USE_MOCK_API) return mockApi.saveSummary(resumeId, newSummary);
+  return sendJson<UpdateSummaryRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}/summary`, {
+    newSummary,
+  });
 }
 
 /**

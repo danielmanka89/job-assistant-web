@@ -2,14 +2,17 @@
 
 import { useId, useState } from "react";
 import type { ApiError, Resume } from "@/lib/types";
-import { generateSummaryOptions, saveSummary } from "@/lib/client/api";
-import type { SummaryOption } from "@/lib/client/summary";
+import { generateSummaries, saveSummary } from "@/lib/client/api";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 
+// The API always returns its three options in this order.
+const ANGLES = ["Leadership", "Technical depth", "Industry fit"];
+
 type Props = {
   resumeId: string;
-  gapAnalysisId: string;
+  /** The job description the current analysis ran on. */
+  jobDescription: string;
   /** The summary currently on the resume. */
   summary: string | undefined;
   matchedCount: number;
@@ -27,9 +30,8 @@ function isUnauthorized(error: ApiError) {
 
 function generateErrorMessage(error: ApiError): string {
   if (error.code === "HTTP_404") return "Summary suggestions aren't available yet. Please try again once the service is running.";
-  if (error.code === "ANALYSIS_NOT_FOUND" || error.fieldErrors?.gapAnalysisId) {
-    return "This job match is no longer available. Click Analyze Again, then generate new options.";
-  }
+  if (error.code === "AI_NOT_CONFIGURED") return "Summary suggestions aren't set up on this server yet.";
+  if (error.fieldErrors?.jobDescription) return error.fieldErrors.jobDescription;
   if (error.code === "RESUME_NOT_FOUND" || error.fieldErrors?.resumeId) {
     return "We couldn't find this resume on the server anymore. Please upload it again from the dashboard.";
   }
@@ -38,7 +40,7 @@ function generateErrorMessage(error: ApiError): string {
 
 export function SummaryOptimizer({
   resumeId,
-  gapAnalysisId,
+  jobDescription,
   summary,
   matchedCount,
   disabled,
@@ -46,8 +48,9 @@ export function SummaryOptimizer({
   onUnauthorized,
 }: Props) {
   const [status, setStatus] = useState<Status>("idle");
-  const [options, setOptions] = useState<SummaryOption[]>([]);
-  const [choice, setChoice] = useState<string | null>(null);
+  const [options, setOptions] = useState<string[]>([]);
+  // Index of the picked option.
+  const [choice, setChoice] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const groupName = useId();
@@ -59,36 +62,37 @@ export function SummaryOptimizer({
     setError(null);
     setJustSaved(false);
     setStatus("generating");
-    const result = await generateSummaryOptions({ resumeId, gapAnalysisId });
+    const result = await generateSummaries({ resumeId, jobDescription });
     if (!result.ok) {
       if (isUnauthorized(result.error)) return onUnauthorized();
       setError(generateErrorMessage(result.error));
       setStatus(options.length > 0 ? "choosing" : "idle");
       return;
     }
-    if (result.data.length === 0) {
+    const fresh = result.data.options.map((o) => o.trim()).filter(Boolean);
+    if (fresh.length === 0) {
       setError("We couldn't come up with summary options for this job. Please try again.");
       setStatus(options.length > 0 ? "choosing" : "idle");
       return;
     }
-    setOptions(result.data.slice(0, 3));
+    setOptions(fresh.slice(0, 3));
     setChoice(null);
     setStatus("choosing");
   }
 
   async function onConfirm() {
-    const picked = options.find((o) => o.id === choice);
+    const picked = choice === null ? undefined : options[choice];
     if (!picked) return;
     setError(null);
     setStatus("saving");
-    const result = await saveSummary(resumeId, picked.text);
+    const result = await saveSummary(resumeId, picked);
     if (!result.ok) {
       if (isUnauthorized(result.error)) return onUnauthorized();
       const { code, message, fieldErrors } = result.error;
       setError(
         code === "RESUME_NOT_FOUND" || code === "HTTP_404"
           ? "We couldn't find this resume on the server anymore. Please upload it again from the dashboard."
-          : (fieldErrors?.summary ?? message),
+          : (fieldErrors?.newSummary ?? message),
       );
       setStatus("choosing");
       return;
@@ -120,8 +124,8 @@ export function SummaryOptimizer({
               Optimize Professional Summary
             </h3>
             <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-              Three AI-written options built around the {matchedCount} {matchedCount === 1 ? "keyword" : "keywords"} you
-              already match.
+              Three AI-written takes (leadership, technical depth and industry fit) using only what&apos;s on your
+              resume and the {matchedCount} {matchedCount === 1 ? "keyword" : "keywords"} you already match.
             </p>
           </div>
         </div>
@@ -182,10 +186,10 @@ export function SummaryOptimizer({
             </legend>
             <div className="mt-3 grid gap-3 lg:grid-cols-3">
               {options.map((option, i) => {
-                const checked = choice === option.id;
+                const checked = choice === i;
                 return (
                   <label
-                    key={option.id}
+                    key={i}
                     className={`relative flex cursor-pointer gap-3 rounded-2xl border p-4 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/30 has-[:disabled]:cursor-not-allowed ${
                       checked
                         ? "border-brand-500 bg-brand-50/60 ring-1 ring-brand-500 dark:border-brand-400 dark:bg-brand-500/[0.07] dark:ring-brand-400"
@@ -195,17 +199,17 @@ export function SummaryOptimizer({
                     <input
                       type="radio"
                       name={groupName}
-                      value={option.id}
+                      value={i}
                       checked={checked}
-                      onChange={() => setChoice(option.id)}
+                      onChange={() => setChoice(i)}
                       className="mt-0.5 size-4 shrink-0 accent-brand-600"
                     />
                     <span className="min-w-0">
                       <span className="text-xs font-semibold tracking-wide text-neutral-400 uppercase dark:text-neutral-500">
-                        Option {i + 1}
+                        {ANGLES[i] ?? `Option ${i + 1}`}
                       </span>
                       <span className="mt-1 block text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
-                        {option.text}
+                        {option}
                       </span>
                     </span>
                   </label>

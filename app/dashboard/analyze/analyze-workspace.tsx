@@ -333,7 +333,7 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
                 // A new analysis starts the picker over.
                 key={analysis.id}
                 resumeId={resume.id}
-                gapAnalysisId={analysis.id}
+                jobDescription={analyzedText}
                 summary={resumeSummary}
                 matchedCount={analysis.matchedKeywords.length}
                 disabled={outdated || analyzing || tailoring || addingSkills}
