@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Resume } from "@/lib/types";
@@ -130,27 +130,11 @@ export function ResumeDropzone() {
         </div>
 
         {uploading ? (
-          <div className="mt-6 w-full max-w-sm" aria-live="polite">
-            <p className="truncate text-base font-semibold text-slate-900 dark:text-white">{state.file.name}</p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {state.progress < 100 ? `Uploading… ${state.progress}%` : "Reading your resume…"}
-            </p>
-            <div
-              className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={state.progress}
-              aria-label="Upload progress"
-            >
-              <div
-                className={`h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-[width] duration-200 ${
-                  state.progress >= 100 ? "animate-pulse" : ""
-                }`}
-                style={{ width: `${state.progress}%` }}
-              />
-            </div>
-          </div>
+          state.progress < 100 ? (
+            <UploadProgress fileName={state.file.name} progress={state.progress} />
+          ) : (
+            <ReadingProgress fileName={state.file.name} />
+          )
         ) : (
           <>
             <p className="mt-6 text-lg font-semibold text-slate-900 dark:text-white">
@@ -194,6 +178,79 @@ export function ResumeDropzone() {
           {state.message}
         </p>
       )}
+    </div>
+  );
+}
+
+function UploadProgress({ fileName, progress }: { fileName: string; progress: number }) {
+  return (
+    <div className="mt-6 w-full max-w-sm" aria-live="polite">
+      <p className="truncate text-base font-semibold text-slate-900 dark:text-white">{fileName}</p>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Uploading… {progress}%</p>
+      <div
+        className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress}
+        aria-label="Upload progress"
+      >
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-[width] duration-200"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+const READING_STEPS = [
+  "Reading your resume…",
+  "Finding your contact details…",
+  "Pulling out your work history…",
+  "Collecting education and skills…",
+  "Almost done…",
+];
+const STEP_MS = 3500;
+
+/** Shown after the file is sent while the server parses it. Parsing has no real progress, so the bar is indeterminate. */
+function ReadingProgress({ fileName }: { fileName: string }) {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStep((s) => Math.min(s + 1, READING_STEPS.length - 1));
+    }, STEP_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="mt-6 w-full max-w-sm">
+      <p className="truncate text-base font-semibold text-slate-900 dark:text-white">{fileName}</p>
+      <p className="mt-1 flex items-center justify-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+        <svg className="size-4 animate-spin motion-reduce:hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+          <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+        </svg>
+        <span>
+          {READING_STEPS[step]}
+        </span>
+      </p>
+      {/* Announce once; the changing step text is decorative. */}
+      <span className="sr-only" role="status">
+        Upload complete. Reading your resume, this can take a few seconds.
+      </span>
+      <div
+        className="relative mt-4 h-2 overflow-hidden rounded-full bg-indigo-100 dark:bg-indigo-500/15"
+        role="progressbar"
+        aria-label="Reading your resume"
+        aria-valuetext="In progress"
+      >
+        <div className="absolute inset-y-0 left-0 w-2/5 rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 animate-indeterminate motion-reduce:w-full motion-reduce:animate-pulse" />
+      </div>
+      <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+        Upload complete. This usually takes 10 to 20 seconds.
+      </p>
     </div>
   );
 }

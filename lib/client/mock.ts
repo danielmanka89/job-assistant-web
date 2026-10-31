@@ -3,9 +3,12 @@
 //   register with taken@example.com  -> "email already registered" field error
 //   login with password "wrongpass"  -> invalid credentials error
 //   upload a file with "fail" in its name -> parse error
+//   gap analysis with "fail" in the job description -> analysis error
 import type {
   ApiError,
   AuthResponse,
+  GapAnalysisRequest,
+  GapAnalysisResponse,
   LoginRequest,
   RegisterRequest,
   Resume,
@@ -77,7 +80,8 @@ async function uploadResume(
     onProgress?.(p);
     await delay(90);
   }
-  await delay(400);
+  // Stands in for the AI parsing time after the file has been sent.
+  await delay(3500);
 
   if (file.name.toLowerCase().includes("fail")) {
     return fail({
@@ -144,4 +148,77 @@ async function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
   return { ok: true, data: { ...resume, updatedAt: new Date().toISOString() } };
 }
 
-export const mockApi = { register, login, logout, uploadResume, saveResume };
+// Terms the mock looks for in a job description. The real endpoint uses the AI model instead.
+const KNOWN_KEYWORDS = [
+  "React", "TypeScript", "JavaScript", "Next.js", "Node.js", "GraphQL", "REST", "Tailwind CSS",
+  "CSS", "HTML", "Accessibility", "Testing Library", "Jest", "Playwright", "Cypress", "Storybook",
+  "Design systems", "Figma", "Performance", "CI/CD", "AWS", "Docker", "Kubernetes", "Python",
+  "SQL", "PostgreSQL", "Agile", "Mentoring", "A/B testing", "Analytics", "Redux", "Vue", "Angular",
+];
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function mentions(text: string, keyword: string): boolean {
+  return new RegExp(`(^|[^a-z0-9])${escapeRegExp(keyword.toLowerCase())}($|[^a-z0-9])`).test(text);
+}
+
+async function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAnalysisResponse>> {
+  await delay(1400);
+  const jd = request.jobDescription.toLowerCase();
+  if (jd.includes("fail")) {
+    return fail({
+      code: "ANALYSIS_FAILED",
+      message: "We couldn't analyze this job description right now. Please try again.",
+    });
+  }
+
+  const resume = sampleResume();
+  const resumeText = [
+    resume.summary ?? "",
+    ...resume.skills,
+    ...resume.workExperience.flatMap((w) => [w.jobTitle, ...w.bullets.map((b) => b.text)]),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  const inJob = KNOWN_KEYWORDS.filter((k) => mentions(jd, k));
+  const matchedKeywords = inJob.filter((k) => mentions(resumeText, k));
+  const missingKeywords = inJob.filter((k) => !mentions(resumeText, k));
+  const focus = missingKeywords[0] ?? matchedKeywords[0] ?? "the role";
+
+  return {
+    ok: true,
+    data: {
+      id: "gap_mock_1",
+      matchedKeywords,
+      missingKeywords,
+      suggestedBullets: [
+        {
+          id: "sb_1",
+          workExperienceId: "we_1",
+          originalText: "Rebuilt the checkout flow in React, cutting drop-off by 18%.",
+          text: "Led the rebuild of the React checkout flow, cutting drop-off by 18% and improving conversion.",
+          reason: "Puts the measurable result first and shows ownership, which the posting asks for.",
+        },
+        {
+          id: "sb_2",
+          workExperienceId: "we_1",
+          originalText: "Introduced a shared component library used by 4 teams.",
+          text: "Built and rolled out a shared component library (design system) adopted by 4 product teams.",
+          reason: `Uses the posting's wording around design systems and cross-team work, close to "${focus}".`,
+        },
+        {
+          id: "sb_3",
+          workExperienceId: "we_2",
+          originalText: "Maintained the marketing site and CMS integrations.",
+          text: "Maintained the company marketing site and its CMS integrations, keeping releases stable.",
+          reason: "Highlights reliability, a theme that comes up several times in the job description.",
+        },
+      ],
+    },
+  };
+}
+
+export const mockApi = { register, login, logout, uploadResume, saveResume, analyzeGap };

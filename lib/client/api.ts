@@ -1,6 +1,8 @@
 import type {
   ApiError,
   AuthResponse,
+  GapAnalysisRequest,
+  GapAnalysisResponse,
   LoginRequest,
   RegisterRequest,
   Resume,
@@ -85,6 +87,15 @@ export function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
 }
 
 /**
+ * Compares a resume with a pasted job description using POST /api/gap-analysis.
+ * Suggested bullets only reword the user's existing bullets.
+ */
+export function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAnalysisResponse>> {
+  if (USE_MOCK_API) return mockApi.analyzeGap(request);
+  return postJson<GapAnalysisRequest, GapAnalysisResponse>("/api/gap-analysis", request);
+}
+
+/**
  * Uploads a resume as multipart/form-data (field name "file").
  * Uses XMLHttpRequest instead of fetch so we can report upload progress.
  */
@@ -104,6 +115,10 @@ export function uploadResume(
         onProgress(Math.round((event.loaded / event.total) * 100));
       }
     };
+
+    // Some browsers skip the final progress event, so mark the upload done explicitly.
+    // The server keeps parsing after this, which the UI shows as a separate step.
+    xhr.upload.onload = () => onProgress?.(100);
 
     xhr.onload = () => {
       let body: unknown = null;
