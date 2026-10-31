@@ -3,6 +3,7 @@ import { analyzeGap } from "@/lib/ai";
 import { aiErrorResponse, apiError, readJsonObject, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { matchPercent } from "@/lib/skills";
 import type { GapAnalysisResponse } from "@/lib/types";
 
 // Same limits as the job description field in the UI.
@@ -59,7 +60,11 @@ export async function POST(request: NextRequest) {
         suggestedBullets: result.suggestedBullets as object[],
       },
     });
-    return NextResponse.json<GapAnalysisResponse>({ id: analysis.id, ...result });
+    return NextResponse.json<GapAnalysisResponse>({
+      id: analysis.id,
+      ...result,
+      matchPercent: matchPercent(result.matchedKeywords.length, result.missingKeywords.length),
+    });
   } catch (error) {
     console.error("saving gap analysis failed", error);
     return apiError(500, "INTERNAL_ERROR", "Something went wrong. Please try again.");

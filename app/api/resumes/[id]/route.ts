@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, readJsonObject, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { validateResumeUpdate } from "@/lib/resume-validation";
+import { validateNewSkills, validateResumeUpdate } from "@/lib/resume-validation";
+import { mergeSkills } from "@/lib/skills";
 import type { Resume } from "@/lib/types";
 
 type Context = { params: Promise<{ id: string }> };
@@ -55,6 +56,38 @@ export async function PUT(request: NextRequest, { params }: Context) {
     return NextResponse.json<Resume>(toResume(updated));
   } catch (error) {
     console.error("resume update failed", error);
+    return apiError(500, "INTERNAL_ERROR", "Something went wrong. Please try again.");
+  }
+}
+
+/**
+ * PATCH /api/resumes/:id — appends { newSkills: string[] } to the resume's skills.
+ * Skills it already has (case-insensitive) are skipped. Re-run the gap analysis to get the new score.
+ */
+export async function PATCH(request: NextRequest, { params }: Context) {
+  const user = await getSessionUser(request);
+  if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to edit this resume");
+
+  const body = await readJsonObject(request);
+  if (!body) return apiError(400, "INVALID_JSON", "Request body must be a JSON object");
+
+  const result = validateNewSkills(body);
+  if ("fieldErrors" in result) {
+    return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", result.fieldErrors);
+  }
+
+  const { id } = await params;
+  try {
+    // Read and write in one transaction so two quick additions can't overwrite each other.
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.resume.findFirst({ where: { id, userId: user.id } });
+      if (!row) return null;
+      return tx.resume.update({ where: { id }, data: { skills: mergeSkills(toResume(row).skills, result.data) } });
+    }, { isolationLevel: "Serializable" });
+    if (!updated) return NOT_FOUND();
+    return NextResponse.json<Resume>(toResume(updated));
+  } catch (error) {
+    console.error("adding skills failed", error);
     return apiError(500, "INTERNAL_ERROR", "Something went wrong. Please try again.");
   }
 }

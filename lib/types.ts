@@ -110,7 +110,13 @@ export interface GapAnalysisResponse {
   id: string; // gap analysis id
   matchedKeywords: string[]; // in both the job description and the resume
   missingKeywords: string[]; // in the job description but not the resume
+  matchPercent: number; // matched / (matched + missing), rounded; 0 when no keywords
   suggestedBullets: SuggestedBullet[];
+}
+
+/** Input for PATCH /api/resumes/:id: skills to append (case-insensitive duplicates are skipped). */
+export interface AddSkillsRequest {
+  newSkills: string[];
 }
 
 /** Input for building the tailored resume from the user's selections. */
