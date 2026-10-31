@@ -142,7 +142,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
     setDirty(false);
     setSubmitted(false);
     setStatus("saved");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    router.push("/dashboard/analyze");
   }
 
   const sections = [

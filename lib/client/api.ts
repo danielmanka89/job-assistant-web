@@ -1,6 +1,8 @@
 import type {
   ApiError,
   AuthResponse,
+  GapAnalysisRequest,
+  GapAnalysisResponse,
   LoginRequest,
   RegisterRequest,
   Resume,
@@ -82,6 +84,15 @@ export async function logout(): Promise<void> {
 export function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
   if (USE_MOCK_API) return mockApi.saveResume(resume);
   return sendJson<Resume, Resume>("PUT", `/api/resumes/${encodeURIComponent(resume.id)}`, resume);
+}
+
+/**
+ * Compares a resume with a pasted job description using POST /api/gap-analysis.
+ * Suggested bullets only reword the user's existing bullets.
+ */
+export function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAnalysisResponse>> {
+  if (USE_MOCK_API) return mockApi.analyzeGap(request);
+  return postJson<GapAnalysisRequest, GapAnalysisResponse>("/api/gap-analysis", request);
 }
 
 /**
