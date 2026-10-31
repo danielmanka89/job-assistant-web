@@ -15,13 +15,13 @@ function CompactStepper({ current }: { current: number }) {
   return (
     <div className="sm:hidden">
       <p className="text-sm">
-        <span className="font-medium text-slate-500 dark:text-slate-400">
+        <span className="font-medium text-neutral-500 dark:text-neutral-400">
           Step {current + 1} of {STEPS.length}
         </span>
-        <span className="mx-1.5 text-slate-300 dark:text-slate-600" aria-hidden="true">
+        <span className="mx-1.5 text-neutral-300 dark:text-neutral-600" aria-hidden="true">
           ·
         </span>
-        <span className="font-semibold text-indigo-600 dark:text-indigo-400">{STEPS[current]}</span>
+        <span className="font-semibold text-brand-600 dark:text-brand-400">{STEPS[current]}</span>
       </p>
       <div className="mt-2.5 grid grid-cols-4 gap-1.5" aria-hidden="true">
         {STEPS.map((label, i) => (
@@ -31,8 +31,8 @@ function CompactStepper({ current }: { current: number }) {
               i < current
                 ? "bg-emerald-500"
                 : i === current
-                  ? "bg-indigo-600 dark:bg-indigo-500"
-                  : "bg-slate-200 dark:bg-slate-800"
+                  ? "bg-brand-600 dark:bg-brand-500"
+                  : "bg-neutral-200 dark:bg-neutral-800"
             }`}
           />
         ))}
@@ -52,19 +52,19 @@ function FullStepper({ current }: { current: number }) {
             <span
               className={`flex items-center gap-2 font-medium ${
                 active
-                  ? "text-indigo-600 dark:text-indigo-400"
+                  ? "text-brand-600 dark:text-brand-400"
                   : done
-                    ? "text-slate-700 dark:text-slate-300"
-                    : "text-slate-400 dark:text-slate-500"
+                    ? "text-neutral-700 dark:text-neutral-300"
+                    : "text-neutral-400 dark:text-neutral-500"
               }`}
             >
               <span
                 className={`grid size-6 place-items-center rounded-full text-xs font-semibold ${
                   active
-                    ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                    ? "bg-brand-600 text-white dark:bg-brand-500"
                     : done
                       ? "bg-emerald-500 text-white"
-                      : "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                      : "bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
                 }`}
               >
                 {done ? (
@@ -81,7 +81,7 @@ function FullStepper({ current }: { current: number }) {
               </span>
               {label}
             </span>
-            {i < STEPS.length - 1 && <span className="h-px w-6 bg-slate-300 dark:bg-slate-700" aria-hidden="true" />}
+            {i < STEPS.length - 1 && <span className="h-px w-6 bg-neutral-300 dark:bg-neutral-700" aria-hidden="true" />}
           </li>
         );
       })}

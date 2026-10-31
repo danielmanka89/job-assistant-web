@@ -110,17 +110,17 @@ export function ResumeDropzone() {
         className={[
           "relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-14 text-center transition sm:py-20",
           dragging
-            ? "scale-[1.01] border-indigo-500 bg-indigo-50/80 dark:border-indigo-400 dark:bg-indigo-500/10"
+            ? "scale-[1.01] border-brand-500 bg-brand-50/80 dark:border-brand-400 dark:bg-brand-500/10"
             : state.status === "error"
-              ? "border-rose-300 bg-white dark:border-rose-500/50 dark:bg-slate-900/50"
-              : "border-slate-300 bg-white hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-indigo-500",
+              ? "border-rose-300 bg-white dark:border-rose-500/50 dark:bg-neutral-900/50"
+              : "border-neutral-300 bg-white hover:border-brand-400 dark:border-neutral-700 dark:bg-neutral-900/50 dark:hover:border-brand-500",
         ].join(" ")}
       >
         <div
           className={`grid size-16 place-items-center rounded-2xl transition ${
             dragging
-              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-              : "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"
+              ? "bg-brand-600 text-white shadow-lg shadow-brand-600/30"
+              : "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300"
           }`}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-8" aria-hidden="true">
@@ -137,14 +137,14 @@ export function ResumeDropzone() {
           )
         ) : (
           <>
-            <p className="mt-6 text-lg font-semibold text-slate-900 dark:text-white">
+            <p className="mt-6 text-lg font-semibold text-neutral-900 dark:text-white">
               {dragging ? "Drop it here" : "Drag and drop your resume"}
             </p>
-            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">PDF or DOCX, up to 10 MB</p>
-            <div className="mt-6 flex items-center gap-3 text-sm text-slate-400">
-              <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
+            <p className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">PDF or DOCX, up to 10 MB</p>
+            <div className="mt-6 flex items-center gap-3 text-sm text-neutral-400">
+              <span className="h-px w-10 bg-neutral-200 dark:bg-neutral-700" />
               or
-              <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
+              <span className="h-px w-10 bg-neutral-200 dark:bg-neutral-700" />
             </div>
             <Button type="button" variant="secondary" className="mt-6" onClick={() => inputRef.current?.click()}>
               Browse files
@@ -185,10 +185,10 @@ export function ResumeDropzone() {
 function UploadProgress({ fileName, progress }: { fileName: string; progress: number }) {
   return (
     <div className="mt-6 w-full max-w-sm" aria-live="polite">
-      <p className="truncate text-base font-semibold text-slate-900 dark:text-white">{fileName}</p>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Uploading… {progress}%</p>
+      <p className="truncate text-base font-semibold text-neutral-900 dark:text-white">{fileName}</p>
+      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Uploading… {progress}%</p>
       <div
-        className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+        className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -196,7 +196,7 @@ function UploadProgress({ fileName, progress }: { fileName: string; progress: nu
         aria-label="Upload progress"
       >
         <div
-          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-[width] duration-200"
+          className="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-400 transition-[width] duration-200"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -226,8 +226,8 @@ function ReadingProgress({ fileName }: { fileName: string }) {
 
   return (
     <div className="mt-6 w-full max-w-sm">
-      <p className="truncate text-base font-semibold text-slate-900 dark:text-white">{fileName}</p>
-      <p className="mt-1 flex items-center justify-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+      <p className="truncate text-base font-semibold text-neutral-900 dark:text-white">{fileName}</p>
+      <p className="mt-1 flex items-center justify-center gap-2 text-sm font-medium text-brand-600 dark:text-brand-400">
         <svg className="size-4 animate-spin motion-reduce:hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
           <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
@@ -241,14 +241,14 @@ function ReadingProgress({ fileName }: { fileName: string }) {
         Upload complete. Reading your resume, this can take a few seconds.
       </span>
       <div
-        className="relative mt-4 h-2 overflow-hidden rounded-full bg-indigo-100 dark:bg-indigo-500/15"
+        className="relative mt-4 h-2 overflow-hidden rounded-full bg-brand-100 dark:bg-brand-500/15"
         role="progressbar"
         aria-label="Reading your resume"
         aria-valuetext="In progress"
       >
-        <div className="absolute inset-y-0 left-0 w-2/5 rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 animate-indeterminate motion-reduce:w-full motion-reduce:animate-pulse" />
+        <div className="absolute inset-y-0 left-0 w-2/5 rounded-full bg-gradient-to-r from-brand-600 to-brand-400 animate-indeterminate motion-reduce:w-full motion-reduce:animate-pulse" />
       </div>
-      <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+      <p className="mt-3 text-xs text-neutral-400 dark:text-neutral-500">
         Upload complete. This usually takes 10 to 20 seconds.
       </p>
     </div>
@@ -260,8 +260,8 @@ function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File
   const schools = resume.education.length;
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-      <div className="flex flex-col gap-4 border-b border-slate-100 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8 dark:border-slate-800">
+    <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-xl shadow-neutral-200/50 dark:border-neutral-800 dark:bg-neutral-900/60 dark:shadow-none">
+      <div className="flex flex-col gap-4 border-b border-neutral-100 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8 dark:border-neutral-800">
         <div className="flex items-center gap-4">
           <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
             <svg viewBox="0 0 20 20" fill="currentColor" className="size-6" aria-hidden="true">
@@ -273,8 +273,8 @@ function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File
             </svg>
           </span>
           <div className="min-w-0">
-            <p className="text-base font-semibold text-slate-900 dark:text-white">Resume uploaded</p>
-            <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-base font-semibold text-neutral-900 dark:text-white">Resume uploaded</p>
+            <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">
               {resume.sourceFileName ?? file.name} · {formatSize(file.size)}
             </p>
           </div>
@@ -285,9 +285,9 @@ function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File
       </div>
 
       <div className="p-6 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">We found</p>
-        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">{resume.contact.fullName}</p>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">We found</p>
+        <p className="mt-2 text-xl font-semibold text-neutral-900 dark:text-white">{resume.contact.fullName}</p>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
           {[resume.contact.email, resume.contact.location].filter(Boolean).join(" · ")}
         </p>
 
@@ -297,9 +297,9 @@ function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File
             { label: schools === 1 ? "School" : "Schools", value: schools },
             { label: resume.skills.length === 1 ? "Skill" : "Skills", value: resume.skills.length },
           ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/60">
-              <dt className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</dt>
-              <dd className="mt-0.5 text-2xl font-semibold text-slate-900 dark:text-white">{stat.value}</dd>
+            <div key={stat.label} className="rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-neutral-800/60">
+              <dt className="text-xs text-neutral-500 dark:text-neutral-400">{stat.label}</dt>
+              <dd className="mt-0.5 text-2xl font-semibold text-neutral-900 dark:text-white">{stat.value}</dd>
             </div>
           ))}
         </dl>
@@ -309,7 +309,7 @@ function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File
             {resume.skills.map((skill) => (
               <li
                 key={skill}
-                className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
+                className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
               >
                 {skill}
               </li>
@@ -318,13 +318,13 @@ function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File
         )}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-slate-800 dark:bg-slate-950/40">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex flex-col gap-3 border-t border-neutral-100 bg-neutral-50/70 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-neutral-800 dark:bg-neutral-950/40">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
           Check these details and fill in anything we missed.
         </p>
         <Link
           href="/dashboard/review"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-[15px] font-semibold text-white shadow-sm shadow-indigo-600/30 transition hover:bg-indigo-500 focus-visible:ring-4 focus-visible:ring-indigo-500/40 focus-visible:outline-none dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 font-display text-[15px] font-medium uppercase tracking-wider text-white shadow-sm shadow-brand-600/30 transition hover:bg-brand-500 focus-visible:ring-4 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:bg-brand-500 dark:hover:bg-brand-400"
         >
           Review details
           <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">

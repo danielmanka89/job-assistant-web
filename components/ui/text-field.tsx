@@ -16,7 +16,7 @@ export function TextField({ label, error, hint, type = "text", className, ...pro
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-200">
         {label}
       </label>
       <div className="relative">
@@ -26,12 +26,12 @@ export function TextField({ label, error, hint, type = "text", className, ...pro
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={[
-            "block w-full rounded-xl border bg-white px-3.5 py-2.5 text-[15px] text-slate-900 shadow-sm outline-none transition",
-            "placeholder:text-slate-400 focus:ring-4 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500",
+            "block w-full rounded-xl border bg-white px-3.5 py-2.5 text-[15px] text-neutral-900 shadow-sm outline-none transition",
+            "placeholder:text-neutral-400 focus:ring-4 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500",
             isPassword ? "pr-16" : "",
             error
               ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/15 dark:border-rose-500/70"
-              : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/15 dark:border-slate-700 dark:focus:border-indigo-400",
+              : "border-neutral-200 focus:border-brand-500 focus:ring-brand-500/15 dark:border-neutral-700 dark:focus:border-brand-400",
           ].join(" ")}
           {...props}
         />
@@ -39,7 +39,7 @@ export function TextField({ label, error, hint, type = "text", className, ...pro
           <button
             type="button"
             onClick={() => setRevealed((v) => !v)}
-            className="absolute inset-y-0 right-2 my-auto h-8 rounded-lg px-2.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="absolute inset-y-0 right-2 my-auto h-8 rounded-lg px-2.5 text-xs font-semibold text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             aria-label={revealed ? "Hide password" : "Show password"}
           >
             {revealed ? "Hide" : "Show"}
@@ -58,7 +58,7 @@ export function TextField({ label, error, hint, type = "text", className, ...pro
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+        <p id={`${id}-hint`} className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">
           {hint}
         </p>
       ) : null}

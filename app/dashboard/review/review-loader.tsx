@@ -22,7 +22,7 @@ function LoadingState() {
   return (
     <div className="space-y-6 lg:ml-[220px]" aria-busy="true" aria-label="Loading your resume">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="h-48 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-slate-800/60" />
+        <div key={i} className="h-48 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" />
       ))}
     </div>
   );

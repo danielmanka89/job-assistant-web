@@ -40,7 +40,7 @@ export function ResumePreview({ original, tailored, accepted }: Props) {
   return (
     <section aria-label="Resume preview" className="min-w-0">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="tablist" aria-label="Compare versions" className="inline-flex rounded-xl bg-slate-200/70 p-1 dark:bg-slate-800">
+        <div role="tablist" aria-label="Compare versions" className="inline-flex rounded-xl bg-neutral-200/70 p-1 dark:bg-neutral-800">
           {(["after", "before"] as const).map((v) => (
             <button
               key={v}
@@ -52,8 +52,8 @@ export function ResumePreview({ original, tailored, accepted }: Props) {
               onClick={() => setView(v)}
               className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
                 view === v
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white"
-                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                  ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-white"
+                  : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
               }`}
             >
               {v === "after" ? "After (tailored)" : "Before (original)"}
@@ -61,12 +61,12 @@ export function ResumePreview({ original, tailored, accepted }: Props) {
           ))}
         </div>
         {accepted.length > 0 && (
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-600 select-none dark:text-slate-300">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-neutral-600 select-none dark:text-neutral-300">
             <input
               type="checkbox"
               checked={highlight}
               onChange={(e) => setHighlight(e.target.checked)}
-              className="size-4 cursor-pointer rounded accent-indigo-600"
+              className="size-4 cursor-pointer rounded accent-brand-600"
             />
             Highlight changes
           </label>
@@ -77,7 +77,7 @@ export function ResumePreview({ original, tailored, accepted }: Props) {
         id={`${tabsId}-panel`}
         role="tabpanel"
         aria-labelledby={`${tabsId}-${view}`}
-        className="rounded-2xl bg-white px-6 py-8 text-slate-800 shadow-xl ring-1 shadow-slate-300/40 ring-slate-200 sm:px-12 sm:py-12 dark:shadow-none dark:ring-slate-700"
+        className="rounded-2xl bg-white px-6 py-8 text-neutral-800 shadow-xl ring-1 shadow-neutral-300/40 ring-neutral-200 sm:px-12 sm:py-12 dark:shadow-none dark:ring-neutral-700"
       >
         <Header contact={resume.contact} />
         {resume.summary && (
@@ -111,7 +111,7 @@ export function ResumePreview({ original, tailored, accepted }: Props) {
       </article>
 
       {highlight && accepted.length > 0 && (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
           {view === "after" ? (
             <>
               <Swatch tone="after" /> Updated bullets
@@ -142,10 +142,10 @@ function Header({ contact }: { contact: ResumeContact }) {
   const details = [contact.email, contact.phone, contact.location].filter(Boolean);
   const links = [contact.linkedinUrl, contact.websiteUrl].filter(Boolean);
   return (
-    <header className="border-b border-slate-200 pb-5 text-center">
-      <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{contact.fullName}</h2>
-      {details.length > 0 && <p className="mt-1.5 text-[13px] text-slate-500">{details.join("  ·  ")}</p>}
-      {links.length > 0 && <p className="mt-1 text-[13px] break-all text-indigo-700">{links.join("  ·  ")}</p>}
+    <header className="border-b border-neutral-200 pb-5 text-center">
+      <h2 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">{contact.fullName}</h2>
+      {details.length > 0 && <p className="mt-1.5 text-[13px] text-neutral-500">{details.join("  ·  ")}</p>}
+      {links.length > 0 && <p className="mt-1 text-[13px] break-all text-brand-700">{links.join("  ·  ")}</p>}
     </header>
   );
 }
@@ -153,7 +153,7 @@ function Header({ contact }: { contact: ResumeContact }) {
 function PaperSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-6">
-      <h3 className="mb-2.5 border-b border-slate-200 pb-1 text-[12px] font-bold tracking-[0.14em] text-slate-500 uppercase">
+      <h3 className="mb-2.5 border-b border-neutral-200 pb-1 text-[12px] font-bold tracking-[0.14em] text-neutral-500 uppercase">
         {title}
       </h3>
       {children}
@@ -165,20 +165,20 @@ function Job({ job, changed, view }: { job: WorkExperience; changed: Set<string>
   return (
     <div>
       <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-        <p className="text-[15px] font-semibold text-slate-900">
+        <p className="text-[15px] font-semibold text-neutral-900">
           {job.jobTitle}
-          {job.company && <span className="font-normal text-slate-600">, {job.company}</span>}
+          {job.company && <span className="font-normal text-neutral-600">, {job.company}</span>}
         </p>
-        <p className="shrink-0 text-[13px] text-slate-500">{dateRange(job.startDate, job.endDate)}</p>
+        <p className="shrink-0 text-[13px] text-neutral-500">{dateRange(job.startDate, job.endDate)}</p>
       </div>
-      {job.location && <p className="text-[13px] text-slate-500">{job.location}</p>}
+      {job.location && <p className="text-[13px] text-neutral-500">{job.location}</p>}
       {job.bullets.length > 0 && (
         <ul className="mt-2 space-y-1.5">
           {job.bullets.map((bullet) => {
             const isChanged = changed?.has(bullet.text.trim()) ?? false;
             return (
               <li key={bullet.id} className="flex gap-2.5 text-[14px] leading-relaxed">
-                <span aria-hidden="true" className="mt-[9px] size-1.5 shrink-0 rounded-full bg-slate-400" />
+                <span aria-hidden="true" className="mt-[9px] size-1.5 shrink-0 rounded-full bg-neutral-400" />
                 <span
                   className={
                     isChanged
@@ -205,11 +205,11 @@ function School({ education }: { education: Education }) {
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
       <p className="text-[14px]">
-        <span className="font-semibold text-slate-900">{education.institution}</span>
-        {degree && <span className="text-slate-600">, {degree}</span>}
+        <span className="font-semibold text-neutral-900">{education.institution}</span>
+        {degree && <span className="text-neutral-600">, {degree}</span>}
       </p>
       {(education.startDate || education.endDate) && (
-        <p className="shrink-0 text-[13px] text-slate-500">
+        <p className="shrink-0 text-[13px] text-neutral-500">
           {[formatMonth(education.startDate), formatMonth(education.endDate)].filter(Boolean).join(" – ")}
         </p>
       )}

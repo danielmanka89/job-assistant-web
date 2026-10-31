@@ -7,9 +7,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variants = {
   primary:
-    "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 hover:bg-indigo-500 focus-visible:ring-indigo-500/40 dark:bg-indigo-500 dark:hover:bg-indigo-400",
+    "bg-brand-600 text-white shadow-md shadow-brand-600/30 hover:bg-brand-700 focus-visible:ring-brand-500/40 dark:hover:bg-brand-500",
   secondary:
-    "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-400/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
+    "border border-neutral-300 bg-white text-neutral-800 hover:border-neutral-400 hover:bg-neutral-50 focus-visible:ring-neutral-400/30 dark:border-neutral-700 dark:bg-transparent dark:text-neutral-100 dark:hover:border-neutral-500 dark:hover:bg-neutral-800",
 };
 
 export function Button({
@@ -24,7 +24,7 @@ export function Button({
     <button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[15px] font-semibold transition outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 font-display text-[15px] font-medium uppercase tracking-wider transition outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`}
       {...props}
     >
       {loading && (

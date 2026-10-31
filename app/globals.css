@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f6f6f6;
+  --foreground: #111111;
 }
 
 @theme inline {
@@ -10,6 +10,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Condensed display face for headings, nav and buttons. */
+  --font-display: var(--font-oswald);
   --animate-indeterminate: indeterminate 1.4s ease-in-out infinite;
 
   @keyframes indeterminate {
@@ -22,10 +24,25 @@
   }
 }
 
+/* Brand accent: a deep red. 600 is the main button color; 400/500 read best on dark backgrounds. */
+@theme {
+  --color-brand-50: #fef2f2;
+  --color-brand-100: #fde4e4;
+  --color-brand-200: #fbcdcd;
+  --color-brand-300: #f6a6a6;
+  --color-brand-400: #ee6f6f;
+  --color-brand-500: #e23b3e;
+  --color-brand-600: #cf2329;
+  --color-brand-700: #ad1a20;
+  --color-brand-800: #8f191e;
+  --color-brand-900: #771a1e;
+  --color-brand-950: #40080b;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #020617;
-    --foreground: #f1f5f9;
+    --background: #0c0c0c;
+    --foreground: #f4f4f4;
     /* Native controls (checkboxes, scrollbars) match the dark theme instead of staying white. */
     color-scheme: dark;
   }
@@ -35,4 +52,20 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  /* Page and section titles use the condensed display face in capitals. */
+  h1,
+  h2 {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+
+  /* Card titles keep normal case for readability. */
+  h3 {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.01em;
+  }
 }
