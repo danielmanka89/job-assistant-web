@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { apiError, readJsonObject, toUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { setSessionCookie } from "@/lib/session";
+import { createSession } from "@/lib/session";
 import type { AuthResponse } from "@/lib/types";
 
 // Compared against when the email is unknown, so response time doesn't reveal which emails exist.
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (!user || !valid) return apiError(401, "INVALID_CREDENTIALS", "Email or password is incorrect");
 
     const response = NextResponse.json<AuthResponse>({ user: toUser(user) });
-    setSessionCookie(response, user.id);
+    await createSession(response, user.id);
     return response;
   } catch (error) {
     console.error("login failed", error);

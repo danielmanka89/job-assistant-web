@@ -3,7 +3,7 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import { apiError, readJsonObject, toUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
-import { setSessionCookie } from "@/lib/session";
+import { createSession } from "@/lib/session";
 import type { AuthResponse, RegisterRequest } from "@/lib/types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       data: { email, name, passwordHash: await hashPassword(password) },
     });
     const response = NextResponse.json<AuthResponse>({ user: toUser(user) }, { status: 201 });
-    setSessionCookie(response, user.id);
+    await createSession(response, user.id);
     return response;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

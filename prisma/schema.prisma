@@ -21,6 +21,7 @@ model User {
   tailoredResumes TailoredResume[]
   generatedFiles  GeneratedFile[]
   jobPostings     JobPosting[]
+  sessions        Session[]
 }
 
 model Resume {
@@ -114,4 +115,17 @@ model JobPosting {
 
   @@unique([source, externalId])
   @@index([createdAt])
+}
+
+// A logged-in browser. The cookie holds a random token; only its HMAC is stored, so a copy of
+// the database can't be used to log in. Logout deletes the row, which ends the session everywhere it was copied.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
