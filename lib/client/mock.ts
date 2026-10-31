@@ -138,4 +138,10 @@ export function sampleResume(fileName = "Jane_Doe_CV.pdf"): Resume {
   };
 }
 
-export const mockApi = { register, login, logout, uploadResume };
+async function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
+  console.log("Resume to save (mock):", JSON.stringify(resume, null, 2));
+  await delay(600);
+  return { ok: true, data: { ...resume, updatedAt: new Date().toISOString() } };
+}
+
+export const mockApi = { register, login, logout, uploadResume, saveResume };

@@ -101,6 +101,60 @@ export function validateResume(resume: Resume): FormErrors {
   return errors;
 }
 
+// Field paths the form can show an error under. Bullet errors use the bullet id, not its index.
+const SHOWN_FIELDS = [
+  /^contact\.(fullName|email|phone|location|linkedinUrl|websiteUrl)$/,
+  /^summary$/,
+  /^workExperience\.\d+\.(jobTitle|company|location|startDate|endDate)$/,
+  /^workExperience\.\d+\.bullets\.[^.]+$/,
+  /^education\.\d+\.(institution|degree|fieldOfStudy|startDate|endDate)$/,
+  /^skills$/,
+];
+
+const SERVER_MESSAGES: Record<string, string> = {
+  Required: "This field is required.",
+};
+
+/**
+ * Maps ApiError.fieldErrors from the server onto the form's error keys.
+ * `sent` is the exact payload that was submitted, used to turn bullet indexes into ids.
+ * Errors for fields the form doesn't display are returned in `other`.
+ */
+export function mapServerFieldErrors(
+  fieldErrors: Record<string, string>,
+  sent: Resume,
+): { fieldErrors: FormErrors; other: string[] } {
+  const mapped: FormErrors = {};
+  const other: string[] = [];
+
+  for (const [path, raw] of Object.entries(fieldErrors)) {
+    const message = SERVER_MESSAGES[raw] ?? raw;
+    let key = path;
+
+    const bullet = /^workExperience\.(\d+)\.bullets\.(\d+)(?:\.\w+)?$/.exec(path);
+    if (bullet) {
+      const id = sent.workExperience[Number(bullet[1])]?.bullets[Number(bullet[2])]?.id;
+      if (id) key = `workExperience.${bullet[1]}.bullets.${id}`;
+    } else if (/^skills\.\d+$/.test(path)) {
+      key = "skills";
+    }
+
+    if (SHOWN_FIELDS.some((re) => re.test(key))) mapped[key] ??= message;
+    else other.push(`${path}: ${raw}`);
+  }
+
+  return { fieldErrors: mapped, other };
+}
+
+/** Removes errors for a field path and everything under it. */
+export function withoutErrors(errors: FormErrors, prefixes: string[]): FormErrors {
+  const next: FormErrors = {};
+  for (const [key, message] of Object.entries(errors)) {
+    if (!prefixes.some((p) => key === p || key.startsWith(`${p}.`))) next[key] = message;
+  }
+  return next;
+}
+
 function optional(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;

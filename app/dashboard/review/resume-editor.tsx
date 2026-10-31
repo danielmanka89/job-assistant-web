@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Education, Resume, ResumeContact, WorkExperience } from "@/lib/types";
-import { saveResume } from "@/lib/client/api";
+import { logout, saveResume } from "@/lib/client/api";
 import { storeResume } from "@/lib/client/resume-storage";
 import { TextField } from "@/components/ui/text-field";
 import { TextArea } from "@/components/ui/text-area";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { AddButton, Checkbox, EmptyHint, ItemCard, Section, SkillsInput } from "./form-parts";
-import { emptyBullet, emptyEducation, emptyWorkExperience, normalizeResume, validateResume } from "./resume-form";
+import {
+  emptyBullet,
+  emptyEducation,
+  emptyWorkExperience,
+  mapServerFieldErrors,
+  normalizeResume,
+  validateResume,
+  withoutErrors,
+  type FormErrors,
+} from "./resume-form";
+
+const MAX_TEXT = 2000;
 
 type Status = "idle" | "saving" | "saved";
 
@@ -47,50 +59,86 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [serverErrors, setServerErrors] = useState<FormErrors>({});
+  const [focusRequest, setFocusRequest] = useState(0);
+  const router = useRouter();
 
-  // Errors show only after the first save attempt, then update live as fields are fixed.
-  const errors = submitted ? validateResume(resume) : {};
+  // Client errors show only after the first save attempt, then update live as fields are fixed.
+  // Server errors stay until the field they belong to is edited.
+  const errors: FormErrors = { ...serverErrors, ...(submitted ? validateResume(resume) : {}) };
   const errorCount = Object.keys(errors).length;
 
-  function update(fn: (r: Resume) => Resume) {
+  // Move focus to the first invalid field once the errors have rendered.
+  useEffect(() => {
+    if (focusRequest === 0) return;
+    const first = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+    first?.scrollIntoView({ behavior: "smooth", block: "center" });
+    first?.focus({ preventScroll: true });
+  }, [focusRequest]);
+
+  /** Applies an edit and clears server errors under the given field paths. */
+  function update(fn: (r: Resume) => Resume, clear: string[]) {
     setResume(fn);
     setDirty(true);
+    setServerErrors((e) => withoutErrors(e, clear));
     if (status === "saved") setStatus("idle");
   }
 
   const setContact = (field: keyof ResumeContact, value: string) =>
-    update((r) => ({ ...r, contact: { ...r.contact, [field]: value } }));
+    update((r) => ({ ...r, contact: { ...r.contact, [field]: value } }), [`contact.${field}`]);
 
   const setWork = (index: number, changes: Partial<WorkExperience>) =>
-    update((r) => ({
-      ...r,
-      workExperience: r.workExperience.map((w, i) => (i === index ? { ...w, ...changes } : w)),
-    }));
+    update(
+      (r) => ({
+        ...r,
+        workExperience: r.workExperience.map((w, i) => (i === index ? { ...w, ...changes } : w)),
+      }),
+      Object.keys(changes).map((k) => `workExperience.${index}.${k}`),
+    );
 
   const setEducation = (index: number, changes: Partial<Education>) =>
-    update((r) => ({ ...r, education: r.education.map((e, i) => (i === index ? { ...e, ...changes } : e)) }));
+    update(
+      (r) => ({ ...r, education: r.education.map((e, i) => (i === index ? { ...e, ...changes } : e)) }),
+      Object.keys(changes).map((k) => `education.${index}.${k}`),
+    );
 
   async function onSave() {
     setSubmitted(true);
     setSaveError(null);
     if (Object.keys(validateResume(resume)).length > 0) {
-      requestAnimationFrame(() => {
-        const first = document.querySelector<HTMLElement>('[aria-invalid="true"]');
-        first?.scrollIntoView({ behavior: "smooth", block: "center" });
-        first?.focus({ preventScroll: true });
-      });
+      setFocusRequest((n) => n + 1);
       return;
     }
 
     setStatus("saving");
-    const result = await saveResume(normalizeResume(resume));
+    const payload = normalizeResume(resume);
+    const result = await saveResume(payload);
+
     if (!result.ok) {
       setStatus("idle");
-      setSaveError(result.error.message);
+      if (result.error.code === "UNAUTHORIZED" || result.error.code === "HTTP_401") {
+        await logout();
+        router.replace("/login");
+        return;
+      }
+      // The server checked the cleaned-up payload, so show the form in that same shape.
+      setResume(payload);
+      const { fieldErrors, other } = mapServerFieldErrors(result.error.fieldErrors ?? {}, payload);
+      setServerErrors(fieldErrors);
+      setSaveError(
+        other.length > 0
+          ? `${result.error.message} (${other.join("; ")})`
+          : Object.keys(fieldErrors).length > 0
+            ? null
+            : result.error.message,
+      );
+      setFocusRequest((n) => n + 1);
       return;
     }
+
     setResume(result.data);
     storeResume(result.data);
+    setServerErrors({});
     setDirty(false);
     setSubmitted(false);
     setStatus("saved");
@@ -189,12 +237,14 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
               placeholder="+49 30 1234567"
               value={resume.contact.phone ?? ""}
               onChange={(e) => setContact("phone", e.target.value)}
+              error={errors["contact.phone"]}
             />
             <TextField
               label="Location (optional)"
               placeholder="Berlin, Germany"
               value={resume.contact.location ?? ""}
               onChange={(e) => setContact("location", e.target.value)}
+              error={errors["contact.location"]}
             />
             <TextField
               label="LinkedIn (optional)"
@@ -218,7 +268,9 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
               rows={4}
               placeholder="Two or three sentences about your experience and what you're good at."
               value={resume.summary ?? ""}
-              onChange={(e) => update((r) => ({ ...r, summary: e.target.value }))}
+              onChange={(e) => update((r) => ({ ...r, summary: e.target.value }), ["summary"])}
+              error={errors.summary}
+              maxLength={MAX_TEXT}
             />
           </div>
         </Section>
@@ -230,7 +282,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
           icon={SECTION_ICONS.experience}
           action={
             <AddButton
-              onClick={() => update((r) => ({ ...r, workExperience: [...r.workExperience, emptyWorkExperience()] }))}
+              onClick={() => update((r) => ({ ...r, workExperience: [...r.workExperience, emptyWorkExperience()] }), [])}
             >
               Add role
             </AddButton>
@@ -251,9 +303,9 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                     count={resume.workExperience.length}
                     title={work.jobTitle.trim() || "New role"}
                     subtitle={work.company.trim() || undefined}
-                    onMove={(to) => update((r) => ({ ...r, workExperience: move(r.workExperience, i, to) }))}
+                    onMove={(to) => update((r) => ({ ...r, workExperience: move(r.workExperience, i, to) }), ["workExperience"])}
                     onRemove={() =>
-                      update((r) => ({ ...r, workExperience: r.workExperience.filter((w) => w.id !== work.id) }))
+                      update((r) => ({ ...r, workExperience: r.workExperience.filter((w) => w.id !== work.id) }), ["workExperience"])
                     }
                   >
                     <div className="grid gap-5 sm:grid-cols-2">
@@ -277,6 +329,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                         placeholder="Berlin, Germany"
                         value={work.location ?? ""}
                         onChange={(e) => setWork(i, { location: e.target.value })}
+                        error={errors[`${p}.location`]}
                       />
                       <TextField
                         label="Start date"
@@ -320,6 +373,8 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                               hideLabel
                               rows={2}
                               placeholder="What did you do, and what changed because of it?"
+                              maxLength={MAX_TEXT}
+                              error={errors[`${p}.bullets.${bullet.id}`]}
                               value={bullet.text}
                               onChange={(e) =>
                                 setWork(i, {
@@ -369,7 +424,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
           description="Degrees, diplomas and certifications."
           icon={SECTION_ICONS.education}
           action={
-            <AddButton onClick={() => update((r) => ({ ...r, education: [...r.education, emptyEducation()] }))}>
+            <AddButton onClick={() => update((r) => ({ ...r, education: [...r.education, emptyEducation()] }), [])}>
               Add education
             </AddButton>
           }
@@ -389,8 +444,8 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                     count={resume.education.length}
                     title={edu.institution.trim() || "New education"}
                     subtitle={[edu.degree, edu.fieldOfStudy].filter((v) => v?.trim()).join(", ") || undefined}
-                    onMove={(to) => update((r) => ({ ...r, education: move(r.education, i, to) }))}
-                    onRemove={() => update((r) => ({ ...r, education: r.education.filter((e) => e.id !== edu.id) }))}
+                    onMove={(to) => update((r) => ({ ...r, education: move(r.education, i, to) }), ["education"])}
+                    onRemove={() => update((r) => ({ ...r, education: r.education.filter((e) => e.id !== edu.id) }), ["education"])}
                   >
                     <div className="grid gap-5 sm:grid-cols-2">
                       <TextField
@@ -413,6 +468,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                         placeholder="Computer Science"
                         value={edu.fieldOfStudy ?? ""}
                         onChange={(e) => setEducation(i, { fieldOfStudy: e.target.value })}
+                        error={errors[`${p}.fieldOfStudy`]}
                       />
                       <TextField
                         label="Start date (optional)"
@@ -454,7 +510,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
           description="Tools, languages and strengths we should match against job descriptions."
           icon={SECTION_ICONS.skills}
         >
-          <SkillsInput skills={resume.skills} onChange={(skills) => update((r) => ({ ...r, skills }))} />
+          <SkillsInput skills={resume.skills} error={errors.skills} onChange={(skills) => update((r) => ({ ...r, skills }), ["skills"])} />
         </Section>
       </div>
 

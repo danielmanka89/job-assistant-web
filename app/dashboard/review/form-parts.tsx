@@ -170,7 +170,15 @@ export function EmptyHint({ children }: { children: ReactNode }) {
 }
 
 /** Tag-style input: Enter or comma adds a skill, Backspace on an empty input removes the last one. */
-export function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills: string[]) => void }) {
+export function SkillsInput({
+  skills,
+  onChange,
+  error,
+}: {
+  skills: string[];
+  onChange: (skills: string[]) => void;
+  error?: string;
+}) {
   const id = useId();
   const [draft, setDraft] = useState("");
 
@@ -240,12 +248,17 @@ export function SkillsInput({ skills, onChange }: { skills: string[]; onChange: 
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           onBlur={() => add(draft)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={`${id}-help`}
           placeholder={skills.length ? "Add another skill" : "e.g. React, SQL, Project management"}
           className="min-w-40 flex-1 bg-transparent px-2 py-1.5 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
         />
       </div>
-      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-        Press Enter or type a comma to add. You can paste a comma-separated list.
+      <p
+        id={`${id}-help`}
+        className={`mt-2 text-sm ${error ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}`}
+      >
+        {error ?? "Press Enter or type a comma to add. You can paste a comma-separated list."}
       </p>
     </div>
   );
