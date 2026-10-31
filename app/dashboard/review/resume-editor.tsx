@@ -185,7 +185,8 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
         </ul>
       </nav>
 
-      <div className="space-y-6 pb-36">
+      {/* Locked while saving: the saved version replaces the form, so edits made meanwhile would be lost. */}
+      <fieldset disabled={status === "saving"} className="m-0 min-w-0 space-y-6 border-0 p-0 pb-36">
         {status === "saved" && (
           <div
             role="status"
@@ -512,7 +513,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
         >
           <SkillsInput skills={resume.skills} error={errors.skills} onChange={(skills) => update((r) => ({ ...r, skills }), ["skills"])} />
         </Section>
-      </div>
+      </fieldset>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/80 bg-white/85 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">

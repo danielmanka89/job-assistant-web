@@ -47,7 +47,8 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form onSubmit={onSubmit} noValidate>
+      <fieldset disabled={pending} className="m-0 min-w-0 space-y-5 border-0 p-0">
       {formError && <ErrorAlert>{formError}</ErrorAlert>}
       <TextField
         label="Email"
@@ -72,6 +73,7 @@ export function LoginForm() {
       <Button type="submit" loading={pending} className="w-full">
         {pending ? "Signing in…" : "Sign in"}
       </Button>
+      </fieldset>
     </form>
   );
 }

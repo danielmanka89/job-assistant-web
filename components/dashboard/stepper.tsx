@@ -3,7 +3,47 @@ const STEPS = ["Upload resume", "Review details", "Job description", "Download"]
 /** Progress indicator for the tailoring flow. `current` is the zero-based active step. */
 export function Stepper({ current }: { current: number }) {
   return (
-    <ol className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm" aria-label="Progress">
+    <>
+      <CompactStepper current={current} />
+      <FullStepper current={current} />
+    </>
+  );
+}
+
+/** Phones: one line plus a segmented bar, instead of four steps wrapping across rows. */
+function CompactStepper({ current }: { current: number }) {
+  return (
+    <div className="sm:hidden">
+      <p className="text-sm">
+        <span className="font-medium text-slate-500 dark:text-slate-400">
+          Step {current + 1} of {STEPS.length}
+        </span>
+        <span className="mx-1.5 text-slate-300 dark:text-slate-600" aria-hidden="true">
+          ·
+        </span>
+        <span className="font-semibold text-indigo-600 dark:text-indigo-400">{STEPS[current]}</span>
+      </p>
+      <div className="mt-2.5 grid grid-cols-4 gap-1.5" aria-hidden="true">
+        {STEPS.map((label, i) => (
+          <span
+            key={label}
+            className={`h-1.5 rounded-full ${
+              i < current
+                ? "bg-emerald-500"
+                : i === current
+                  ? "bg-indigo-600 dark:bg-indigo-500"
+                  : "bg-slate-200 dark:bg-slate-800"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FullStepper({ current }: { current: number }) {
+  return (
+    <ol className="hidden flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:flex" aria-label="Progress">
       {STEPS.map((label, i) => {
         const done = i < current;
         const active = i === current;
