@@ -21,27 +21,27 @@ export function TailorView({ original, response, suggestions }: Props) {
       <ResumePreview original={original} tailored={tailoredResume} accepted={accepted} />
 
       <aside className="space-y-4 lg:sticky lg:top-24">
-        <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Download</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Your files are ready.</p>
+        <section className="rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+          <h2 className="text-base font-semibold text-neutral-900 dark:text-white">Download</h2>
+          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your files are ready.</p>
           <div className="mt-4 space-y-3">
             <DownloadButton file={files.find((f) => f.format === "docx")} format="docx" />
             <DownloadButton file={files.find((f) => f.format === "pdf")} format="pdf" />
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200/80 bg-white p-5 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-          <p className="font-semibold text-slate-900 dark:text-white">
+        <section className="rounded-3xl border border-neutral-200/80 bg-white p-5 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+          <p className="font-semibold text-neutral-900 dark:text-white">
             {changes === 0 ? "No bullet changes" : `${changes} ${changes === 1 ? "bullet" : "bullets"} updated`}
           </p>
-          <p className="mt-1 text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-neutral-500 dark:text-neutral-400">
             Everything else is as you wrote it. Skills that match the job are listed first.
           </p>
           <div className="mt-4 flex flex-col gap-2">
-            <Link href="/dashboard/analyze" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+            <Link href="/dashboard/analyze" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
               Change selected bullets
             </Link>
-            <Link href="/dashboard/review" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+            <Link href="/dashboard/review" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
               Edit resume details
             </Link>
           </div>
@@ -89,7 +89,7 @@ function DownloadButton({ file, format }: { file?: GeneratedFile; format: "docx"
 
   if (!file) {
     return (
-      <span aria-disabled="true" className={`${base} cursor-not-allowed bg-slate-400 opacity-60 shadow-none dark:bg-slate-700`}>
+      <span aria-disabled="true" className={`${base} cursor-not-allowed bg-neutral-400 opacity-60 shadow-none dark:bg-neutral-700`}>
         {content}
       </span>
     );

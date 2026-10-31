@@ -48,9 +48,9 @@ export function AnalysisResults({
           empty="Nice. Your resume covers every keyword we found."
           footer={
             missingKeywords.length > 0 && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
                 Only add the ones that are true for you, in your skills or bullets on the{" "}
-                <Link href="/dashboard/review" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                <Link href="/dashboard/review" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
                   review page
                 </Link>
                 .
@@ -108,12 +108,12 @@ function TailorBar({
     <section
       aria-busy={tailoring || undefined}
       // Sticks to the bottom of the screen while the results are in view, so the next step is always reachable.
-      className="sticky bottom-4 z-10 rounded-3xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 px-5 py-5 text-white shadow-2xl shadow-indigo-900/30 ring-1 ring-white/10 sm:px-8"
+      className="sticky bottom-4 z-10 rounded-3xl bg-gradient-to-br from-brand-600 to-brand-900 px-5 py-5 text-white shadow-2xl shadow-brand-900/30 ring-1 ring-white/10 sm:px-8"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold">Ready to tailor your resume?</h3>
-          <p className="mt-0.5 text-sm text-indigo-100" aria-live="polite">
+          <p className="mt-0.5 text-sm text-brand-100" aria-live="polite">
             {message}
           </p>
         </div>
@@ -122,7 +122,7 @@ function TailorBar({
           onClick={onTailor}
           disabled={outdated || tailoring}
           aria-busy={tailoring || undefined}
-          className="inline-flex min-w-44 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-[15px] font-semibold text-indigo-700 shadow-sm transition outline-none hover:bg-indigo-50 focus-visible:ring-4 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-70"
+          className="inline-flex min-w-44 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-display text-[15px] font-medium uppercase tracking-wider text-brand-700 shadow-sm transition outline-none hover:bg-brand-50 focus-visible:ring-4 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {tailoring ? (
             <>
@@ -161,7 +161,7 @@ function MatchSummary({ matched, missing }: { matched: number; missing: number }
   const percent = total === 0 ? 0 : Math.round((matched / total) * 100);
   const level =
     total === 0
-      ? { label: "No keywords found", ring: "stroke-slate-300 dark:stroke-slate-600", text: "text-slate-500" }
+      ? { label: "No keywords found", ring: "stroke-neutral-300 dark:stroke-neutral-600", text: "text-neutral-500" }
       : percent >= 75
         ? { label: "Strong match", ring: "stroke-emerald-500", text: "text-emerald-600 dark:text-emerald-400" }
         : percent >= 45
@@ -172,10 +172,10 @@ function MatchSummary({ matched, missing }: { matched: number; missing: number }
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <section className="flex flex-col gap-6 rounded-3xl border border-slate-200/80 bg-white px-5 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 dark:border-slate-800 dark:bg-slate-900/60">
+    <section className="flex flex-col gap-6 rounded-3xl border border-neutral-200/80 bg-white px-5 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 dark:border-neutral-800 dark:bg-neutral-900/60">
       <div className="relative size-24 shrink-0">
         <svg viewBox="0 0 80 80" className="size-24 -rotate-90" aria-hidden="true">
-          <circle cx="40" cy="40" r={radius} fill="none" strokeWidth="8" className="stroke-slate-100 dark:stroke-slate-800" />
+          <circle cx="40" cy="40" r={radius} fill="none" strokeWidth="8" className="stroke-neutral-100 dark:stroke-neutral-800" />
           <circle
             cx="40"
             cy="40"
@@ -188,18 +188,18 @@ function MatchSummary({ matched, missing }: { matched: number; missing: number }
             className={`${level.ring} transition-[stroke-dashoffset] duration-700`}
           />
         </svg>
-        <span className="absolute inset-0 grid place-items-center text-xl font-semibold text-slate-900 dark:text-white">
+        <span className="absolute inset-0 grid place-items-center text-xl font-semibold text-neutral-900 dark:text-white">
           {percent}%
         </span>
       </div>
       <div>
         <p className={`text-sm font-semibold tracking-wide uppercase ${level.text}`}>{level.label}</p>
-        <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+        <p className="mt-1 text-lg font-semibold text-neutral-900 dark:text-white">
           {total === 0
             ? "We couldn't pick out keywords from this posting."
             : `Your resume covers ${matched} of ${total} keywords from this job.`}
         </p>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
           Keyword coverage is a rough guide to how screening tools read your resume, not a verdict on your fit.
         </p>
       </div>
@@ -224,9 +224,9 @@ function KeywordCard({
 }) {
   const matched = tone === "matched";
   return (
-    <section className="flex flex-col rounded-3xl border border-slate-200/80 bg-white px-5 py-6 shadow-sm sm:px-7 dark:border-slate-800 dark:bg-slate-900/60">
+    <section className="flex flex-col rounded-3xl border border-neutral-200/80 bg-white px-5 py-6 shadow-sm sm:px-7 dark:border-neutral-800 dark:bg-neutral-900/60">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h3>
+        <h3 className="text-base font-semibold text-neutral-900 dark:text-white">{title}</h3>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
             matched
@@ -237,10 +237,10 @@ function KeywordCard({
           {keywords.length}
         </span>
       </div>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{description}</p>
 
       {keywords.length === 0 ? (
-        <p className="mt-5 rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+        <p className="mt-5 rounded-2xl border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
           {empty}
         </p>
       ) : (
@@ -300,14 +300,14 @@ function SuggestionChecklist({
   return (
     <section
       aria-labelledby="suggestions-title"
-      className="rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60"
+      className="rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
     >
-      <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-slate-800">
+      <div className="flex flex-col gap-3 border-b border-neutral-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-neutral-800">
         <div>
-          <h3 id="suggestions-title" className="text-lg font-semibold text-slate-900 dark:text-white">
+          <h3 id="suggestions-title" className="text-lg font-semibold text-neutral-900 dark:text-white">
             Suggested bullet improvements
           </h3>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
             Rewordings of bullets you already wrote. Tick the ones you want to use.
           </p>
         </div>
@@ -315,7 +315,7 @@ function SuggestionChecklist({
           <button
             type="button"
             onClick={() => onAcceptedChange(allSelected ? [] : bullets.map((b) => b.id))}
-            className="self-start rounded-lg px-3 py-1.5 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50 sm:self-auto dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+            className="self-start rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 sm:self-auto dark:text-brand-400 dark:hover:bg-brand-500/10"
           >
             {allSelected ? "Clear all" : "Select all"}
           </button>
@@ -323,11 +323,11 @@ function SuggestionChecklist({
       </div>
 
       {bullets.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-slate-500 sm:px-8 dark:text-slate-400">
+        <p className="px-5 py-10 text-center text-sm text-neutral-500 sm:px-8 dark:text-neutral-400">
           No changes suggested. Your bullets already read well for this job.
         </p>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+        <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {bullets.map((bullet) => {
             const checked = selected.has(bullet.id);
             const job = jobLabel(bullet.workExperienceId);
@@ -335,26 +335,26 @@ function SuggestionChecklist({
               <li key={bullet.id}>
                 <label
                   className={`flex cursor-pointer gap-4 px-5 py-5 transition sm:px-8 ${
-                    checked ? "bg-indigo-50/60 dark:bg-indigo-500/[0.07]" : "hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    checked ? "bg-brand-50/60 dark:bg-brand-500/[0.07]" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={(e) => toggle(bullet.id, e.target.checked)}
-                    className="mt-1 size-5 shrink-0 cursor-pointer rounded accent-indigo-600"
+                    className="mt-1 size-5 shrink-0 cursor-pointer rounded accent-brand-600"
                   />
                   <span className="min-w-0 flex-1">
                     {job && (
-                      <span className="text-xs font-semibold tracking-wide text-slate-400 uppercase dark:text-slate-500">
+                      <span className="text-xs font-semibold tracking-wide text-neutral-400 uppercase dark:text-neutral-500">
                         {job}
                       </span>
                     )}
-                    <span className="mt-1 block text-[15px] leading-relaxed font-medium text-slate-900 dark:text-white">
+                    <span className="mt-1 block text-[15px] leading-relaxed font-medium text-neutral-900 dark:text-white">
                       {bullet.text}
                     </span>
-                    <span className="mt-2 block text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                      <span className="font-medium text-slate-600 dark:text-slate-300">Currently: </span>
+                    <span className="mt-2 block text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+                      <span className="font-medium text-neutral-600 dark:text-neutral-300">Currently: </span>
                       {bullet.originalText}
                     </span>
                     <span className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
@@ -375,8 +375,8 @@ function SuggestionChecklist({
       )}
 
       {bullets.length > 0 && (
-        <div className="border-t border-slate-100 px-5 py-4 text-sm text-slate-500 sm:px-8 dark:border-slate-800 dark:text-slate-400" aria-live="polite">
-          <span className="font-semibold text-slate-700 dark:text-slate-200">
+        <div className="border-t border-neutral-100 px-5 py-4 text-sm text-neutral-500 sm:px-8 dark:border-neutral-800 dark:text-neutral-400" aria-live="polite">
+          <span className="font-semibold text-neutral-700 dark:text-neutral-200">
             {accepted.length} of {bullets.length}
           </span>{" "}
           {accepted.length === 1 ? "change" : "changes"} selected.

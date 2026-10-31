@@ -171,11 +171,11 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
-                className="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900 hover:shadow-sm dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
+                className="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-neutral-600 transition hover:bg-white hover:text-neutral-900 hover:shadow-sm dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white"
               >
                 {s.label}
                 {s.count !== undefined && (
-                  <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                  <span className="rounded-full bg-neutral-200/70 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
                     {s.count}
                   </span>
                 )}
@@ -360,13 +360,13 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                     </div>
 
                     <fieldset className="mt-6">
-                      <legend className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                      <legend className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">
                         Achievements
                       </legend>
                       <div className="space-y-2.5">
                         {work.bullets.map((bullet, j) => (
                           <div key={bullet.id} className="flex items-start gap-2">
-                            <span className="mt-[1.15rem] size-1.5 shrink-0 rounded-full bg-indigo-400" aria-hidden="true" />
+                            <span className="mt-[1.15rem] size-1.5 shrink-0 rounded-full bg-brand-400" aria-hidden="true" />
                             <TextArea
                               className="flex-1"
                               label={`Achievement ${j + 1}`}
@@ -390,7 +390,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                                 aria-label={`Remove achievement ${j + 1}`}
                                 title="Remove"
                                 onClick={() => setWork(i, { bullets: work.bullets.filter((b) => b.id !== bullet.id) })}
-                                className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                                className="grid size-8 place-items-center rounded-lg text-neutral-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                               >
                                 <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
                                   <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
@@ -403,7 +403,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                       <button
                         type="button"
                         onClick={() => setWork(i, { bullets: [...work.bullets, emptyBullet()] })}
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10"
                       >
                         <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
                           <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
@@ -514,7 +514,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
         </Section>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/80 bg-white/85 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200/80 bg-white/85 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/85">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <p
             aria-live="polite"
@@ -523,7 +523,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
                 ? "text-emerald-600 dark:text-emerald-400"
                 : errorCount > 0
                   ? "text-rose-600 dark:text-rose-400"
-                  : "text-slate-500 dark:text-slate-400"
+                  : "text-neutral-500 dark:text-neutral-400"
             }`}
           >
             {statusText}
@@ -531,7 +531,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
           <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
             <Link
               href="/dashboard"
-              className="rounded-xl px-4 py-2.5 text-[15px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="rounded-xl px-4 py-2.5 text-[15px] font-semibold text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
             >
               Back
             </Link>

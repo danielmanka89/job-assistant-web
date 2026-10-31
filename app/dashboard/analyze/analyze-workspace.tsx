@@ -155,28 +155,28 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
     <div className="space-y-8">
       <section
         aria-labelledby="jd-title"
-        className="rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60"
+        className="rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
       >
-        <div className="flex items-start gap-4 border-b border-slate-100 px-5 py-5 sm:px-8 dark:border-slate-800">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+        <div className="flex items-start gap-4 border-b border-neutral-100 px-5 py-5 sm:px-8 dark:border-neutral-800">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
               <path d="M9 6V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1m-9 0h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" strokeLinejoin="round" />
               <path d="M4 12h16" strokeLinecap="round" />
             </svg>
           </span>
           <div>
-            <h2 id="jd-title" className="text-lg font-semibold text-slate-900 dark:text-white">
+            <h2 id="jd-title" className="text-lg font-semibold text-neutral-900 dark:text-white">
               Job description
             </h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-              Comparing with <span className="font-medium text-slate-700 dark:text-slate-300">{resume.sourceFileName}</span>
+            <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+              Comparing with <span className="font-medium text-neutral-700 dark:text-neutral-300">{resume.sourceFileName}</span>
             </p>
           </div>
         </div>
 
         <div className="space-y-5 px-5 py-6 sm:px-8">
           {fromJob && (
-            <p className="flex items-start gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
+            <p className="flex items-start gap-2.5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200">
               <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 size-4 shrink-0" aria-hidden="true">
                 <path fillRule="evenodd" d="M6 3.75A2.75 2.75 0 0 1 8.75 1h2.5A2.75 2.75 0 0 1 14 3.75v.443c.572.055 1.14.122 1.706.2C17.053 4.582 18 5.75 18 7.07v3.469c0 1.126-.694 2.191-1.83 2.54-1.952.599-4.024.921-6.17.921s-4.219-.322-6.17-.921C2.694 12.73 2 11.665 2 10.539V7.07c0-1.321.947-2.489 2.294-2.676A41.047 41.047 0 0 1 6 4.193V3.75Zm6.5 0v.325a41.622 41.622 0 0 0-5 0V3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25ZM10 10a1 1 0 0 0-1 1v.01a1 1 0 0 0 1 1h.01a1 1 0 0 0 1-1V11a1 1 0 0 0-1-1H10Z" clipRule="evenodd" />
                 <path d="M3 15.055v-.684c.126.053.255.1.39.142 2.092.642 4.313.987 6.61.987 2.297 0 4.518-.345 6.61-.987.135-.041.264-.089.39-.142v.684c0 1.347-.985 2.53-2.363 2.686a41.454 41.454 0 0 1-9.274 0C3.985 17.585 3 16.402 3 15.055Z" />
@@ -207,7 +207,7 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
             disabled={analyzing}
           />
           <div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400" aria-live="polite">
               {outdated ? (
                 <span className="font-medium text-amber-600 dark:text-amber-400">
                   You&apos;ve changed the text since the last analysis. Analyze again to update the results.
@@ -253,12 +253,12 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
 function ResultsSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Analyzing your match">
-      <div className="h-36 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-slate-800/60" />
+      <div className="h-36 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" />
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="h-44 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-slate-800/60" />
-        <div className="h-44 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-slate-800/60" />
+        <div className="h-44 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" />
+        <div className="h-44 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" />
       </div>
-      <div className="h-72 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-slate-800/60" />
+      <div className="h-72 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" />
     </div>
   );
 }

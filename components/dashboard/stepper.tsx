@@ -12,19 +12,19 @@ export function Stepper({ current }: { current: number }) {
             <span
               className={`flex items-center gap-2 font-medium ${
                 active
-                  ? "text-indigo-600 dark:text-indigo-400"
+                  ? "text-brand-600 dark:text-brand-400"
                   : done
-                    ? "text-slate-700 dark:text-slate-300"
-                    : "text-slate-400 dark:text-slate-500"
+                    ? "text-neutral-700 dark:text-neutral-300"
+                    : "text-neutral-400 dark:text-neutral-500"
               }`}
             >
               <span
                 className={`grid size-6 place-items-center rounded-full text-xs font-semibold ${
                   active
-                    ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                    ? "bg-brand-600 text-white dark:bg-brand-500"
                     : done
                       ? "bg-emerald-500 text-white"
-                      : "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                      : "bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
                 }`}
               >
                 {done ? (
@@ -41,7 +41,7 @@ export function Stepper({ current }: { current: number }) {
               </span>
               {label}
             </span>
-            {i < STEPS.length - 1 && <span className="h-px w-6 bg-slate-300 dark:bg-slate-700" aria-hidden="true" />}
+            {i < STEPS.length - 1 && <span className="h-px w-6 bg-neutral-300 dark:bg-neutral-700" aria-hidden="true" />}
           </li>
         );
       })}

@@ -21,18 +21,18 @@ export function Section({
     <section
       id={id}
       aria-labelledby={`${id}-title`}
-      className="scroll-mt-24 rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60"
+      className="scroll-mt-24 rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
     >
-      <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-slate-800">
+      <div className="flex flex-col gap-4 border-b border-neutral-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-neutral-800">
         <div className="flex items-start gap-4">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
             {icon}
           </span>
           <div>
-            <h2 id={`${id}-title`} className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+            <h2 id={`${id}-title`} className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-white">
               {title}
             </h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+            <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">{description}</p>
           </div>
         </div>
         {action}
@@ -47,7 +47,7 @@ export function AddButton({ onClick, children }: { onClick: () => void; children
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-xl bg-indigo-50 px-3.5 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 focus-visible:ring-4 focus-visible:ring-indigo-500/30 focus-visible:outline-none sm:self-auto dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25"
+      className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-xl bg-brand-50 px-3.5 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none sm:self-auto dark:bg-brand-500/15 dark:text-brand-300 dark:hover:bg-brand-500/25"
     >
       <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
         <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
@@ -84,10 +84,10 @@ export function IconButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`grid size-8 place-items-center rounded-lg text-slate-400 transition focus-visible:ring-4 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-30 ${
+      className={`grid size-8 place-items-center rounded-lg text-neutral-400 transition focus-visible:ring-4 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-30 ${
         tone === "danger"
           ? "hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-rose-500/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-          : "hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-indigo-500/20 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          : "hover:bg-neutral-100 hover:text-neutral-700 focus-visible:ring-brand-500/20 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
       }`}
     >
       <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
@@ -117,11 +117,11 @@ export function ItemCard({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-6 dark:border-slate-800 dark:bg-slate-950/40">
+    <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4 sm:p-6 dark:border-neutral-800 dark:bg-neutral-950/40">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-slate-900 dark:text-white">{title}</p>
-          {subtitle && <p className="truncate text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
+          <p className="truncate font-semibold text-neutral-900 dark:text-white">{title}</p>
+          {subtitle && <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">{subtitle}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <IconButton icon="up" label={`Move ${kind} up`} onClick={() => onMove(index - 1)} disabled={index === 0} />
@@ -149,12 +149,12 @@ export function Checkbox({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-700 select-none dark:text-slate-300">
+    <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm font-medium text-neutral-700 select-none dark:text-neutral-300">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="size-4 cursor-pointer rounded accent-indigo-600"
+        className="size-4 cursor-pointer rounded accent-brand-600"
       />
       {label}
     </label>
@@ -163,7 +163,7 @@ export function Checkbox({
 
 export function EmptyHint({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+    <p className="rounded-2xl border border-dashed border-neutral-300 px-4 py-8 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
       {children}
     </p>
   );
@@ -222,18 +222,18 @@ export function SkillsInput({
       <label htmlFor={id} className="sr-only">
         Add a skill
       </label>
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/15 dark:border-slate-700 dark:bg-slate-900 dark:focus-within:border-indigo-400">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm transition focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/15 dark:border-neutral-700 dark:bg-neutral-900 dark:focus-within:border-brand-400">
         {skills.map((skill) => (
           <span
             key={skill}
-            className="inline-flex items-center gap-1 rounded-full bg-indigo-50 py-1 pr-1 pl-3 text-sm font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
+            className="inline-flex items-center gap-1 rounded-full bg-brand-50 py-1 pr-1 pl-3 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
           >
             {skill}
             <button
               type="button"
               onClick={() => onChange(skills.filter((s) => s !== skill))}
               aria-label={`Remove ${skill}`}
-              className="grid size-5 place-items-center rounded-full text-indigo-400 transition hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-500/30 dark:hover:text-indigo-200"
+              className="grid size-5 place-items-center rounded-full text-brand-400 transition hover:bg-brand-100 hover:text-brand-700 dark:hover:bg-brand-500/30 dark:hover:text-brand-200"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
                 <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
@@ -251,12 +251,12 @@ export function SkillsInput({
           aria-invalid={error ? true : undefined}
           aria-describedby={`${id}-help`}
           placeholder={skills.length ? "Add another skill" : "e.g. React, SQL, Project management"}
-          className="min-w-40 flex-1 bg-transparent px-2 py-1.5 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
+          className="min-w-40 flex-1 bg-transparent px-2 py-1.5 text-[15px] text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-100"
         />
       </div>
       <p
         id={`${id}-help`}
-        className={`mt-2 text-sm ${error ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}`}
+        className={`mt-2 text-sm ${error ? "text-rose-600 dark:text-rose-400" : "text-neutral-500 dark:text-neutral-400"}`}
       >
         {error ?? "Press Enter or type a comma to add. You can paste a comma-separated list."}
       </p>
