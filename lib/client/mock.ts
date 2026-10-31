@@ -86,54 +86,55 @@ async function uploadResume(
     });
   }
 
+  return { ok: true, data: sampleResume(file.name) };
+}
+
+export function sampleResume(fileName = "Jane_Doe_CV.pdf"): Resume {
   const now = new Date().toISOString();
   return {
-    ok: true,
-    data: {
-      id: "resume_mock_1",
-      userId: "user_mock_1",
-      sourceFileName: file.name,
-      contact: {
-        fullName: "Jane Doe",
-        email: "jane.doe@example.com",
-        location: "Berlin, Germany",
-      },
-      summary: "Frontend engineer with 5 years of experience building React apps.",
-      workExperience: [
-        {
-          id: "we_1",
-          jobTitle: "Frontend Engineer",
-          company: "Acme GmbH",
-          startDate: "2022-03",
-          endDate: null,
-          bullets: [
-            { id: "b_1", text: "Rebuilt the checkout flow in React, cutting drop-off by 18%." },
-            { id: "b_2", text: "Introduced a shared component library used by 4 teams." },
-          ],
-        },
-        {
-          id: "we_2",
-          jobTitle: "Web Developer",
-          company: "Northwind",
-          startDate: "2019-01",
-          endDate: "2022-02",
-          bullets: [{ id: "b_3", text: "Maintained the marketing site and CMS integrations." }],
-        },
-      ],
-      education: [
-        {
-          id: "ed_1",
-          institution: "TU Berlin",
-          degree: "B.Sc.",
-          fieldOfStudy: "Computer Science",
-          startDate: "2015-10",
-          endDate: "2018-09",
-        },
-      ],
-      skills: ["React", "TypeScript", "Next.js", "Tailwind CSS", "Testing Library", "Figma"],
-      createdAt: now,
-      updatedAt: now,
+    id: "resume_mock_1",
+    userId: "user_mock_1",
+    sourceFileName: fileName,
+    contact: {
+      fullName: "Jane Doe",
+      email: "jane.doe@example.com",
+      location: "Berlin, Germany",
     },
+    summary: "Frontend engineer with 5 years of experience building React apps.",
+    workExperience: [
+      {
+        id: "we_1",
+        jobTitle: "Frontend Engineer",
+        company: "Acme GmbH",
+        startDate: "2022-03",
+        endDate: null,
+        bullets: [
+          { id: "b_1", text: "Rebuilt the checkout flow in React, cutting drop-off by 18%." },
+          { id: "b_2", text: "Introduced a shared component library used by 4 teams." },
+        ],
+      },
+      {
+        id: "we_2",
+        jobTitle: "Web Developer",
+        company: "Northwind",
+        startDate: "2019-01",
+        endDate: "2022-02",
+        bullets: [{ id: "b_3", text: "Maintained the marketing site and CMS integrations." }],
+      },
+    ],
+    education: [
+      {
+        id: "ed_1",
+        institution: "TU Berlin",
+        degree: "B.Sc.",
+        fieldOfStudy: "Computer Science",
+        startDate: "2015-10",
+        endDate: "2018-09",
+      },
+    ],
+    skills: ["React", "TypeScript", "Next.js", "Tailwind CSS", "Testing Library", "Figma"],
+    createdAt: now,
+    updatedAt: now,
   };
 }
 

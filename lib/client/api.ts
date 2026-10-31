@@ -67,6 +67,16 @@ export async function logout(): Promise<void> {
 }
 
 /**
+ * Saves the edited resume. The update endpoint isn't built yet, so for now this
+ * logs the payload to the browser console and reports success.
+ */
+export async function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
+  console.log("Resume to save:", JSON.stringify(resume, null, 2));
+  await new Promise((r) => setTimeout(r, 600));
+  return { ok: true, data: resume };
+}
+
+/**
  * Uploads a resume as multipart/form-data (field name "file").
  * Uses XMLHttpRequest instead of fetch so we can report upload progress.
  */
