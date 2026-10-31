@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { AiError } from "@/lib/ai";
 import type { User as UserRow, Resume as ResumeRow } from "@/lib/generated/prisma/client";
 import type { ApiError, Education, Resume, ResumeContact, User, WorkExperience } from "@/lib/types";
 
@@ -11,6 +12,15 @@ export function apiError(
 ): NextResponse<ApiError> {
   const body: ApiError = fieldErrors ? { code, message, fieldErrors } : { code, message };
   return NextResponse.json(body, { status });
+}
+
+/** Maps a failed AI call to an ApiError response; `unreadable` covers declined or unusable model output. */
+export function aiErrorResponse(error: unknown, unreadable: { code: string; message: string }): NextResponse<ApiError> {
+  if (error instanceof AiError && error.reason === "unreadable") return apiError(422, unreadable.code, unreadable.message);
+  if (error instanceof AiError && error.reason === "not_configured") {
+    return apiError(503, "AI_NOT_CONFIGURED", "The AI service isn't set up on this server yet.");
+  }
+  return apiError(502, "AI_UNAVAILABLE", "The AI service is temporarily unavailable. Please try again.");
 }
 
 /** Parses a JSON request body, or returns null if it is not a JSON object. */
