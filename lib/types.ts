@@ -8,6 +8,7 @@
 export interface ApiError {
   code: string; // machine-readable, e.g. "INVALID_CREDENTIALS"
   message: string; // human-readable, safe to show the user
+  fieldErrors?: Record<string, string>; // per-field validation errors, e.g. { email: "Already registered" }
 }
 
 /** A registered user. Never includes the password hash. */
@@ -54,7 +55,10 @@ export interface WorkExperience {
   location?: string;
   startDate: string; // "YYYY-MM"; year-only input becomes "YYYY-01"
   endDate: string | null; // "YYYY-MM"; year-only input becomes "YYYY-01"; null if current role
-  bullets: string[]; // user-provided achievement lines
+  bullets: {
+    id: string; // stable id so specific bullets can be targeted
+    text: string; // user-provided achievement line
+  }[];
 }
 
 /** One education entry on a resume. */
@@ -64,13 +68,14 @@ export interface Education {
   degree: string; // e.g. "B.Sc."
   fieldOfStudy?: string;
   startDate?: string; // "YYYY-MM"; year-only input becomes "YYYY-01"
-  endDate?: string; // "YYYY-MM" (graduation or expected graduation); year-only input becomes "YYYY-01"; omitted if unknown
+  endDate?: string | null; // "YYYY-MM" (graduation date); year-only input becomes "YYYY-01"; null if in progress; omitted if unknown
 }
 
 /** A parsed resume belonging to a user. */
 export interface Resume {
   id: string;
   userId: string;
+  sourceFileName?: string; // original upload name, e.g. "Jane_Doe_CV.pdf"; accepted formats: PDF and DOCX
   contact: ResumeContact;
   summary?: string;
   workExperience: WorkExperience[];
