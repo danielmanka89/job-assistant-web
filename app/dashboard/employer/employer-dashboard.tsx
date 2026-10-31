@@ -1,13 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { JobPosting } from "@/lib/types";
 import { listEmployerJobs, logout } from "@/lib/client/api";
+import { useCurrentUser } from "@/lib/client/current-user";
+import { NotEmployer } from "./not-employer";
 import { JobPostForm } from "./job-post-form";
 import { PostedJobs, type PostedState } from "./posted-jobs";
 
 export function EmployerDashboard() {
+  const user = useCurrentUser();
+  // Set when the API refuses this account, which also covers sessions with no stored role.
+  const [forbidden, setForbidden] = useState(false);
+  const onForbidden = useCallback(() => setForbidden(true), []);
+
+  if (user === undefined) {
+    return <div className="h-96 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" aria-busy="true" />;
+  }
+  if (forbidden || user?.role === "SEEKER") return <NotEmployer />;
+  return <EmployerWorkspace onForbidden={onForbidden} />;
+}
+
+function EmployerWorkspace({ onForbidden }: { onForbidden: () => void }) {
   const router = useRouter();
   const [posted, setPosted] = useState<PostedState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -30,6 +45,10 @@ export function EmployerDashboard() {
         router.replace("/login");
         return;
       }
+      if (result.error.code === "EMPLOYER_ONLY") {
+        onForbidden();
+        return;
+      }
       setPosted({
         status: "error",
         message:
@@ -41,7 +60,7 @@ export function EmployerDashboard() {
     return () => {
       active = false;
     };
-  }, [attempt, router]);
+  }, [attempt, router, onForbidden]);
 
   function onPosted(job: JobPosting) {
     setJustPostedId(job.id);
@@ -50,7 +69,7 @@ export function EmployerDashboard() {
 
   return (
     <div className="space-y-10">
-      <JobPostForm onPosted={onPosted} />
+      <JobPostForm onPosted={onPosted} onForbidden={onForbidden} />
       <PostedJobs
         state={posted}
         highlightId={justPostedId}

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { LoginRequest } from "@/lib/types";
 import { login } from "@/lib/client/api";
+import { storeUser } from "@/lib/client/current-user";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,8 @@ export function LoginForm() {
       setPending(false);
       return;
     }
-    router.replace("/dashboard");
+    storeUser(result.data.user);
+    router.replace(result.data.user.role === "EMPLOYER" ? "/dashboard/employer" : "/dashboard");
   }
 
   return (

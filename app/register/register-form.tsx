@@ -2,23 +2,25 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { RegisterRequest } from "@/lib/types";
+import type { RegisterRequest, UserRole } from "@/lib/types";
 import { register } from "@/lib/client/api";
+import { storeUser } from "@/lib/client/current-user";
+import { RolePicker } from "./role-picker";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 
-const FIELDS = ["name", "email", "password"] as const;
+const FIELDS = ["name", "email", "password", "role"] as const;
 
 export function RegisterForm() {
   const router = useRouter();
-  const [values, setValues] = useState<RegisterRequest>({ name: "", email: "", password: "" });
+  const [values, setValues] = useState<RegisterRequest>({ name: "", email: "", password: "", role: "SEEKER" });
   const [errors, setErrors] = useState<FieldErrors<RegisterRequest>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  function update(field: keyof RegisterRequest, value: string) {
+  function update(field: Exclude<keyof RegisterRequest, "role">, value: string) {
     setValues((v) => ({ ...v, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
   }
@@ -40,6 +42,7 @@ export function RegisterForm() {
       name: values.name.trim(),
       email: values.email.trim(),
       password: values.password,
+      role: values.role,
     });
     if (!result.ok) {
       const { fieldErrors, formError } = splitApiError<RegisterRequest>(result.error, FIELDS);
@@ -48,13 +51,22 @@ export function RegisterForm() {
       setPending(false);
       return;
     }
-    router.replace("/dashboard");
+    storeUser(result.data.user);
+    router.replace(result.data.user.role === "EMPLOYER" ? "/dashboard/employer" : "/dashboard");
   }
 
   return (
     <form onSubmit={onSubmit} noValidate>
       <fieldset disabled={pending} className="m-0 min-w-0 space-y-5 border-0 p-0">
       {formError && <ErrorAlert>{formError}</ErrorAlert>}
+      <RolePicker
+        value={values.role ?? "SEEKER"}
+        onChange={(role: UserRole) => {
+          setValues((v) => ({ ...v, role }));
+          if (errors.role) setErrors((e) => ({ ...e, role: undefined }));
+        }}
+        error={errors.role}
+      />
       <TextField
         label="Full name"
         name="name"

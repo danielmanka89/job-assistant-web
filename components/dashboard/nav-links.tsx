@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCurrentUser } from "@/lib/client/current-user";
 
 const LINKS = [
   {
@@ -10,14 +11,21 @@ const LINKS = [
     match: (p: string) => p.startsWith("/dashboard") && !p.startsWith("/dashboard/jobs") && !p.startsWith("/dashboard/employer"),
   },
   { href: "/dashboard/jobs", label: "Job board", match: (p: string) => p.startsWith("/dashboard/jobs") },
-  { href: "/dashboard/employer", label: "Post a job", match: (p: string) => p.startsWith("/dashboard/employer") },
+  {
+    href: "/dashboard/employer",
+    label: "Post a job",
+    match: (p: string) => p.startsWith("/dashboard/employer"),
+    employerOnly: true,
+  },
 ];
 
 export function NavLinks() {
   const pathname = usePathname() ?? "";
+  const user = useCurrentUser();
+  const links = LINKS.filter((link) => !("employerOnly" in link) || user?.role === "EMPLOYER");
   return (
     <nav aria-label="Main" className="flex items-center gap-1">
-      {LINKS.map((link) => {
+      {links.map((link) => {
         const active = link.match(pathname);
         return (
           <Link
