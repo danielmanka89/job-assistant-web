@@ -106,6 +106,7 @@ export interface GapAnalysisResponse {
 /** Input for building the tailored resume from the user's selections. */
 export interface TailoredResumeRequest {
   resumeId: string;
+  gapAnalysisId: string; // GapAnalysisResponse.id the accepted bullets came from
   jobDescription: string;
   acceptedBulletIds: string[]; // only these suggested bullets get merged
   formats: ("docx" | "pdf")[];
@@ -124,6 +125,12 @@ export interface TailoredResume {
   education: Education[];
   skills: string[];
   createdAt: string; // ISO 8601
+}
+
+/** Returned by the tailoring endpoint for a TailoredResumeRequest. */
+export interface TailoredResumeResponse {
+  tailoredResume: TailoredResume;
+  files: GeneratedFile[]; // one per requested format
 }
 
 /** A generated resume file ready for download. */
