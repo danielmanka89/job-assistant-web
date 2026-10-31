@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { TextArea } from "@/components/ui/text-area";
 import { AnalysisResults } from "./analysis-results";
+import { SummaryOptimizer } from "./summary-optimizer";
 
 const MIN_LENGTH = 50;
 const MAX_LENGTH = 20000;
@@ -75,6 +76,8 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   const [skillsError, setSkillsError] = useState<string | null>(null);
   // Skills were saved but the follow-up analysis failed, so these results no longer match the resume.
   const [needsRefresh, setNeedsRefresh] = useState(false);
+  // The resume prop comes from storage once; keep the summary here so a saved one shows right away.
+  const [resumeSummary, setResumeSummary] = useState(resume.summary);
   const [scrollToResults, setScrollToResults] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -181,6 +184,7 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
       return;
     }
     storeResume(saved.data);
+    setResumeSummary(saved.data.summary);
 
     // The resume changed, so run the match again to get a score (and suggestions) for the new version.
     const rerun = await analyzeGap({ resumeId: resume.id, jobDescription: analyzedText });
@@ -197,6 +201,16 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
     setAccepted(kept);
     setNeedsRefresh(false);
     storeAnalysis({ resumeId: resume.id, jobDescription: analyzedText, analysis: rerun.data, acceptedBulletIds: kept });
+  }
+
+  async function signOutExpired() {
+    await logout();
+    router.replace("/login");
+  }
+
+  function onSummarySaved(updated: Resume) {
+    storeResume(updated);
+    setResumeSummary(updated.summary);
   }
 
   function onSkillsChange(skills: string[]) {
@@ -314,6 +328,19 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
             addingSkills={addingSkills}
             skillsError={skillsError}
             busy={analyzing}
+            summarySection={
+              <SummaryOptimizer
+                // A new analysis starts the picker over.
+                key={analysis.id}
+                resumeId={resume.id}
+                jobDescription={analyzedText}
+                summary={resumeSummary}
+                matchedCount={analysis.matchedKeywords.length}
+                disabled={outdated || analyzing || tailoring || addingSkills}
+                onSaved={onSummarySaved}
+                onUnauthorized={signOutExpired}
+              />
+            }
           />
         </div>
       )}
