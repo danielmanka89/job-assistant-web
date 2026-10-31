@@ -31,11 +31,19 @@ function toApiError(body: unknown, status: number): ApiError {
   };
 }
 
-async function postJson<TReq, TRes>(url: string, payload: TReq): Promise<ApiResult<TRes>> {
+function postJson<TReq, TRes>(url: string, payload: TReq): Promise<ApiResult<TRes>> {
+  return sendJson<TReq, TRes>("POST", url, payload);
+}
+
+async function sendJson<TReq, TRes>(
+  method: "POST" | "PUT",
+  url: string,
+  payload: TReq,
+): Promise<ApiResult<TRes>> {
   let res: Response;
   try {
     res = await fetch(url, {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
       body: JSON.stringify(payload),
@@ -64,6 +72,16 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(
     () => undefined,
   );
+}
+
+/**
+ * Saves the edited resume with PUT /api/resumes/:id and returns the stored version.
+ * Validation problems come back as ApiError.fieldErrors keyed by field path,
+ * e.g. "workExperience.0.startDate".
+ */
+export function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
+  if (USE_MOCK_API) return mockApi.saveResume(resume);
+  return sendJson<Resume, Resume>("PUT", `/api/resumes/${encodeURIComponent(resume.id)}`, resume);
 }
 
 /**

@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState, type DragEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Resume } from "@/lib/types";
 import { logout, uploadResume } from "@/lib/client/api";
+import { storeResume } from "@/lib/client/resume-storage";
 import { Button } from "@/components/ui/button";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx"];
@@ -54,6 +56,7 @@ export function ResumeDropzone() {
     );
 
     if (result.ok) {
+      storeResume(result.data);
       setState({ status: "success", file, resume: result.data });
       return;
     }
@@ -256,6 +259,25 @@ function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-slate-800 dark:bg-slate-950/40">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Check these details and fill in anything we missed.
+        </p>
+        <Link
+          href="/dashboard/review"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-[15px] font-semibold text-white shadow-sm shadow-indigo-600/30 transition hover:bg-indigo-500 focus-visible:ring-4 focus-visible:ring-indigo-500/40 focus-visible:outline-none dark:bg-indigo-500 dark:hover:bg-indigo-400"
+        >
+          Review details
+          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
+            <path
+              fillRule="evenodd"
+              d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </Link>
       </div>
     </div>
   );
