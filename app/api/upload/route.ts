@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
-import { parseResumeText, ResumeParseError, type ParsedResume } from "@/lib/ai";
-import { apiError, toResume } from "@/lib/api";
+import { parseResumeText, type ParsedResume } from "@/lib/ai";
+import { aiErrorResponse, apiError, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { extractResumeText } from "@/lib/resume-text";
@@ -81,13 +81,10 @@ export async function POST(request: NextRequest) {
     parsed = await parseResumeText(text);
   } catch (error) {
     console.error("resume parsing failed", error);
-    if (error instanceof ResumeParseError && error.reason === "unreadable") {
-      return apiError(422, "PARSE_FAILED", "We couldn't read this resume. Try exporting it again as PDF or DOCX.");
-    }
-    if (error instanceof ResumeParseError && error.reason === "not_configured") {
-      return apiError(503, "AI_NOT_CONFIGURED", "Resume parsing isn't set up on this server yet.");
-    }
-    return apiError(502, "AI_UNAVAILABLE", "Resume parsing is temporarily unavailable. Please try again.");
+    return aiErrorResponse(error, {
+      code: "PARSE_FAILED",
+      message: "We couldn't read this resume. Try exporting it again as PDF or DOCX.",
+    });
   }
 
   // Name and email fall back to the account when the document doesn't include them.

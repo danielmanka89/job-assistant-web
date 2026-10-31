@@ -17,6 +17,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   resumes      Resume[]
+  gapAnalyses  GapAnalysis[]
 }
 
 model Resume {
@@ -34,6 +35,23 @@ model Resume {
   skills         Json // string[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  gapAnalyses    GapAnalysis[]
 
   @@index([userId])
+}
+
+model GapAnalysis {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId         String
+  resume           Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobDescription   String
+  matchedKeywords  Json // string[]
+  missingKeywords  Json // string[]
+  suggestedBullets Json // SuggestedBullet[]
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([resumeId])
 }
