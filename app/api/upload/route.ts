@@ -3,8 +3,8 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, toResume } from "@/lib/api";
+import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 import type { Resume, ResumeContact } from "@/lib/types";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -27,8 +27,7 @@ function detectFileType(fileName: string, bytes: Buffer): keyof typeof FILE_TYPE
 }
 
 export async function POST(request: NextRequest) {
-  const userId = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
-  const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+  const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to upload a resume");
 
   if (Number(request.headers.get("content-length") ?? 0) > MAX_FILE_BYTES + 64 * 1024) {
