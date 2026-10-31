@@ -17,6 +17,7 @@ import type {
   ResumeContact,
   TailoredResume,
   User,
+  UserRole,
   WorkExperience,
 } from "@/lib/types";
 
@@ -52,7 +53,7 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
 
 /** Maps a database user to the public User type (drops passwordHash). */
 export function toUser(row: UserRow): User {
-  return { id: row.id, email: row.email, name: row.name, createdAt: row.createdAt.toISOString() };
+  return { id: row.id, email: row.email, name: row.name, role: row.role as UserRole, createdAt: row.createdAt.toISOString() };
 }
 
 /** Maps a database resume to the Resume type. */

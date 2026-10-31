@@ -92,10 +92,11 @@ function validate(body: Record<string, unknown>): { fieldErrors: Record<string, 
   return Object.keys(fieldErrors).length ? { fieldErrors } : { data };
 }
 
-/** POST /api/jobs — posts a job on the site. Requires login; the poster is recorded. */
+/** POST /api/jobs — posts a job on the site. Employers only; the poster is recorded. */
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to post a job");
+  if (user.role !== "EMPLOYER") return apiError(403, "EMPLOYER_ONLY", "Only employer accounts can post jobs");
 
   const body = await readJsonObject(request);
   if (!body) return apiError(400, "INVALID_JSON", "Request body must be a JSON object");

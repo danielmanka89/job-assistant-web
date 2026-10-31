@@ -4,7 +4,7 @@ import { apiError, readJsonObject, toUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { createSession } from "@/lib/session";
-import type { AuthResponse, RegisterRequest } from "@/lib/types";
+import type { AuthResponse, RegisterRequest, UserRole } from "@/lib/types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,6 +13,7 @@ function validate(body: Record<string, unknown>): { fieldErrors: Record<string, 
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
+  const role = body.role === undefined ? "SEEKER" : body.role;
   const fieldErrors: Record<string, string> = {};
 
   if (!EMAIL_PATTERN.test(email)) fieldErrors.email = "Enter a valid email address";
@@ -20,8 +21,11 @@ function validate(body: Record<string, unknown>): { fieldErrors: Record<string, 
   else if (name.length > 100) fieldErrors.name = "Name must be 100 characters or fewer";
   if (password.length < 8) fieldErrors.password = "Password must be at least 8 characters";
   else if (Buffer.byteLength(password) > 72) fieldErrors.password = "Password must be 72 bytes or fewer";
+  if (role !== "SEEKER" && role !== "EMPLOYER") fieldErrors.role = 'Choose "SEEKER" or "EMPLOYER"';
 
-  return Object.keys(fieldErrors).length ? { fieldErrors } : { data: { email, name, password } };
+  return Object.keys(fieldErrors).length
+    ? { fieldErrors }
+    : { data: { email, name, password, role: role as UserRole } };
 }
 
 export async function POST(request: Request) {
@@ -32,11 +36,11 @@ export async function POST(request: Request) {
   if ("fieldErrors" in result) {
     return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", result.fieldErrors);
   }
-  const { email, name, password } = result.data;
+  const { email, name, password, role } = result.data;
 
   try {
     const user = await prisma.user.create({
-      data: { email, name, passwordHash: await hashPassword(password) },
+      data: { email, name, role, passwordHash: await hashPassword(password) },
     });
     const response = NextResponse.json<AuthResponse>({ user: toUser(user) }, { status: 201 });
     await createSession(response, user.id);
