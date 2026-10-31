@@ -20,7 +20,8 @@ export function TailorView({ original, response, suggestions }: Props) {
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
       <ResumePreview original={original} tailored={tailoredResume} accepted={accepted} />
 
-      <aside className="space-y-4 lg:sticky lg:top-24">
+      {/* First on phones so the downloads don't sit below the whole preview. */}
+      <aside className="order-first space-y-4 lg:sticky lg:top-24 lg:order-none">
         <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">Download</h2>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Your files are ready.</p>

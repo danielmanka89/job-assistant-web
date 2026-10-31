@@ -52,7 +52,8 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form onSubmit={onSubmit} noValidate>
+      <fieldset disabled={pending} className="m-0 min-w-0 space-y-5 border-0 p-0">
       {formError && <ErrorAlert>{formError}</ErrorAlert>}
       <TextField
         label="Full name"
@@ -87,6 +88,7 @@ export function RegisterForm() {
       <Button type="submit" loading={pending} className="w-full">
         {pending ? "Creating account…" : "Create account"}
       </Button>
+      </fieldset>
     </form>
   );
 }

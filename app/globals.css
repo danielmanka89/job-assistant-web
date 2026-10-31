@@ -26,6 +26,8 @@
   :root {
     --background: #020617;
     --foreground: #f1f5f9;
+    /* Native controls (checkboxes, scrollbars) match the dark theme instead of staying white. */
+    color-scheme: dark;
   }
 }
 
