@@ -2,6 +2,7 @@ import type {
   ApiError,
   AuthResponse,
   GapAnalysisRequest,
+  CreateJobPostingRequest,
   GapAnalysisResponse,
   JobPosting,
   LoginRequest,
@@ -79,6 +80,19 @@ async function getJson(url: string): Promise<ApiResult<unknown>> {
 export async function listJobs(): Promise<ApiResult<JobPosting[]>> {
   if (USE_MOCK_API) return mockApi.listJobs();
   const result = await getJson("/api/jobs");
+  return result.ok ? { ok: true, data: toJobList(result.data) } : result;
+}
+
+/** Posts a job on the site with POST /api/jobs. Requires login. */
+export function postJob(request: CreateJobPostingRequest): Promise<ApiResult<JobPosting>> {
+  if (USE_MOCK_API) return mockApi.postJob(request);
+  return postJson<CreateJobPostingRequest, JobPosting>("/api/jobs", request);
+}
+
+/** Jobs the logged-in employer has posted, from GET /api/employer/jobs ({ jobs: [...] }). */
+export async function listEmployerJobs(): Promise<ApiResult<JobPosting[]>> {
+  if (USE_MOCK_API) return mockApi.listEmployerJobs();
+  const result = await getJson("/api/employer/jobs");
   return result.ok ? { ok: true, data: toJobList(result.data) } : result;
 }
 

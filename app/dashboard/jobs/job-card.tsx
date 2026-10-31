@@ -1,5 +1,5 @@
 import type { JobPosting, JobSource } from "@/lib/types";
-import { safeApplyUrl } from "@/lib/client/jobs";
+import { descriptionSnippet as snippet, safeApplyUrl } from "@/lib/client/jobs";
 
 const AVATAR_COLORS = [
   "bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300",
@@ -20,17 +20,6 @@ function avatarColor(name: string) {
   let hash = 0;
   for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
-
-function snippet(text: string, max = 240) {
-  // Drop list markers ("- ", "• ") so bullet lists read as sentences.
-  const flat = text
-    .split(/\n+/)
-    .map((line) => line.replace(/^\s*[-•*]\s+/, "").trim())
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\s+/g, " ");
-  return flat.length > max ? `${flat.slice(0, max).replace(/\s+\S*$/, "")}…` : flat;
 }
 
 function postedLabel(iso?: string) {

@@ -5,9 +5,11 @@
 //   upload a file with "fail" in its name -> parse error
 //   gap analysis with "fail" in the job description -> analysis error
 //   tailoring with "tailor-fail" in the job description -> generation error
+//   posting a job titled with "fail" in it -> server error
 import type {
   ApiError,
   AuthResponse,
+  CreateJobPostingRequest,
   GapAnalysisRequest,
   GapAnalysisResponse,
   LoginRequest,
@@ -387,4 +389,45 @@ async function listJobs(): Promise<ApiResult<JobPosting[]>> {
   return { ok: true, data: sampleJobs() };
 }
 
-export const mockApi = { register, login, logout, uploadResume, saveResume, analyzeGap, tailorResume, listJobs };
+// Jobs "posted" in this browser session, newest first.
+const employerJobs: JobPosting[] = [
+  {
+    id: "posted_1",
+    title: "Frontend Engineer",
+    company: "Jane's Studio",
+    location: "Berlin, Germany",
+    description:
+      "We're a small product studio looking for a frontend engineer to build web apps for our clients with React and TypeScript. You'll work directly with designers and clients, own features end to end, and help shape how we build.",
+    applyUrl: "https://example.com/careers/frontend-engineer",
+    source: "native",
+    createdAt: daysAgo(4),
+  },
+];
+
+async function postJob(request: CreateJobPostingRequest): Promise<ApiResult<JobPosting>> {
+  await delay(900);
+  if (request.title.toLowerCase().includes("fail")) {
+    return fail({ code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." });
+  }
+  const job: JobPosting = { ...request, id: `posted_${Date.now()}`, source: "native", createdAt: new Date().toISOString() };
+  employerJobs.unshift(job);
+  return { ok: true, data: job };
+}
+
+async function listEmployerJobs(): Promise<ApiResult<JobPosting[]>> {
+  await delay(600);
+  return { ok: true, data: [...employerJobs] };
+}
+
+export const mockApi = {
+  register,
+  login,
+  logout,
+  uploadResume,
+  saveResume,
+  analyzeGap,
+  tailorResume,
+  listJobs,
+  postJob,
+  listEmployerJobs,
+};

@@ -14,6 +14,18 @@ export function safeApplyUrl(url: string | undefined): string | null {
   return url && /^https?:\/\//i.test(url) ? url : null;
 }
 
+/** Short plain-text preview of a job description, with list markers removed. */
+export function descriptionSnippet(text: string, max = 240) {
+  // Drop list markers ("- ", "• ") so bullet lists read as sentences.
+  const flat = text
+    .split(/\n+/)
+    .map((line) => line.replace(/^\s*[-•*]\s+/, "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ");
+  return flat.length > max ? `${flat.slice(0, max).replace(/\s+\S*$/, "")}…` : flat;
+}
+
 // Hands the chosen job to the analyze page. Descriptions can be thousands of
 // characters, too long to pass in the URL.
 const PENDING_KEY = "job-assistant.pending-job";
