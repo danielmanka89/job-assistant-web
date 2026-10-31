@@ -1,3 +1,26 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# env files (.env.example is committed)
 .env
-node_modules
-.next
+.env*
+!.env.example
+
+# database
+*.db
+*.db-journal
+
+# misc
+.DS_Store
+*.pem
+.vercel
+npm-debug.log*
