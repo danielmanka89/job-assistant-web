@@ -107,7 +107,8 @@ function TailorBar({
   return (
     <section
       aria-busy={tailoring || undefined}
-      className="rounded-3xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 px-5 py-6 text-white shadow-lg shadow-indigo-600/20 sm:px-8"
+      // Sticks to the bottom of the screen while the results are in view, so the next step is always reachable.
+      className="sticky bottom-4 z-10 rounded-3xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 px-5 py-5 text-white shadow-2xl shadow-indigo-900/30 ring-1 ring-white/10 sm:px-8"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
