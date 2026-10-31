@@ -1,7 +1,17 @@
 import Link from "next/link";
 
 /** Shown on flow steps that need a resume when none has been uploaded in this tab. */
-export function NoResume({ title, children }: { title: string; children: React.ReactNode }) {
+export function NoResume({
+  title,
+  children,
+  href = "/dashboard",
+  action = "Upload a resume",
+}: {
+  title: string;
+  children: React.ReactNode;
+  href?: string;
+  action?: string;
+}) {
   return (
     <div className="mx-auto max-w-lg rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
       <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
@@ -13,10 +23,10 @@ export function NoResume({ title, children }: { title: string; children: React.R
       <h2 className="mt-5 text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
       <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{children}</p>
       <Link
-        href="/dashboard"
+        href={href}
         className="mt-6 inline-flex rounded-xl bg-indigo-600 px-5 py-2.5 text-[15px] font-semibold text-white shadow-sm shadow-indigo-600/30 transition hover:bg-indigo-500"
       >
-        Upload a resume
+        {action}
       </Link>
     </div>
   );

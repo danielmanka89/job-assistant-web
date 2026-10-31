@@ -6,6 +6,8 @@ import type {
   LoginRequest,
   RegisterRequest,
   Resume,
+  TailoredResumeRequest,
+  TailoredResumeResponse,
 } from "@/lib/types";
 import { mockApi } from "./mock";
 
@@ -93,6 +95,15 @@ export function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
 export function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAnalysisResponse>> {
   if (USE_MOCK_API) return mockApi.analyzeGap(request);
   return postJson<GapAnalysisRequest, GapAnalysisResponse>("/api/gap-analysis", request);
+}
+
+/**
+ * Builds the tailored resume from the accepted bullets and renders the requested
+ * files with POST /api/tailor. Each returned file has its own downloadUrl.
+ */
+export function tailorResume(request: TailoredResumeRequest): Promise<ApiResult<TailoredResumeResponse>> {
+  if (USE_MOCK_API) return mockApi.tailorResume(request);
+  return postJson<TailoredResumeRequest, TailoredResumeResponse>("/api/tailor", request);
 }
 
 /**

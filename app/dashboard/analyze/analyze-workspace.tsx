@@ -167,6 +167,8 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
             resume={resume}
             accepted={accepted}
             onAcceptedChange={onAcceptedChange}
+            outdated={outdated}
+            onTailor={() => router.push("/dashboard/download")}
           />
         </div>
       )}

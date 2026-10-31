@@ -4,6 +4,7 @@
 //   login with password "wrongpass"  -> invalid credentials error
 //   upload a file with "fail" in its name -> parse error
 //   gap analysis with "fail" in the job description -> analysis error
+//   tailoring with "tailor-fail" in the job description -> generation error
 import type {
   ApiError,
   AuthResponse,
@@ -11,7 +12,11 @@ import type {
   GapAnalysisResponse,
   LoginRequest,
   RegisterRequest,
+  GeneratedFile,
   Resume,
+  TailoredResume,
+  TailoredResumeRequest,
+  TailoredResumeResponse,
   User,
 } from "@/lib/types";
 import type { ApiResult } from "./api";
@@ -221,4 +226,82 @@ async function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAna
   };
 }
 
-export const mockApi = { register, login, logout, uploadResume, saveResume, analyzeGap };
+// Mirrors the bullets returned by analyzeGap so accepted ids can be merged in.
+const MOCK_SUGGESTIONS: Record<string, { originalText: string; text: string }> = {
+  sb_1: {
+    originalText: "Rebuilt the checkout flow in React, cutting drop-off by 18%.",
+    text: "Led the rebuild of the React checkout flow, cutting drop-off by 18% and improving conversion.",
+  },
+  sb_2: {
+    originalText: "Introduced a shared component library used by 4 teams.",
+    text: "Built and rolled out a shared component library (design system) adopted by 4 product teams.",
+  },
+  sb_3: {
+    originalText: "Maintained the marketing site and CMS integrations.",
+    text: "Maintained the company marketing site and its CMS integrations, keeping releases stable.",
+  },
+};
+
+function plainTextResume(resume: TailoredResume): string {
+  const lines = [resume.contact.fullName, resume.contact.email, ""];
+  if (resume.summary) lines.push(resume.summary, "");
+  for (const job of resume.workExperience) {
+    lines.push(`${job.jobTitle}, ${job.company}`);
+    for (const bullet of job.bullets) lines.push(`- ${bullet.text}`);
+    lines.push("");
+  }
+  lines.push(`Skills: ${resume.skills.join(", ")}`);
+  return lines.join("\n");
+}
+
+async function tailorResume(request: TailoredResumeRequest): Promise<ApiResult<TailoredResumeResponse>> {
+  await delay(2800);
+  if (request.jobDescription.toLowerCase().includes("tailor-fail")) {
+    return fail({
+      code: "GENERATION_FAILED",
+      message: "We couldn't generate your files. Please try again.",
+    });
+  }
+
+  const base = sampleResume();
+  const accepted = request.acceptedBulletIds
+    .map((id) => MOCK_SUGGESTIONS[id])
+    .filter((s): s is { originalText: string; text: string } => Boolean(s));
+  const now = new Date().toISOString();
+
+  const tailoredResume: TailoredResume = {
+    id: "tailored_mock_1",
+    userId: base.userId,
+    sourceResumeId: request.resumeId,
+    gapAnalysisId: request.gapAnalysisId,
+    acceptedBulletIds: request.acceptedBulletIds,
+    contact: base.contact,
+    summary: base.summary,
+    workExperience: base.workExperience.map((job) => ({
+      ...job,
+      bullets: job.bullets.map((bullet) => {
+        const match = accepted.find((s) => s.originalText === bullet.text);
+        return match ? { ...bullet, text: match.text } : bullet;
+      }),
+    })),
+    education: base.education,
+    skills: base.skills,
+    createdAt: now,
+  };
+
+  // No real documents in mock mode: each "file" is a plain-text copy so the download buttons can be tried.
+  const text = plainTextResume(tailoredResume);
+  const files: GeneratedFile[] = request.formats.map((format) => ({
+    id: `file_mock_${format}`,
+    resumeId: request.resumeId,
+    tailoredResumeId: tailoredResume.id,
+    format,
+    fileName: `Jane_Doe_Resume.mock-${format}.txt`,
+    downloadUrl: URL.createObjectURL(new Blob([text], { type: "text/plain" })),
+    createdAt: now,
+  }));
+
+  return { ok: true, data: { tailoredResume, files } };
+}
+
+export const mockApi = { register, login, logout, uploadResume, saveResume, analyzeGap, tailorResume };
