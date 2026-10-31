@@ -11,6 +11,7 @@ import type {
   TailoredResumeRequest,
   TailoredResumeResponse,
 } from "@/lib/types";
+import { clearUser } from "./current-user";
 import { toJobList } from "./jobs";
 import { mockApi } from "./mock";
 
@@ -107,6 +108,7 @@ export function login(payload: LoginRequest): Promise<ApiResult<AuthResponse>> {
 }
 
 export async function logout(): Promise<void> {
+  clearUser();
   if (USE_MOCK_API) return mockApi.logout();
   await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(
     () => undefined,

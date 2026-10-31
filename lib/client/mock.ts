@@ -6,6 +6,7 @@
 //   gap analysis with "fail" in the job description -> analysis error
 //   tailoring with "tailor-fail" in the job description -> generation error
 //   posting a job titled with "fail" in it -> server error
+//   log in with an email containing "employer" -> employer account
 import type {
   ApiError,
   AuthResponse,
@@ -21,8 +22,10 @@ import type {
   TailoredResumeRequest,
   TailoredResumeResponse,
   User,
+  UserRole,
 } from "@/lib/types";
 import type { ApiResult } from "./api";
+import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -41,12 +44,12 @@ function clearMockSession() {
   document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;
 }
 
-function mockUser(email: string, name: string): User {
+function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User {
   return {
     id: "user_mock_1",
     email,
     name,
-    role: "SEEKER",
+    role,
     createdAt: new Date().toISOString(),
   };
 }
@@ -61,7 +64,7 @@ async function register(payload: RegisterRequest): Promise<ApiResult<AuthRespons
     });
   }
   setMockSession();
-  return { ok: true, data: { user: mockUser(payload.email, payload.name) } };
+  return { ok: true, data: { user: mockUser(payload.email, payload.name, payload.role ?? "SEEKER") } };
 }
 
 async function login(payload: LoginRequest): Promise<ApiResult<AuthResponse>> {
@@ -73,7 +76,8 @@ async function login(payload: LoginRequest): Promise<ApiResult<AuthResponse>> {
     });
   }
   setMockSession();
-  return { ok: true, data: { user: mockUser(payload.email, "Jane Doe") } };
+  const role: UserRole = payload.email.toLowerCase().includes("employer") ? "EMPLOYER" : "SEEKER";
+  return { ok: true, data: { user: mockUser(payload.email, "Jane Doe", role) } };
 }
 
 async function logout(): Promise<void> {
@@ -404,8 +408,13 @@ const employerJobs: JobPosting[] = [
   },
 ];
 
+// Like the API: only employer accounts can post or list their postings.
+const EMPLOYER_ONLY: ApiError = { code: "EMPLOYER_ONLY", message: "Only employer accounts can post jobs" };
+const isEmployer = () => readStoredUser()?.role === "EMPLOYER";
+
 async function postJob(request: CreateJobPostingRequest): Promise<ApiResult<JobPosting>> {
   await delay(900);
+  if (!isEmployer()) return fail(EMPLOYER_ONLY);
   if (request.title.toLowerCase().includes("fail")) {
     return fail({ code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." });
   }
@@ -416,6 +425,7 @@ async function postJob(request: CreateJobPostingRequest): Promise<ApiResult<JobP
 
 async function listEmployerJobs(): Promise<ApiResult<JobPosting[]>> {
   await delay(600);
+  if (!isEmployer()) return fail(EMPLOYER_ONLY);
   return { ok: true, data: [...employerJobs] };
 }
 

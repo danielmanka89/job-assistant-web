@@ -21,7 +21,14 @@ import {
   type JobFormErrors,
 } from "./job-form-validation";
 
-export function JobPostForm({ onPosted }: { onPosted: (job: JobPosting) => void }) {
+export function JobPostForm({
+  onPosted,
+  onForbidden,
+}: {
+  onPosted: (job: JobPosting) => void;
+  /** The API says this account isn't an employer. */
+  onForbidden: () => void;
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [values, setValues] = useState<CreateJobPostingRequest>(EMPTY_JOB);
@@ -67,6 +74,10 @@ export function JobPostForm({ onPosted }: { onPosted: (job: JobPosting) => void 
       if (code === "UNAUTHORIZED" || code === "HTTP_401") {
         await logout();
         router.replace("/login");
+        return;
+      }
+      if (code === "EMPLOYER_ONLY") {
+        onForbidden();
         return;
       }
       const { errors: serverErrors, other } = splitServerErrors(fieldErrors);
