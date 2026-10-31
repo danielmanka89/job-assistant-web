@@ -4,8 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/dashboard", label: "Tailor resume", match: (p: string) => p.startsWith("/dashboard") && !p.startsWith("/dashboard/jobs") },
+  {
+    href: "/dashboard",
+    label: "Tailor resume",
+    match: (p: string) => p.startsWith("/dashboard") && !p.startsWith("/dashboard/jobs") && !p.startsWith("/dashboard/employer"),
+  },
   { href: "/dashboard/jobs", label: "Job board", match: (p: string) => p.startsWith("/dashboard/jobs") },
+  { href: "/dashboard/employer", label: "Post a job", match: (p: string) => p.startsWith("/dashboard/employer") },
 ];
 
 export function NavLinks() {
