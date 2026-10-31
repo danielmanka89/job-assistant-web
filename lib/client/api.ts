@@ -9,8 +9,11 @@ import type {
   LoginRequest,
   RegisterRequest,
   Resume,
+  SummaryGenerateRequest,
+  SummaryGenerateResponse,
   TailoredResumeRequest,
   TailoredResumeResponse,
+  UpdateSummaryRequest,
 } from "@/lib/types";
 import { clearUser } from "./current-user";
 import { toJobList } from "./jobs";
@@ -134,6 +137,23 @@ export function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
 export function addSkills(resumeId: string, newSkills: string[]): Promise<ApiResult<Resume>> {
   if (USE_MOCK_API) return mockApi.addSkills(resumeId, newSkills);
   return sendJson<AddSkillsRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}`, { newSkills });
+}
+
+/**
+ * Asks POST /api/summary-generate for three summary options (leadership, technical depth,
+ * industry fit, in that order). Nothing is saved until saveSummary is called.
+ */
+export function generateSummaries(request: SummaryGenerateRequest): Promise<ApiResult<SummaryGenerateResponse>> {
+  if (USE_MOCK_API) return mockApi.generateSummaries(request);
+  return postJson<SummaryGenerateRequest, SummaryGenerateResponse>("/api/summary-generate", request);
+}
+
+/** Replaces the resume's summary with PATCH /api/resumes/:id/summary and returns the stored version. */
+export function saveSummary(resumeId: string, newSummary: string): Promise<ApiResult<Resume>> {
+  if (USE_MOCK_API) return mockApi.saveSummary(resumeId, newSummary);
+  return sendJson<UpdateSummaryRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}/summary`, {
+    newSummary,
+  });
 }
 
 /**

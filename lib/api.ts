@@ -41,6 +41,22 @@ export function aiErrorResponse(error: unknown, unreadable: { code: string; mess
   return apiError(502, "AI_UNAVAILABLE", "The AI service is temporarily unavailable. Please try again.");
 }
 
+// Same limits as the job description field in the UI.
+const MIN_JD_CHARS = 50;
+const MAX_JD_CHARS = 20_000;
+
+/** Returns a field error for a pasted job description, or undefined if it's usable. */
+export function jobDescriptionError(jobDescription: string): string | undefined {
+  if (!jobDescription) return "Paste a job description to analyze.";
+  if (jobDescription.length < MIN_JD_CHARS) {
+    return `That looks too short. Paste the full job description (at least ${MIN_JD_CHARS} characters).`;
+  }
+  if (jobDescription.length > MAX_JD_CHARS) {
+    return `Job descriptions can be at most ${MAX_JD_CHARS.toLocaleString("en-US")} characters.`;
+  }
+  return undefined;
+}
+
 /** Parses a JSON request body, or returns null if it is not a JSON object. */
 export async function readJsonObject(request: Request): Promise<Record<string, unknown> | null> {
   try {
