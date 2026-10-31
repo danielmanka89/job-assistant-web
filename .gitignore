@@ -13,3 +13,17 @@ uploads/
 # TypeScript / Next.js
 *.tsbuildinfo
 next-env.d.ts
+
+# Next.js build output
+/out/
+/build
+
+# Local env files (.env.example is committed)
+.env*
+!.env.example
+
+# Misc
+.DS_Store
+*.pem
+.vercel
+npm-debug.log*
