@@ -80,7 +80,8 @@ async function uploadResume(
     onProgress?.(p);
     await delay(90);
   }
-  await delay(400);
+  // Stands in for the AI parsing time after the file has been sent.
+  await delay(3500);
 
   if (file.name.toLowerCase().includes("fail")) {
     return fail({

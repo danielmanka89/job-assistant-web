@@ -116,6 +116,10 @@ export function uploadResume(
       }
     };
 
+    // Some browsers skip the final progress event, so mark the upload done explicitly.
+    // The server keeps parsing after this, which the UI shows as a separate step.
+    xhr.upload.onload = () => onProgress?.(100);
+
     xhr.onload = () => {
       let body: unknown = null;
       try {
