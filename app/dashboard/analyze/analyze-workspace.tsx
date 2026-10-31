@@ -62,6 +62,10 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
         router.replace("/login");
         return;
       }
+      if (code === "RESUME_NOT_FOUND" || fieldErrors?.resumeId) {
+        setError("We couldn't find this resume on the server anymore. Please upload it again from the dashboard.");
+        return;
+      }
       if (code === "HTTP_404") {
         setError("Job matching isn't available yet. Please try again once the analysis service is running.");
         return;
