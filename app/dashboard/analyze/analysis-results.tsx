@@ -65,6 +65,7 @@ export function AnalysisResults({
         resume={resume}
         accepted={accepted}
         onAcceptedChange={onAcceptedChange}
+        disabled={tailoring}
       />
 
       <TailorBar
@@ -104,17 +105,27 @@ function TailorBar({
         ? "No changes selected. Your resume will be generated as it is now."
         : "Your resume will be generated as it is now.";
 
+  const shortMessage = tailoring
+    ? "Creating your files…"
+    : outdated
+      ? "Analyze again first."
+      : selected > 0
+        ? `${selected} ${selected === 1 ? "change" : "changes"} selected`
+        : "No changes selected";
+
   return (
     <section
       aria-busy={tailoring || undefined}
       // Sticks to the bottom of the screen while the results are in view, so the next step is always reachable.
-      className="sticky bottom-4 z-10 rounded-3xl bg-gradient-to-br from-brand-600 to-brand-900 px-5 py-5 text-white shadow-2xl shadow-brand-900/30 ring-1 ring-white/10 sm:px-8"
+      // Compact on phones so it covers as little of the suggestions as possible.
+      className="sticky bottom-3 z-10 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 px-4 py-3 text-white shadow-2xl shadow-brand-900/30 ring-1 ring-white/10 sm:bottom-4 sm:rounded-3xl sm:px-8 sm:py-5"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Ready to tailor your resume?</h3>
-          <p className="mt-0.5 text-sm text-brand-100" aria-live="polite">
-            {message}
+      <div className="flex items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h3 className="hidden text-lg font-semibold sm:block">Ready to tailor your resume?</h3>
+          <p className="text-xs leading-snug text-brand-100 sm:mt-0.5 sm:text-sm" aria-live="polite">
+            <span className="sm:hidden">{shortMessage}</span>
+            <span className="hidden sm:inline">{message}</span>
           </p>
         </div>
         <button
@@ -122,7 +133,7 @@ function TailorBar({
           onClick={onTailor}
           disabled={outdated || tailoring}
           aria-busy={tailoring || undefined}
-          className="inline-flex min-w-44 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-display text-[15px] font-medium uppercase tracking-wider text-brand-700 shadow-sm transition outline-none hover:bg-brand-50 focus-visible:ring-4 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-70"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 font-display text-sm font-medium uppercase tracking-wider sm:min-w-44 sm:px-6 sm:py-3 sm:text-[15px] text-brand-700 shadow-sm transition outline-none hover:bg-brand-50 focus-visible:ring-4 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {tailoring ? (
             <>
@@ -143,12 +154,12 @@ function TailorBar({
         </button>
       </div>
       {tailoring && (
-        <div className="relative mt-5 h-1.5 overflow-hidden rounded-full bg-white/25" aria-hidden="true">
+        <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-white/25 sm:mt-5" aria-hidden="true">
           <div className="absolute inset-y-0 left-0 w-2/5 animate-indeterminate rounded-full bg-white motion-reduce:w-full motion-reduce:animate-pulse" />
         </div>
       )}
       {error && (
-        <p role="alert" className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-medium text-rose-700">
+        <p role="alert" className="mt-3 max-h-32 overflow-y-auto rounded-xl bg-white px-4 py-3 text-sm font-medium text-rose-700 sm:mt-4">
           {error}
         </p>
       )}
@@ -278,11 +289,14 @@ function SuggestionChecklist({
   resume,
   accepted,
   onAcceptedChange,
+  disabled = false,
 }: {
   bullets: SuggestedBullet[];
   resume: Resume;
   accepted: string[];
   onAcceptedChange: (ids: string[]) => void;
+  /** The selection is being sent; changing it now wouldn't match the generated files. */
+  disabled?: boolean;
 }) {
   const selected = new Set(accepted);
   const allSelected = bullets.length > 0 && bullets.every((b) => selected.has(b.id));
@@ -315,7 +329,8 @@ function SuggestionChecklist({
           <button
             type="button"
             onClick={() => onAcceptedChange(allSelected ? [] : bullets.map((b) => b.id))}
-            className="self-start rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 sm:self-auto dark:text-brand-400 dark:hover:bg-brand-500/10"
+            disabled={disabled}
+            className="self-start rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto dark:text-brand-400 dark:hover:bg-brand-500/10"
           >
             {allSelected ? "Clear all" : "Select all"}
           </button>
@@ -334,15 +349,20 @@ function SuggestionChecklist({
             return (
               <li key={bullet.id}>
                 <label
-                  className={`flex cursor-pointer gap-4 px-5 py-5 transition sm:px-8 ${
-                    checked ? "bg-brand-50/60 dark:bg-brand-500/[0.07]" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+                  className={`flex gap-4 px-5 py-5 transition sm:px-8 ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"} ${
+                    checked
+                      ? "bg-brand-50/60 dark:bg-brand-500/[0.07]"
+                      : disabled
+                        ? ""
+                        : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
                   }`}
                 >
                   <input
                     type="checkbox"
+                    disabled={disabled}
                     checked={checked}
                     onChange={(e) => toggle(bullet.id, e.target.checked)}
-                    className="mt-1 size-5 shrink-0 cursor-pointer rounded accent-brand-600"
+                    className="mt-1 size-5 shrink-0 cursor-pointer rounded accent-brand-600 disabled:cursor-not-allowed"
                   />
                   <span className="min-w-0 flex-1">
                     {job && (

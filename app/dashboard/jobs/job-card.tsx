@@ -23,7 +23,13 @@ function avatarColor(name: string) {
 }
 
 function snippet(text: string, max = 240) {
-  const flat = text.replace(/\s+/g, " ").trim();
+  // Drop list markers ("- ", "• ") so bullet lists read as sentences.
+  const flat = text
+    .split(/\n+/)
+    .map((line) => line.replace(/^\s*[-•*]\s+/, "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ");
   return flat.length > max ? `${flat.slice(0, max).replace(/\s+\S*$/, "")}…` : flat;
 }
 
@@ -37,7 +43,18 @@ function postedLabel(iso?: string) {
   return `Posted ${new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`;
 }
 
-export function JobCard({ job, onTailor }: { job: JobPosting; onTailor: () => void }) {
+export function JobCard({
+  job,
+  onTailor,
+  opening = false,
+  disabled = false,
+}: {
+  job: JobPosting;
+  onTailor: () => void;
+  /** This card's job is being opened on the job match page. */
+  opening?: boolean;
+  disabled?: boolean;
+}) {
   const posted = postedLabel(job.createdAt);
   const applyUrl = safeApplyUrl(job.applyUrl);
   const badge = SOURCE_BADGES[job.source];
@@ -85,13 +102,22 @@ export function JobCard({ job, onTailor }: { job: JobPosting; onTailor: () => vo
         <button
           type="button"
           onClick={onTailor}
+          disabled={disabled || opening}
+          aria-busy={opening || undefined}
           aria-describedby={titleId}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 font-display text-[15px] font-medium uppercase tracking-wider text-white shadow-sm shadow-brand-600/30 transition outline-none hover:bg-brand-500 focus-visible:ring-4 focus-visible:ring-brand-500/40 dark:bg-brand-500 dark:hover:bg-brand-400"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 font-display text-[15px] font-medium uppercase tracking-wider text-white shadow-sm shadow-brand-600/30 transition outline-none hover:bg-brand-500 focus-visible:ring-4 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-500 dark:hover:bg-brand-400"
         >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
-            <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684Z" />
-          </svg>
-          Tailor Resume for this Job
+          {opening ? (
+            <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+              <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
+              <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684Z" />
+            </svg>
+          )}
+          {opening ? "Opening…" : "Tailor Resume for this Job"}
         </button>
         {applyUrl && (
           <a

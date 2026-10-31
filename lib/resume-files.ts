@@ -8,7 +8,10 @@ import {
   TabStopType,
   TextRun,
 } from "docx";
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { Education, TailoredResume, WorkExperience } from "@/lib/types";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -112,7 +115,30 @@ export async function renderDocx(resume: TailoredResume): Promise<Buffer> {
 const PAGE = { width: 595.28, height: 841.89, margin: 54 }; // A4, 0.75in margins
 const GRAY = rgb(0.33, 0.33, 0.33);
 
-// Latin letters the standard fonts lack and that don't reduce to a base letter by removing accents.
+// DejaVu Sans (Bitstream Vera license, free to embed) covers Latin, Greek, Cyrillic and many other
+// scripts. It ships as an npm package, so no font files live in the repo.
+const FONT_DIR = path.join(process.cwd(), "node_modules", "dejavu-fonts-ttf", "ttf");
+
+interface PdfFonts {
+  regular: Uint8Array;
+  bold: Uint8Array;
+  /** True when both faces have a glyph for the code point. */
+  covers: (codePoint: number) => boolean;
+}
+
+let fonts: PdfFonts | undefined;
+
+function loadFonts(): PdfFonts {
+  if (!fonts) {
+    const regular = readFileSync(path.join(FONT_DIR, "DejaVuSans.ttf"));
+    const bold = readFileSync(path.join(FONT_DIR, "DejaVuSans-Bold.ttf"));
+    const faces = [fontkit.create(regular), fontkit.create(bold)];
+    fonts = { regular, bold, covers: (cp) => faces.every((f) => f.hasGlyphForCodePoint(cp)) };
+  }
+  return fonts;
+}
+
+// Last-resort replacements for characters the font lacks; most are already covered by DejaVu.
 const LATIN_FALLBACKS: Record<string, string> = {
   Ł: "L", ł: "l", Ø: "O", ø: "o", Đ: "D", đ: "d", Ħ: "H", ħ: "h", ı: "i", Ŧ: "T", ŧ: "t", Ŀ: "L", ŀ: "l",
   "‐": "-", "‑": "-", "−": "-", " ": " ", " ": " ", // hyphens, minus, no-break spaces
@@ -128,30 +154,25 @@ class PdfWriter {
     private readonly doc: PDFDocument,
     private readonly regular: PDFFont,
     private readonly bold: PDFFont,
+    private readonly covers: (codePoint: number) => boolean,
   ) {
     this.page = doc.addPage([PAGE.width, PAGE.height]);
     this.y = PAGE.height - PAGE.margin;
   }
 
   /**
-   * The standard PDF fonts only cover Western European characters. Accents are kept where the
-   * font has them; other Latin letters are reduced to their base letter. Characters from other
-   * scripts (CJK, emoji) become "?" until a Unicode font is embedded; the .docx keeps them.
+   * Keeps every character the embedded font can draw. Anything it can't (mainly CJK and emoji) falls
+   * back to a plain-letter equivalent, or "?" as a last resort, instead of an empty box. The .docx keeps them all.
    */
-  private encodable(text: string, font: PDFFont): string {
+  private encodable(text: string): string {
     let out = "";
     for (const ch of text) {
       let safe = this.safe.get(ch);
       if (safe === undefined) {
-        safe = [ch, LATIN_FALLBACKS[ch] ?? "", ch.normalize("NFKD").replace(/\p{M}/gu, ""), "?"].find((c) => {
-          if (!c) return false;
-          try {
-            font.encodeText(c);
-            return true;
-          } catch {
-            return false;
-          }
-        })!;
+        const drawable = (s: string) => [...s].every((c) => /\s/.test(c) || this.covers(c.codePointAt(0)!));
+        safe = [ch, LATIN_FALLBACKS[ch] ?? "", ch.normalize("NFKD").replace(/\p{M}/gu, ""), "?"].find(
+          (c) => c !== "" && drawable(c),
+        )!;
         this.safe.set(ch, safe);
       }
       out += safe;
@@ -190,7 +211,7 @@ class PdfWriter {
     const font = opts.bold ? this.bold : this.regular;
     const indent = opts.indent ?? 0;
     const width = PAGE.width - 2 * PAGE.margin - indent;
-    for (const line of this.wrap(this.encodable(raw, font), font, size, width)) {
+    for (const line of this.wrap(this.encodable(raw), font, size, width)) {
       this.ensureSpace(size * 1.35);
       this.y -= size * 1.35;
       const x = opts.center ? (PAGE.width - font.widthOfTextAtSize(line, size)) / 2 : PAGE.margin + indent;
@@ -211,9 +232,9 @@ class PdfWriter {
     this.gap(5);
     this.ensureSpace(size * 1.35);
     this.y -= size * 1.35;
-    const t = this.encodable(title, this.bold);
-    const d = detail ? this.encodable(`, ${detail}`, this.regular) : "";
-    const r = this.encodable(dates, this.regular);
+    const t = this.encodable(title);
+    const d = detail ? this.encodable(`, ${detail}`) : "";
+    const r = this.encodable(dates);
     const datesWidth = this.regular.widthOfTextAtSize(r, size);
     this.page.drawText(t, { x: PAGE.margin, y: this.y, size, font: this.bold });
     this.page.drawText(d, { x: PAGE.margin + this.bold.widthOfTextAtSize(t, size), y: this.y, size, font: this.regular });
@@ -238,7 +259,10 @@ export async function renderPdf(resume: TailoredResume): Promise<Buffer> {
   const doc = await PDFDocument.create();
   doc.setTitle(`${resume.contact.fullName} – Resume`);
   doc.setAuthor(resume.contact.fullName);
-  const pdf = new PdfWriter(doc, await doc.embedFont(StandardFonts.Helvetica), await doc.embedFont(StandardFonts.HelveticaBold));
+  doc.registerFontkit(fontkit);
+  const { regular, bold, covers } = loadFonts();
+  // subset: only the characters used are embedded, which keeps files small.
+  const pdf = new PdfWriter(doc, await doc.embedFont(regular, { subset: true }), await doc.embedFont(bold, { subset: true }), covers);
 
   pdf.text(resume.contact.fullName, { size: 18, bold: true, center: true });
   pdf.text(contactLine(resume), { size: 9, color: GRAY, center: true });

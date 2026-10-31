@@ -1,15 +1,12 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import type { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
-// Session = HMAC-signed cookie "<payload>.<signature>", where payload is base64url JSON { uid, exp }.
+// Sessions live in the Session table. The cookie holds a random token; the table stores only its
+// HMAC, so a copy of the database can't be turned back into working cookies.
 
 export const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
-
-interface SessionPayload {
-  uid: string; // user id
-  exp: number; // expiry, seconds since epoch
-}
 
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -17,49 +14,50 @@ function getSecret(): string {
   return secret;
 }
 
-function sign(data: string): string {
-  return createHmac("sha256", getSecret()).update(data).digest("base64url");
+function hashToken(token: string): string {
+  return createHmac("sha256", getSecret()).update(token).digest("hex");
 }
 
-/** Sets the HTTP-only session cookie for the given user on a response. */
-export function setSessionCookie(response: NextResponse, userId: string): void {
-  const payload: SessionPayload = { uid: userId, exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS };
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  response.cookies.set(SESSION_COOKIE, `${encoded}.${sign(encoded)}`, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
+
+/** Creates a session for the user and sets its cookie on the response. */
+export async function createSession(response: NextResponse, userId: string): Promise<void> {
+  const token = randomBytes(32).toString("base64url");
+  const now = Date.now();
+  await prisma.$transaction([
+    // Tidy up this user's expired sessions while we're here.
+    prisma.session.deleteMany({ where: { userId, expiresAt: { lt: new Date(now) } } }),
+    prisma.session.create({
+      data: { tokenHash: hashToken(token), userId, expiresAt: new Date(now + SESSION_MAX_AGE_SECONDS * 1000) },
+    }),
+  ]);
+  response.cookies.set(SESSION_COOKIE, token, { ...cookieOptions, maxAge: SESSION_MAX_AGE_SECONDS });
+}
+
+/** Returns the user id for a valid, unexpired session token, or null. */
+export async function findSessionUserId(token: string | undefined): Promise<string | null> {
+  if (!token || token.length > 200) return null;
+  const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) } });
+  if (!session) return null;
+  if (session.expiresAt.getTime() <= Date.now()) {
+    await prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);
+    return null;
+  }
+  return session.userId;
+}
+
+/** Deletes the session behind a token, if there is one. The token stops working immediately. */
+export async function deleteSession(token: string | undefined): Promise<void> {
+  if (!token || token.length > 200) return;
+  await prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } });
 }
 
 /** Expires the session cookie on a response. */
 export function clearSessionCookie(response: NextResponse): void {
-  response.cookies.set(SESSION_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-}
-
-/** Returns the user id from a valid, unexpired session cookie, or null. */
-export function verifySessionToken(token: string | undefined): string | null {
-  if (!token) return null;
-  const [encoded, signature] = token.split(".");
-  if (!encoded || !signature) return null;
-
-  const expected = Buffer.from(sign(encoded));
-  const actual = Buffer.from(signature);
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-
-  try {
-    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString()) as SessionPayload;
-    if (typeof payload.uid !== "string" || typeof payload.exp !== "number") return null;
-    return payload.exp > Math.floor(Date.now() / 1000) ? payload.uid : null;
-  } catch {
-    return null;
-  }
+  response.cookies.set(SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { listJobs, logout } from "@/lib/client/api";
 import type { JobPosting } from "@/lib/types";
@@ -19,6 +19,8 @@ export function JobBoard() {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState("");
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [navigating, startNavigation] = useTransition();
 
   useEffect(() => {
     let active = true;
@@ -51,7 +53,8 @@ export function JobBoard() {
 
   function tailorFor(job: JobPosting) {
     storePendingJob({ id: job.id, title: job.title, company: job.company, description: job.description });
-    router.push("/dashboard/analyze");
+    setOpeningId(job.id);
+    startNavigation(() => router.push("/dashboard/analyze"));
   }
 
   if (state.status === "loading") return <BoardSkeleton />;
@@ -111,7 +114,12 @@ export function JobBoard() {
         <ul className="grid gap-5 md:grid-cols-2">
           {filtered.map((job) => (
             <li key={job.id} className="flex">
-              <JobCard job={job} onTailor={() => tailorFor(job)} />
+              <JobCard
+                job={job}
+                onTailor={() => tailorFor(job)}
+                opening={navigating && openingId === job.id}
+                disabled={navigating}
+              />
             </li>
           ))}
         </ul>
