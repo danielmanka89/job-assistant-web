@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { GapAnalysisResponse, Resume } from "@/lib/types";
-import { analyzeGap, logout } from "@/lib/client/api";
-import { readStoredAnalysis, storeAnalysis } from "@/lib/client/analysis-storage";
+import { analyzeGap, logout, tailorResume } from "@/lib/client/api";
+import { readStoredAnalysis, storeAnalysis, storeTailoring } from "@/lib/client/analysis-storage";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { TextArea } from "@/components/ui/text-area";
@@ -20,6 +20,21 @@ function validateJobDescription(value: string): string | undefined {
   return undefined;
 }
 
+/** Turns a failed POST /api/tailor into a message that says what to do next. */
+function tailorErrorMessage(code: string, message: string, fieldErrors?: Record<string, string>): string {
+  if (code === "RESUME_CHANGED") {
+    return "You edited your resume after this analysis, so the suggestions may not fit anymore. Click Analyze Again to refresh them.";
+  }
+  if (code === "ANALYSIS_NOT_FOUND" || fieldErrors?.gapAnalysisId || fieldErrors?.acceptedBulletIds) {
+    return "This job match is no longer available. Click Analyze Again to run it again.";
+  }
+  if (code === "RESUME_NOT_FOUND" || fieldErrors?.resumeId) {
+    return "We couldn't find this resume on the server anymore. Please upload it again from the dashboard.";
+  }
+  if (code === "HTTP_404") return "Resume generation isn't available yet. Please try again once the service is running.";
+  return message;
+}
+
 export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   const router = useRouter();
   // The workspace only mounts in the browser (the loader waits for storage), so reading it here is safe.
@@ -33,6 +48,8 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   const [analysis, setAnalysis] = useState<GapAnalysisResponse | null>(saved?.analysis ?? null);
   const [accepted, setAccepted] = useState<string[]>(saved?.acceptedBulletIds ?? []);
   const [analyzing, setAnalyzing] = useState(false);
+  const [tailoring, setTailoring] = useState(false);
+  const [tailorError, setTailorError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string>();
   const [error, setError] = useState<string | null>(null);
   const [scrollToResults, setScrollToResults] = useState(0);
@@ -46,6 +63,7 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
 
   async function onAnalyze() {
     setError(null);
+    setTailorError(null);
     const problem = validateJobDescription(jobDescription);
     setFieldError(problem);
     if (problem) return;
@@ -85,8 +103,38 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
     setScrollToResults((n) => n + 1);
   }
 
+  async function onTailor() {
+    if (!analysis) return;
+    setTailorError(null);
+    setTailoring(true);
+    const result = await tailorResume({
+      resumeId: resume.id,
+      gapAnalysisId: analysis.id,
+      jobDescription: analyzedText,
+      acceptedBulletIds: accepted,
+      formats: ["docx", "pdf"],
+    });
+
+    if (!result.ok) {
+      setTailoring(false);
+      const { code, message, fieldErrors } = result.error;
+      if (code === "UNAUTHORIZED" || code === "HTTP_401") {
+        await logout();
+        router.replace("/login");
+        return;
+      }
+      setTailorError(tailorErrorMessage(code, message, fieldErrors));
+      return;
+    }
+
+    storeTailoring({ resumeId: resume.id, gapAnalysisId: analysis.id, response: result.data });
+    // Stay in the loading state until the download page takes over.
+    router.push("/dashboard/download");
+  }
+
   function onAcceptedChange(ids: string[]) {
     setAccepted(ids);
+    setTailorError(null);
     if (analysis) {
       storeAnalysis({ resumeId: resume.id, jobDescription: analyzedText, analysis, acceptedBulletIds: ids });
     }
@@ -146,7 +194,7 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
                 </>
               )}
             </p>
-            <Button type="button" loading={analyzing} onClick={onAnalyze} className="min-w-44">
+            <Button type="button" loading={analyzing} disabled={tailoring} onClick={onAnalyze} className="min-w-44">
               {analyzing ? "Analyzing…" : analysis && !outdated ? "Analyze Again" : "Analyze Match"}
             </Button>
           </div>
@@ -167,6 +215,10 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
             resume={resume}
             accepted={accepted}
             onAcceptedChange={onAcceptedChange}
+            outdated={outdated}
+            onTailor={onTailor}
+            tailoring={tailoring}
+            tailorError={tailorError}
           />
         </div>
       )}

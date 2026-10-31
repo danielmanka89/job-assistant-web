@@ -8,9 +8,23 @@ type Props = {
   resume: Resume;
   accepted: string[];
   onAcceptedChange: (ids: string[]) => void;
+  onTailor: () => void;
+  tailoring: boolean;
+  tailorError: string | null;
+  /** The job description was edited after this analysis ran. */
+  outdated: boolean;
 };
 
-export function AnalysisResults({ analysis, resume, accepted, onAcceptedChange }: Props) {
+export function AnalysisResults({
+  analysis,
+  resume,
+  accepted,
+  onAcceptedChange,
+  onTailor,
+  tailoring,
+  tailorError,
+  outdated,
+}: Props) {
   const { matchedKeywords, missingKeywords, suggestedBullets } = analysis;
 
   return (
@@ -52,7 +66,92 @@ export function AnalysisResults({ analysis, resume, accepted, onAcceptedChange }
         accepted={accepted}
         onAcceptedChange={onAcceptedChange}
       />
+
+      <TailorBar
+        selected={accepted.length}
+        total={suggestedBullets.length}
+        outdated={outdated}
+        onTailor={onTailor}
+        tailoring={tailoring}
+        error={tailorError}
+      />
     </div>
+  );
+}
+
+function TailorBar({
+  selected,
+  total,
+  outdated,
+  onTailor,
+  tailoring,
+  error,
+}: {
+  selected: number;
+  total: number;
+  outdated: boolean;
+  onTailor: () => void;
+  tailoring: boolean;
+  error: string | null;
+}) {
+  const message = tailoring
+    ? "Building your tailored resume and creating the Word and PDF files. This can take a few seconds."
+    : outdated
+    ? "Analyze again first. The job description changed since these results were made."
+    : selected > 0
+      ? `Your resume will be generated with ${selected} updated ${selected === 1 ? "bullet" : "bullets"}.`
+      : total > 0
+        ? "No changes selected. Your resume will be generated as it is now."
+        : "Your resume will be generated as it is now.";
+
+  return (
+    <section
+      aria-busy={tailoring || undefined}
+      className="rounded-3xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 px-5 py-6 text-white shadow-lg shadow-indigo-600/20 sm:px-8"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Ready to tailor your resume?</h3>
+          <p className="mt-0.5 text-sm text-indigo-100" aria-live="polite">
+            {message}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onTailor}
+          disabled={outdated || tailoring}
+          aria-busy={tailoring || undefined}
+          className="inline-flex min-w-44 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-[15px] font-semibold text-indigo-700 shadow-sm transition outline-none hover:bg-indigo-50 focus-visible:ring-4 focus-visible:ring-white/50 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {tailoring ? (
+            <>
+              <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+                <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+              Tailoring…
+            </>
+          ) : (
+            <>
+              Tailor Resume
+              <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
+                <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
+              </svg>
+            </>
+          )}
+        </button>
+      </div>
+      {tailoring && (
+        <div className="relative mt-5 h-1.5 overflow-hidden rounded-full bg-white/25" aria-hidden="true">
+          <div className="absolute inset-y-0 left-0 w-2/5 animate-indeterminate rounded-full bg-white motion-reduce:w-full motion-reduce:animate-pulse" />
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-medium text-rose-700">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -279,7 +378,7 @@ function SuggestionChecklist({
           <span className="font-semibold text-slate-700 dark:text-slate-200">
             {accepted.length} of {bullets.length}
           </span>{" "}
-          {accepted.length === 1 ? "change" : "changes"} selected. Your choices are kept for the download step.
+          {accepted.length === 1 ? "change" : "changes"} selected.
         </div>
       )}
     </section>
