@@ -6,6 +6,7 @@
 //   gap analysis with "fail" in the job description -> analysis error
 //   tailoring with "tailor-fail" in the job description -> generation error
 //   posting a job titled with "fail" in it -> server error
+//   generating summaries with "summary-error" in the job description (not "fail", which stops the analysis first) -> generation error
 //   log in with an email containing "employer" -> employer account
 import type {
   ApiError,
@@ -28,6 +29,7 @@ import { matchPercent, mergeSkills } from "@/lib/skills";
 import type { ApiResult } from "./api";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
+import type { SummaryGenerateRequest, SummaryOption } from "./summary";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -158,6 +160,58 @@ export function sampleResume(fileName = "Jane_Doe_CV.pdf"): Resume {
 
 // Skills added with addSkills in this tab, so a re-run of analyzeGap shows the higher score.
 let mockAddedSkills: string[] = [];
+// Summary saved with saveSummary in this tab.
+let mockSummary: string | undefined;
+// Job description of the last mock analysis, so summary generation can use its triggers.
+let mockLastJobDescription = "";
+
+/** The sample resume with this tab's mock edits applied. */
+function editedSampleResume(resumeId: string): Resume {
+  const resume = sampleResume();
+  return {
+    ...resume,
+    id: resumeId,
+    summary: mockSummary ?? resume.summary,
+    skills: mergeSkills(resume.skills, mockAddedSkills),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+async function generateSummaryOptions(request: SummaryGenerateRequest): Promise<ApiResult<SummaryOption[]>> {
+  await delay(1800);
+  if (mockLastJobDescription.includes("summary-error")) {
+    return fail({ code: "AI_ERROR", message: "We couldn't write summary options right now. Please try again." });
+  }
+  if (!request.gapAnalysisId) {
+    return fail({ code: "ANALYSIS_NOT_FOUND", message: "Run the analysis again first." });
+  }
+  return {
+    ok: true,
+    data: [
+      {
+        id: "sum_1",
+        text: "Frontend engineer with 5 years of experience building fast, accessible React and TypeScript apps. Led a checkout rebuild that cut drop-off by 18%, and enjoys turning product goals into polished, well-tested interfaces.",
+      },
+      {
+        id: "sum_2",
+        text: "Product-minded React engineer who ships. Five years building customer-facing web apps with TypeScript and Next.js, from shared component libraries used by 4 teams to performance work that moves conversion.",
+      },
+      {
+        id: "sum_3",
+        text: "Senior-track frontend developer focused on React, TypeScript and Next.js. Known for clean component architecture, measurable UX improvements and close collaboration with design and backend teams.",
+      },
+    ],
+  };
+}
+
+async function saveSummary(resumeId: string, summary: string): Promise<ApiResult<Resume>> {
+  await delay(600);
+  if (!summary.trim()) {
+    return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { summary: "Pick a summary to save" } });
+  }
+  mockSummary = summary.trim();
+  return { ok: true, data: editedSampleResume(resumeId) };
+}
 
 async function addSkills(resumeId: string, newSkills: string[]): Promise<ApiResult<Resume>> {
   await delay(500);
@@ -165,11 +219,7 @@ async function addSkills(resumeId: string, newSkills: string[]): Promise<ApiResu
     return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { newSkills: "Pick at least one skill to add" } });
   }
   mockAddedSkills = mergeSkills(mockAddedSkills, newSkills);
-  const resume = sampleResume();
-  return {
-    ok: true,
-    data: { ...resume, id: resumeId, skills: mergeSkills(resume.skills, mockAddedSkills), updatedAt: new Date().toISOString() },
-  };
+  return { ok: true, data: editedSampleResume(resumeId) };
 }
 
 async function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
@@ -197,6 +247,7 @@ function mentions(text: string, keyword: string): boolean {
 async function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAnalysisResponse>> {
   await delay(1400);
   const jd = request.jobDescription.toLowerCase();
+  mockLastJobDescription = jd;
   if (jd.includes("fail")) {
     return fail({
       code: "ANALYSIS_FAILED",
@@ -454,6 +505,8 @@ export const mockApi = {
   uploadResume,
   saveResume,
   addSkills,
+  generateSummaryOptions,
+  saveSummary,
   analyzeGap,
   tailorResume,
   listJobs,

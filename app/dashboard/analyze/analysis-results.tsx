@@ -25,6 +25,8 @@ type Props = {
   skillsError: string | null;
   /** A new analysis is running. */
   busy: boolean;
+  /** Shown above the suggested bullets when some keywords already match. */
+  summarySection?: React.ReactNode;
 };
 
 export function AnalysisResults({
@@ -42,6 +44,7 @@ export function AnalysisResults({
   addingSkills,
   skillsError,
   busy,
+  summarySection,
 }: Props) {
   const { matchedKeywords, missingKeywords, suggestedBullets } = analysis;
   const preview = withAddedSkills(analysis, selectedSkills);
@@ -96,6 +99,8 @@ export function AnalysisResults({
           }
         />
       </div>
+
+      {matchedKeywords.length > 0 && summarySection}
 
       <SuggestionChecklist
         bullets={suggestedBullets}

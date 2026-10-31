@@ -15,6 +15,7 @@ import type {
 import { clearUser } from "./current-user";
 import { toJobList } from "./jobs";
 import { mockApi } from "./mock";
+import { toSummaryOptions, type SaveSummaryRequest, type SummaryGenerateRequest, type SummaryOption } from "./summary";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
@@ -134,6 +135,21 @@ export function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
 export function addSkills(resumeId: string, newSkills: string[]): Promise<ApiResult<Resume>> {
   if (USE_MOCK_API) return mockApi.addSkills(resumeId, newSkills);
   return sendJson<AddSkillsRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}`, { newSkills });
+}
+
+/** Asks the AI for professional summary options with POST /api/summary-generate. */
+export async function generateSummaryOptions(
+  request: SummaryGenerateRequest,
+): Promise<ApiResult<SummaryOption[]>> {
+  if (USE_MOCK_API) return mockApi.generateSummaryOptions(request);
+  const result = await postJson<SummaryGenerateRequest, unknown>("/api/summary-generate", request);
+  return result.ok ? { ok: true, data: toSummaryOptions(result.data) } : result;
+}
+
+/** Saves the chosen professional summary with PATCH /api/resumes/:id and returns the stored resume. */
+export function saveSummary(resumeId: string, summary: string): Promise<ApiResult<Resume>> {
+  if (USE_MOCK_API) return mockApi.saveSummary(resumeId, summary);
+  return sendJson<SaveSummaryRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}`, { summary });
 }
 
 /**
