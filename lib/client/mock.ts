@@ -24,6 +24,7 @@ import type {
   User,
   UserRole,
 } from "@/lib/types";
+import { matchPercent, mergeSkills } from "@/lib/skills";
 import type { ApiResult } from "./api";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
@@ -155,6 +156,22 @@ export function sampleResume(fileName = "Jane_Doe_CV.pdf"): Resume {
   };
 }
 
+// Skills added with addSkills in this tab, so a re-run of analyzeGap shows the higher score.
+let mockAddedSkills: string[] = [];
+
+async function addSkills(resumeId: string, newSkills: string[]): Promise<ApiResult<Resume>> {
+  await delay(500);
+  if (!newSkills.some((s) => s.trim())) {
+    return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { newSkills: "Pick at least one skill to add" } });
+  }
+  mockAddedSkills = mergeSkills(mockAddedSkills, newSkills);
+  const resume = sampleResume();
+  return {
+    ok: true,
+    data: { ...resume, id: resumeId, skills: mergeSkills(resume.skills, mockAddedSkills), updatedAt: new Date().toISOString() },
+  };
+}
+
 async function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
   console.log("Resume to save (mock):", JSON.stringify(resume, null, 2));
   await delay(600);
@@ -190,7 +207,7 @@ async function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAna
   const resume = sampleResume();
   const resumeText = [
     resume.summary ?? "",
-    ...resume.skills,
+    ...mergeSkills(resume.skills, mockAddedSkills),
     ...resume.workExperience.flatMap((w) => [w.jobTitle, ...w.bullets.map((b) => b.text)]),
   ]
     .join(" ")
@@ -207,6 +224,7 @@ async function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAna
       id: "gap_mock_1",
       matchedKeywords,
       missingKeywords,
+      matchPercent: matchPercent(matchedKeywords.length, missingKeywords.length),
       suggestedBullets: [
         {
           id: "sb_1",
@@ -435,6 +453,7 @@ export const mockApi = {
   logout,
   uploadResume,
   saveResume,
+  addSkills,
   analyzeGap,
   tailorResume,
   listJobs,

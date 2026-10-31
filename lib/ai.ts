@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
+import { withAddedSkills } from "@/lib/skills";
 import type { Education, Resume, ResumeContact, SuggestedBullet, WorkExperience } from "@/lib/types";
 
 const MODEL = "claude-opus-5-5";
@@ -268,7 +269,13 @@ export async function analyzeGap(resume: Resume, jobDescription: string): Promis
     });
   }
 
-  const matchedKeywords = uniqueTerms(result.matchedKeywords);
-  const missingKeywords = uniqueTerms(result.missingKeywords, new Set(matchedKeywords.map((k) => k.toLowerCase())));
+  // A keyword the user has listed as a skill always counts, so adding skills reliably raises the score.
+  const { matchedKeywords, missingKeywords } = withAddedSkills(
+    {
+      matchedKeywords: uniqueTerms(result.matchedKeywords),
+      missingKeywords: uniqueTerms(result.missingKeywords, new Set(result.matchedKeywords.map((k) => k.trim().toLowerCase()))),
+    },
+    resume.skills,
+  );
   return { matchedKeywords, missingKeywords, suggestedBullets };
 }

@@ -1,4 +1,5 @@
 import type {
+  AddSkillsRequest,
   ApiError,
   AuthResponse,
   GapAnalysisRequest,
@@ -44,7 +45,7 @@ function postJson<TReq, TRes>(url: string, payload: TReq): Promise<ApiResult<TRe
 }
 
 async function sendJson<TReq, TRes>(
-  method: "POST" | "PUT",
+  method: "POST" | "PUT" | "PATCH",
   url: string,
   payload: TReq,
 ): Promise<ApiResult<TRes>> {
@@ -123,6 +124,16 @@ export async function logout(): Promise<void> {
 export function saveResume(resume: Resume): Promise<ApiResult<Resume>> {
   if (USE_MOCK_API) return mockApi.saveResume(resume);
   return sendJson<Resume, Resume>("PUT", `/api/resumes/${encodeURIComponent(resume.id)}`, resume);
+}
+
+/**
+ * Appends skills to a resume with PATCH /api/resumes/:id and returns the stored version.
+ * Skills the resume already has are skipped. Run analyzeGap again for the updated score,
+ * or use withAddedSkills from lib/skills to preview it first.
+ */
+export function addSkills(resumeId: string, newSkills: string[]): Promise<ApiResult<Resume>> {
+  if (USE_MOCK_API) return mockApi.addSkills(resumeId, newSkills);
+  return sendJson<AddSkillsRequest, Resume>("PATCH", `/api/resumes/${encodeURIComponent(resumeId)}`, { newSkills });
 }
 
 /**

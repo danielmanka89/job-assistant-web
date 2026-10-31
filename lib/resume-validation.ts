@@ -122,3 +122,21 @@ export function validateResumeUpdate(
     ? { fieldErrors: errors }
     : { data: { contact, summary, workExperience, education, skills } };
 }
+
+const MAX_NEW_SKILLS = 50;
+const MAX_SKILL_CHARS = 100;
+
+/** Validates the body of PATCH /api/resumes/:id: { newSkills: string[] }. */
+export function validateNewSkills(body: Obj): { fieldErrors: Record<string, string> } | { data: string[] } {
+  const v = body.newSkills;
+  if (!Array.isArray(v) || v.length === 0) return { fieldErrors: { newSkills: "Pick at least one skill to add" } };
+  if (v.length > MAX_NEW_SKILLS) return { fieldErrors: { newSkills: `Add at most ${MAX_NEW_SKILLS} skills at a time` } };
+
+  const errors: Record<string, string> = {};
+  const skills = v.map((s, i) => {
+    if (typeof s !== "string" || !s.trim()) errors[`newSkills.${i}`] = "Must be non-empty text";
+    else if (s.trim().length > MAX_SKILL_CHARS) errors[`newSkills.${i}`] = `Must be ${MAX_SKILL_CHARS} characters or fewer`;
+    return typeof s === "string" ? s.trim() : "";
+  });
+  return Object.keys(errors).length ? { fieldErrors: errors } : { data: skills };
+}
