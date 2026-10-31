@@ -8,7 +8,7 @@ node_modules
 *.db-journal
 
 # Uploaded resumes
-/uploads
+uploads/
 
 # TypeScript / Next.js
 *.tsbuildinfo
