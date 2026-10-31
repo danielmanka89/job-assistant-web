@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "vercel-build": "if [ \"$VERCEL_ENV\" = production ]; then prisma migrate deploy; fi && npm run build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
