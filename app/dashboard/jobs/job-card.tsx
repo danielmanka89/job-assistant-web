@@ -1,4 +1,5 @@
-import type { JobPosting } from "@/lib/client/jobs";
+import type { JobPosting, JobSource } from "@/lib/types";
+import { safeApplyUrl } from "@/lib/client/jobs";
 
 const AVATAR_COLORS = [
   "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
@@ -8,6 +9,12 @@ const AVATAR_COLORS = [
   "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
   "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-300",
 ];
+
+const SOURCE_BADGES: Record<JobSource, { label: string; className: string }> = {
+  native: { label: "Posted here", className: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" },
+  adzuna: { label: "via Adzuna", className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
+  mock: { label: "Demo", className: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" },
+};
 
 function avatarColor(name: string) {
   let hash = 0;
@@ -31,7 +38,9 @@ function postedLabel(iso?: string) {
 }
 
 export function JobCard({ job, onTailor }: { job: JobPosting; onTailor: () => void }) {
-  const posted = postedLabel(job.postedAt);
+  const posted = postedLabel(job.createdAt);
+  const applyUrl = safeApplyUrl(job.applyUrl);
+  const badge = SOURCE_BADGES[job.source];
   const titleId = `job-${job.id}-title`;
 
   return (
@@ -62,10 +71,8 @@ export function JobCard({ job, onTailor }: { job: JobPosting; onTailor: () => vo
           <span className="sr-only">Location: </span>
           {job.location}
         </span>
-        {job.employmentType && (
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {job.employmentType}
-          </span>
+        {badge && (
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}>{badge.label}</span>
         )}
         {posted && <span className="text-xs">{posted}</span>}
       </div>
@@ -86,15 +93,15 @@ export function JobCard({ job, onTailor }: { job: JobPosting; onTailor: () => vo
           </svg>
           Tailor Resume for this Job
         </button>
-        {job.url && (
+        {applyUrl && (
           <a
-            href={job.url}
+            href={applyUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
           >
-            View posting
-            <span className="sr-only"> (opens in a new tab)</span>
+            Apply
+            <span className="sr-only"> to {job.title} (opens in a new tab)</span>
           </a>
         )}
       </div>

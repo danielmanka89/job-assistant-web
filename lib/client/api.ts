@@ -3,13 +3,14 @@ import type {
   AuthResponse,
   GapAnalysisRequest,
   GapAnalysisResponse,
+  JobPosting,
   LoginRequest,
   RegisterRequest,
   Resume,
   TailoredResumeRequest,
   TailoredResumeResponse,
 } from "@/lib/types";
-import { toJobList, type JobPosting } from "./jobs";
+import { toJobList } from "./jobs";
 import { mockApi } from "./mock";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };

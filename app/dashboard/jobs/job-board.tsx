@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listJobs, logout } from "@/lib/client/api";
-import { storePendingJob, type JobPosting } from "@/lib/client/jobs";
-import { sampleJobs } from "@/lib/client/mock";
+import type { JobPosting } from "@/lib/types";
+import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { JobCard } from "./job-card";
@@ -12,7 +12,7 @@ import { JobCard } from "./job-card";
 type State =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; jobs: JobPosting[]; sample: boolean };
+  | { status: "ready"; jobs: JobPosting[] };
 
 export function JobBoard() {
   const router = useRouter();
@@ -25,17 +25,12 @@ export function JobBoard() {
     listJobs().then(async (result) => {
       if (!active) return;
       if (result.ok) {
-        setState({ status: "ready", jobs: result.data, sample: false });
+        setState({ status: "ready", jobs: result.data });
         return;
       }
       if (result.error.code === "UNAUTHORIZED" || result.error.code === "HTTP_401") {
         await logout();
         router.replace("/login");
-        return;
-      }
-      // GET /api/jobs isn't on main yet: show sample postings so the board can be tried.
-      if (result.error.code === "HTTP_404") {
-        setState({ status: "ready", jobs: sampleJobs(), sample: true });
         return;
       }
       setState({ status: "error", message: result.error.message });
@@ -101,9 +96,10 @@ export function JobBoard() {
         </p>
       </div>
 
-      {state.sample && (
+      {jobs.some((job) => job.source === "mock") && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          Showing sample jobs. Live listings will appear here once the jobs service is running.
+          Jobs marked <span className="font-semibold">Demo</span> are sample listings for trying the app, not real
+          openings.
         </p>
       )}
 

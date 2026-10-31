@@ -13,6 +13,7 @@ import type {
   LoginRequest,
   RegisterRequest,
   GeneratedFile,
+  JobPosting,
   Resume,
   TailoredResume,
   TailoredResumeRequest,
@@ -20,7 +21,6 @@ import type {
   User,
 } from "@/lib/types";
 import type { ApiResult } from "./api";
-import type { JobPosting } from "./jobs";
 import { SESSION_COOKIE } from "./session";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -309,66 +309,72 @@ function daysAgo(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString();
 }
 
-/** Sample postings for mock mode, and for the job board while GET /api/jobs isn't available. */
+/** Sample postings for mock mode. */
 export function sampleJobs(): JobPosting[] {
   return [
     {
       id: "job_1",
+      applyUrl: "https://example.com/jobs/1",
       title: "Senior Frontend Engineer",
       company: "Lumen Health",
       location: "Berlin, Germany (Hybrid)",
-      employmentType: "Full-time",
-      postedAt: daysAgo(1),
+      source: "mock",
+      createdAt: daysAgo(1),
       description:
         "Lumen Health is looking for a Senior Frontend Engineer to lead the web experience for our patient app. You will build accessible, fast interfaces in React and TypeScript, work closely with design on our component library, and mentor two mid-level engineers.\n\nWhat you'll do:\n- Own features end to end, from design review to release\n- Improve performance and accessibility across the app\n- Shape our design system with the design team\n\nWhat we're looking for:\n- 5+ years building production React apps\n- Strong TypeScript and testing skills (Jest, Testing Library, Playwright)\n- Experience with Next.js and GraphQL is a plus",
     },
     {
       id: "job_2",
+      applyUrl: "https://example.com/jobs/2",
       title: "Full-Stack Developer (Node.js / React)",
       company: "Northwind Logistics",
       location: "Remote (EU)",
-      employmentType: "Full-time",
-      postedAt: daysAgo(3),
+      source: "mock",
+      createdAt: daysAgo(3),
       description:
         "Join a small product team building the tools our warehouses use every day. You'll work across a React front end and Node.js services backed by PostgreSQL.\n\nResponsibilities:\n- Build and maintain REST APIs in Node.js\n- Ship React features used by 2,000 warehouse staff\n- Set up CI/CD pipelines and monitoring on AWS\n\nRequirements:\n- 3+ years with JavaScript or TypeScript\n- Experience with SQL databases\n- Docker and AWS experience preferred",
     },
     {
       id: "job_3",
+      applyUrl: "https://example.com/jobs/3",
       title: "UI Engineer, Design Systems",
       company: "Atlas Bank",
       location: "Munich, Germany",
-      employmentType: "Full-time",
-      postedAt: daysAgo(5),
+      source: "mock",
+      createdAt: daysAgo(5),
       description:
         "Atlas Bank's design systems team builds the components behind every customer screen. We're hiring a UI Engineer who cares about accessibility and consistency.\n\nYou will:\n- Build and document React components in Storybook\n- Work with designers in Figma to define tokens and patterns\n- Help product teams adopt the design system\n\nYou have:\n- Deep knowledge of HTML, CSS and accessibility (WCAG 2.2)\n- Experience with React and TypeScript\n- Clear written communication",
     },
     {
       id: "job_4",
+      applyUrl: "https://example.com/jobs/4",
       title: "Frontend Developer",
       company: "Kite Travel",
       location: "Hamburg, Germany",
-      employmentType: "Part-time",
-      postedAt: daysAgo(8),
+      source: "mock",
+      createdAt: daysAgo(8),
       description:
         "Kite Travel is growing and needs a Frontend Developer to help rebuild our booking flow. You'll work in Vue today with a gradual move to React.\n\nWhat you'll work on:\n- A faster, simpler checkout\n- A/B testing new booking steps with our analytics team\n- Fixing performance issues on mobile\n\nNice to have: experience with Vue, React, and analytics tools.",
     },
     {
       id: "job_5",
+      applyUrl: "https://example.com/jobs/5",
       title: "Software Engineer, Web Platform",
       company: "Orbit Analytics",
       location: "Amsterdam, Netherlands",
-      employmentType: "Contract",
-      postedAt: daysAgo(12),
+      source: "mock",
+      createdAt: daysAgo(12),
       description:
         "We're looking for an engineer to improve the platform our web teams build on: build tooling, shared libraries and the Next.js app shell.\n\nYou'll:\n- Speed up builds and CI\n- Maintain shared TypeScript libraries\n- Improve Core Web Vitals across products\n\nYou bring: strong TypeScript, Next.js, and an eye for developer experience. Kubernetes knowledge is a bonus.",
     },
     {
       id: "job_6",
+      applyUrl: "https://example.com/jobs/6",
       title: "Junior React Developer",
       company: "Greenleaf Studio",
       location: "Remote (Germany)",
-      employmentType: "Full-time",
-      postedAt: daysAgo(20),
+      source: "mock",
+      createdAt: daysAgo(20),
       description:
         "Greenleaf Studio builds websites and apps for sustainable brands. As a Junior React Developer you'll pair with senior engineers on client projects.\n\nYou'll learn and work with React, Next.js and Tailwind CSS, write tests, and take part in code reviews. We value curiosity and good communication over years of experience.",
     },

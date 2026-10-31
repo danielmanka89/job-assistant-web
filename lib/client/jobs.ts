@@ -1,27 +1,17 @@
-// Frontend shape for GET /api/jobs until a Job type is added to lib/types.ts.
-// When it lands there, import it from "@/lib/types" and delete this interface.
-export interface JobPosting {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  description: string; // full plain-text job description
-  employmentType?: string; // e.g. "Full-time"
-  url?: string; // link to the original posting
-  postedAt?: string; // ISO 8601
+import type { JobListResponse, JobPosting } from "@/lib/types";
+
+/** Jobs from a GET /api/jobs body, skipping any malformed entries. */
+export function toJobList(body: unknown): JobPosting[] {
+  const jobs = (body as Partial<JobListResponse> | null)?.jobs;
+  if (!Array.isArray(jobs)) return [];
+  return jobs.filter(
+    (j): j is JobPosting => !!j && typeof j.id === "string" && typeof j.title === "string" && typeof j.description === "string",
+  );
 }
 
-/** Accepts either a plain array or { jobs: [...] } so either response shape works. */
-export function toJobList(body: unknown): JobPosting[] {
-  const list = Array.isArray(body)
-    ? body
-    : body && typeof body === "object" && Array.isArray((body as { jobs?: unknown }).jobs)
-      ? (body as { jobs: unknown[] }).jobs
-      : [];
-  return list.filter(
-    (j): j is JobPosting =>
-      !!j && typeof j === "object" && typeof (j as JobPosting).id === "string" && typeof (j as JobPosting).description === "string",
-  );
+/** Only web links are rendered as "Apply"; anything else (e.g. javascript:) is dropped. */
+export function safeApplyUrl(url: string | undefined): string | null {
+  return url && /^https?:\/\//i.test(url) ? url : null;
 }
 
 // Hands the chosen job to the analyze page. Descriptions can be thousands of
