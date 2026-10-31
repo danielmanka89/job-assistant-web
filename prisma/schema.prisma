@@ -20,6 +20,7 @@ model User {
   gapAnalyses     GapAnalysis[]
   tailoredResumes TailoredResume[]
   generatedFiles  GeneratedFile[]
+  jobPostings     JobPosting[]
 }
 
 model Resume {
@@ -95,4 +96,22 @@ model GeneratedFile {
   createdAt        DateTime       @default(now())
 
   @@index([userId])
+}
+
+// Jobs posted on the site ("native") or pulled from an external provider.
+model JobPosting {
+  id          String   @id @default(cuid())
+  title       String
+  company     String
+  location    String
+  description String // full job description text
+  applyUrl    String // http(s) only
+  source      String // "native" | "adzuna" | "mock"
+  externalId  String? // the provider's id; null for native jobs
+  postedById  String? // user who posted a native job
+  postedBy    User?    @relation(fields: [postedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@unique([source, externalId])
+  @@index([createdAt])
 }
