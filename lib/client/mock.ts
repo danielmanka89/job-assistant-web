@@ -4,6 +4,7 @@
 //   login with password "wrongpass"  -> invalid credentials error
 //   upload a file with "fail" in its name -> parse error
 //   gap analysis with "fail" in the job description -> analysis error
+//   summary generation with "summary-fail" in the job description -> generation error
 //   tailoring with "tailor-fail" in the job description -> generation error
 //   posting a job titled with "fail" in it -> server error
 //   log in with an email containing "employer" -> employer account
@@ -18,6 +19,8 @@ import type {
   GeneratedFile,
   JobPosting,
   Resume,
+  SummaryGenerateRequest,
+  SummaryGenerateResponse,
   TailoredResume,
   TailoredResumeRequest,
   TailoredResumeResponse,
@@ -169,6 +172,34 @@ async function addSkills(resumeId: string, newSkills: string[]): Promise<ApiResu
   return {
     ok: true,
     data: { ...resume, id: resumeId, skills: mergeSkills(resume.skills, mockAddedSkills), updatedAt: new Date().toISOString() },
+  };
+}
+
+async function generateSummaries(request: SummaryGenerateRequest): Promise<ApiResult<SummaryGenerateResponse>> {
+  await delay(1200);
+  if (request.jobDescription.toLowerCase().includes("summary-fail")) {
+    return fail({ code: "SUMMARY_FAILED", message: "We couldn't write summary options for this job. Please try again." });
+  }
+  return {
+    ok: true,
+    data: {
+      options: [
+        "Frontend engineer who takes ownership of work that spans teams. Rebuilt the React checkout flow, cutting drop-off by 18%, and introduced a shared component library now used by 4 teams.",
+        "Frontend engineer working mainly in React and TypeScript, with a focus on component architecture and performance. Built a shared component library used by 4 teams and rebuilt a checkout flow that cut drop-off by 18%.",
+        "Frontend engineer focused on e-commerce, building checkout and storefront experiences that customers rely on. Rebuilt a React checkout flow that cut drop-off by 18% and keeps marketing sites and CMS integrations stable.",
+      ],
+    },
+  };
+}
+
+async function saveSummary(resumeId: string, newSummary: string): Promise<ApiResult<Resume>> {
+  await delay(500);
+  if (!newSummary.trim()) {
+    return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { newSummary: "Required" } });
+  }
+  return {
+    ok: true,
+    data: { ...sampleResume(), id: resumeId, summary: newSummary.trim(), updatedAt: new Date().toISOString() },
   };
 }
 
@@ -455,6 +486,8 @@ export const mockApi = {
   saveResume,
   addSkills,
   analyzeGap,
+  generateSummaries,
+  saveSummary,
   tailorResume,
   listJobs,
   postJob,

@@ -114,6 +114,22 @@ export interface GapAnalysisResponse {
   suggestedBullets: SuggestedBullet[];
 }
 
+/** Input for POST /api/summary-generate. */
+export interface SummaryGenerateRequest {
+  resumeId: string;
+  jobDescription: string; // raw pasted text
+}
+
+/** Three alternative summaries, always in this order: leadership, technical depth, industry fit. */
+export interface SummaryGenerateResponse {
+  options: string[];
+}
+
+/** Input for PATCH /api/resumes/:id/summary. */
+export interface UpdateSummaryRequest {
+  newSummary: string;
+}
+
 /** Input for PATCH /api/resumes/:id: skills to append (case-insensitive duplicates are skipped). */
 export interface AddSkillsRequest {
   newSkills: string[];
