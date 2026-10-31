@@ -44,6 +44,7 @@ function mockUser(email: string, name: string): User {
     id: "user_mock_1",
     email,
     name,
+    role: "SEEKER",
     createdAt: new Date().toISOString(),
   };
 }

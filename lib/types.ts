@@ -16,14 +16,19 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  role: UserRole;
   createdAt: string; // ISO 8601
 }
+
+/** Job seekers tailor resumes; employers can also post jobs and see their own postings. */
+export type UserRole = "SEEKER" | "EMPLOYER";
 
 /** Input for creating an account. Password is hashed with bcrypt before storage. */
 export interface RegisterRequest {
   email: string;
   password: string; // plain text over HTTPS only; never stored or returned
   name: string;
+  role?: UserRole; // defaults to "SEEKER"
 }
 
 /** Input for signing in. */

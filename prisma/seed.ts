@@ -2,17 +2,22 @@ import "dotenv/config";
 import { prisma } from "../lib/db.ts";
 import { hashPassword } from "../lib/password.ts";
 
-// Local test account. Safe to re-run: updates the user if it already exists.
-const TEST_USER = { email: "test@daniel-sowmya.dev", name: "Test User", password: "TestPass123!" };
+// Local test accounts: one job seeker, one employer. Safe to re-run: existing users are updated.
+const TEST_USERS = [
+  { email: "test@daniel-sowmya.dev", name: "Test User", password: "TestPass123!", role: "SEEKER" },
+  { email: "employer@daniel-sowmya.dev", name: "Test Employer", password: "TestPass123!", role: "EMPLOYER" },
+];
 
 async function main() {
-  const passwordHash = await hashPassword(TEST_USER.password);
-  const user = await prisma.user.upsert({
-    where: { email: TEST_USER.email },
-    update: { name: TEST_USER.name, passwordHash },
-    create: { email: TEST_USER.email, name: TEST_USER.name, passwordHash },
-  });
-  console.log(`Seeded test user ${user.email}`);
+  for (const { email, name, password, role } of TEST_USERS) {
+    const passwordHash = await hashPassword(password);
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: { name, passwordHash, role },
+      create: { email, name, passwordHash, role },
+    });
+    console.log(`Seeded ${user.role.toLowerCase()} ${user.email}`);
+  }
 }
 
 main()
