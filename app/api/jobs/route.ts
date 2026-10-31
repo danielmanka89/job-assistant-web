@@ -36,10 +36,10 @@ export async function GET(request: NextRequest) {
       ...(q
         ? {
             OR: [
-              { title: { contains: q } },
-              { company: { contains: q } },
-              { location: { contains: q } },
-              { description: { contains: q } },
+              { title: { contains: q, mode: "insensitive" } },
+              { company: { contains: q, mode: "insensitive" } },
+              { location: { contains: q, mode: "insensitive" } },
+              { description: { contains: q, mode: "insensitive" } },
             ],
           }
         : {}),

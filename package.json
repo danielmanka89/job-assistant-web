@@ -16,7 +16,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "1.3.0",
     "@pdf-lib/fontkit": "1.1.1",
-    "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "bcrypt": "6.0.0",
     "dejavu-fonts-ttf": "2.37.3",
@@ -46,7 +46,6 @@
   "allowScripts": {
     "@prisma/engines@7.10.1": true,
     "bcrypt@6.0.0": true,
-    "better-sqlite3@12.11.1": true,
     "esbuild@0.28.2": true,
     "prisma@7.10.1": true
   }
