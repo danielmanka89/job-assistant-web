@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
 import { AiError } from "@/lib/ai";
-import type { User as UserRow, Resume as ResumeRow } from "@/lib/generated/prisma/client";
-import type { ApiError, Education, Resume, ResumeContact, User, WorkExperience } from "@/lib/types";
+import type {
+  GeneratedFile as GeneratedFileRow,
+  Resume as ResumeRow,
+  TailoredResume as TailoredResumeRow,
+  User as UserRow,
+} from "@/lib/generated/prisma/client";
+import type {
+  ApiError,
+  Education,
+  GeneratedFile,
+  Resume,
+  ResumeContact,
+  TailoredResume,
+  User,
+  WorkExperience,
+} from "@/lib/types";
 
 /** Builds a JSON error response that conforms to ApiError. */
 export function apiError(
@@ -51,5 +65,35 @@ export function toResume(row: ResumeRow): Resume {
     skills: row.skills as unknown as string[],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/** Maps a database tailored resume to the TailoredResume type. */
+export function toTailoredResume(row: TailoredResumeRow): TailoredResume {
+  return {
+    id: row.id,
+    userId: row.userId,
+    sourceResumeId: row.sourceResumeId,
+    gapAnalysisId: row.gapAnalysisId,
+    acceptedBulletIds: row.acceptedBulletIds as unknown as string[],
+    contact: row.contact as unknown as ResumeContact,
+    ...(row.summary ? { summary: row.summary } : {}),
+    workExperience: row.workExperience as unknown as WorkExperience[],
+    education: row.education as unknown as Education[],
+    skills: row.skills as unknown as string[],
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+/** Maps a database generated file to the GeneratedFile type; downloads go through GET /api/files/:id. */
+export function toGeneratedFile(row: GeneratedFileRow, sourceResumeId: string): GeneratedFile {
+  return {
+    id: row.id,
+    resumeId: sourceResumeId,
+    tailoredResumeId: row.tailoredResumeId,
+    format: row.format as GeneratedFile["format"],
+    fileName: row.fileName,
+    downloadUrl: `/api/files/${row.id}`,
+    createdAt: row.createdAt.toISOString(),
   };
 }

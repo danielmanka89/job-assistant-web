@@ -10,20 +10,22 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique // stored lowercased
-  name         String
-  passwordHash String // bcrypt hash; never returned by the API
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  resumes      Resume[]
-  gapAnalyses  GapAnalysis[]
+  id              String           @id @default(cuid())
+  email           String           @unique // stored lowercased
+  name            String
+  passwordHash    String // bcrypt hash; never returned by the API
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  resumes         Resume[]
+  gapAnalyses     GapAnalysis[]
+  tailoredResumes TailoredResume[]
+  generatedFiles  GeneratedFile[]
 }
 
 model Resume {
-  id             String   @id @default(cuid())
+  id             String           @id @default(cuid())
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   sourceFileName String? // original upload name, e.g. "Jane_Doe_CV.pdf"
   storedFileName String // file name inside /uploads
   mimeType       String // application/pdf or DOCX
@@ -33,25 +35,64 @@ model Resume {
   workExperience Json // WorkExperience[]
   education      Json // Education[]
   skills         Json // string[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   gapAnalyses    GapAnalysis[]
+  tailored       TailoredResume[]
 
   @@index([userId])
 }
 
 model GapAnalysis {
-  id               String   @id @default(cuid())
+  id               String           @id @default(cuid())
   userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   resumeId         String
-  resume           Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resume           Resume           @relation(fields: [resumeId], references: [id], onDelete: Cascade)
   jobDescription   String
   matchedKeywords  Json // string[]
   missingKeywords  Json // string[]
   suggestedBullets Json // SuggestedBullet[]
-  createdAt        DateTime @default(now())
+  createdAt        DateTime         @default(now())
+  tailored         TailoredResume[]
 
   @@index([userId])
   @@index([resumeId])
+}
+
+// The "after" resume: the source resume with only the user-accepted bullets merged in.
+model TailoredResume {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceResumeId    String
+  sourceResume      Resume          @relation(fields: [sourceResumeId], references: [id], onDelete: Cascade)
+  gapAnalysisId     String
+  gapAnalysis       GapAnalysis     @relation(fields: [gapAnalysisId], references: [id], onDelete: Cascade)
+  acceptedBulletIds Json // string[]
+  contact           Json // ResumeContact
+  summary           String?
+  workExperience    Json // WorkExperience[]
+  education         Json // Education[]
+  skills            Json // string[]
+  createdAt         DateTime        @default(now())
+  files             GeneratedFile[]
+
+  @@index([userId])
+}
+
+model GeneratedFile {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tailoredResumeId String
+  tailoredResume   TailoredResume @relation(fields: [tailoredResumeId], references: [id], onDelete: Cascade)
+  format           String // "docx" | "pdf"
+  fileName         String // download name, e.g. "Jane_Doe_Resume.pdf"
+  storedFileName   String // file name inside /uploads/tailored/<userId>
+  mimeType         String
+  fileSize         Int // bytes
+  createdAt        DateTime       @default(now())
+
+  @@index([userId])
 }
