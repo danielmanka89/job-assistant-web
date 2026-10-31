@@ -9,6 +9,7 @@ import type {
   TailoredResumeRequest,
   TailoredResumeResponse,
 } from "@/lib/types";
+import { toJobList, type JobPosting } from "./jobs";
 import { mockApi } from "./mock";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -59,6 +60,25 @@ async function sendJson<TReq, TRes>(
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) return { ok: false, error: toApiError(body, res.status) };
   return { ok: true, data: body as TRes };
+}
+
+async function getJson(url: string): Promise<ApiResult<unknown>> {
+  let res: Response;
+  try {
+    res = await fetch(url, { credentials: "same-origin", cache: "no-store" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  const body: unknown = await res.json().catch(() => null);
+  if (!res.ok) return { ok: false, error: toApiError(body, res.status) };
+  return { ok: true, data: body };
+}
+
+/** Lists open jobs from GET /api/jobs. */
+export async function listJobs(): Promise<ApiResult<JobPosting[]>> {
+  if (USE_MOCK_API) return mockApi.listJobs();
+  const result = await getJson("/api/jobs");
+  return result.ok ? { ok: true, data: toJobList(result.data) } : result;
 }
 
 export function register(payload: RegisterRequest): Promise<ApiResult<AuthResponse>> {

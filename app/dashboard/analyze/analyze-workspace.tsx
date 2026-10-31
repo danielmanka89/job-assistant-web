@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { GapAnalysisResponse, Resume } from "@/lib/types";
 import { analyzeGap, logout, tailorResume } from "@/lib/client/api";
 import { readStoredAnalysis, storeAnalysis, storeTailoring } from "@/lib/client/analysis-storage";
+import { clearPendingJob, readPendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { TextArea } from "@/components/ui/text-area";
@@ -17,6 +18,7 @@ function validateJobDescription(value: string): string | undefined {
   const text = value.trim();
   if (!text) return "Paste a job description to analyze.";
   if (text.length < MIN_LENGTH) return `That looks too short. Paste the full job description (at least ${MIN_LENGTH} characters).`;
+  if (text.length > MAX_LENGTH) return `Job descriptions can be at most ${MAX_LENGTH.toLocaleString()} characters. Remove anything that isn't about the role.`;
   return undefined;
 }
 
@@ -38,12 +40,18 @@ function tailorErrorMessage(code: string, message: string, fieldErrors?: Record<
 export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
   const router = useRouter();
   // The workspace only mounts in the browser (the loader waits for storage), so reading it here is safe.
+  // A job picked on the job board starts a fresh match with its description filled in.
+  const [fromJob] = useState(readPendingJob);
   const [saved] = useState(() => {
+    if (fromJob) return null;
     const stored = readStoredAnalysis();
     return stored && stored.resumeId === resume.id ? stored : null;
   });
 
-  const [jobDescription, setJobDescription] = useState(saved?.jobDescription ?? "");
+  // Read once on mount above; clear it so a later visit doesn't prefill again.
+  useEffect(() => clearPendingJob(), []);
+
+  const [jobDescription, setJobDescription] = useState(fromJob?.description ?? saved?.jobDescription ?? "");
   const [analyzedText, setAnalyzedText] = useState(saved?.jobDescription ?? "");
   const [analysis, setAnalysis] = useState<GapAnalysisResponse | null>(saved?.analysis ?? null);
   const [accepted, setAccepted] = useState<string[]>(saved?.acceptedBulletIds ?? []);
@@ -167,6 +175,22 @@ export function AnalyzeWorkspace({ resume }: { resume: Resume }) {
         </div>
 
         <div className="space-y-5 px-5 py-6 sm:px-8">
+          {fromJob && (
+            <p className="flex items-start gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 size-4 shrink-0" aria-hidden="true">
+                <path fillRule="evenodd" d="M6 3.75A2.75 2.75 0 0 1 8.75 1h2.5A2.75 2.75 0 0 1 14 3.75v.443c.572.055 1.14.122 1.706.2C17.053 4.582 18 5.75 18 7.07v3.469c0 1.126-.694 2.191-1.83 2.54-1.952.599-4.024.921-6.17.921s-4.219-.322-6.17-.921C2.694 12.73 2 11.665 2 10.539V7.07c0-1.321.947-2.489 2.294-2.676A41.047 41.047 0 0 1 6 4.193V3.75Zm6.5 0v.325a41.622 41.622 0 0 0-5 0V3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25ZM10 10a1 1 0 0 0-1 1v.01a1 1 0 0 0 1 1h.01a1 1 0 0 0 1-1V11a1 1 0 0 0-1-1H10Z" clipRule="evenodd" />
+                <path d="M3 15.055v-.684c.126.053.255.1.39.142 2.092.642 4.313.987 6.61.987 2.297 0 4.518-.345 6.61-.987.135-.041.264-.089.39-.142v.684c0 1.347-.985 2.53-2.363 2.686a41.454 41.454 0 0 1-9.274 0C3.985 17.585 3 16.402 3 15.055Z" />
+              </svg>
+              <span>
+                Filled in from the job board:{" "}
+                <span className="font-semibold">
+                  {fromJob.title}
+                  {fromJob.company && ` at ${fromJob.company}`}
+                </span>
+                . Click Analyze Match to see how your resume fits.
+              </span>
+            </p>
+          )}
           {error && <ErrorAlert>{error}</ErrorAlert>}
           <TextArea
             label="Job description"
