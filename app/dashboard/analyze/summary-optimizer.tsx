@@ -242,7 +242,7 @@ export function SummaryOptimizer({
                   type="button"
                   onClick={onConfirm}
                   loading={status === "saving"}
-                  disabled={!choice}
+                  disabled={choice === null}
                   className="min-w-44"
                 >
                   {status === "saving" ? "Saving…" : "Confirm Summary"}
