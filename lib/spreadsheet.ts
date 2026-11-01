@@ -2,7 +2,7 @@
 // (no server-only imports). Cells are plain text; "date" cells hold "YYYY-MM-DD".
 
 import type { JobPosting, ProfileValues, Resume, SheetKey, SheetValues, Submission } from "@/lib/types";
-import { EMPLOYMENT_TYPES, splitList, withProfile } from "@/lib/profile";
+import { withProfile } from "@/lib/profile";
 import { scoreText } from "@/lib/skills";
 
 export type ColumnType = "text" | "date" | "select" | "long";
@@ -20,6 +20,8 @@ export interface Sheet {
   title: string;
   columns: readonly Column[];
 }
+
+export const EMPLOYMENT_TYPES = ["W2", "C2C", "1099", "Full-time", "Contract-to-hire"] as const;
 
 export const SUBMISSION_STATUSES = [
   "Applied",
@@ -189,7 +191,7 @@ function workMode(location: string): string {
 
 /**
  * The cells a new submission starts with when the user clicks Apply: the job, the candidate from
- * their saved profile and latest resume (profile fields win), and the keywords from their latest
+ * their profile and latest resume (profile fields win), and the keywords from their latest
  * gap analysis of this job, if any. Vendor details aren't known yet and start blank.
  */
 export function prefillSubmission(
@@ -205,12 +207,11 @@ export function prefillSubmission(
 
   const skills: SheetValues = {};
   if (candidate.skills.length) skills.candidateSkills = list(candidate.skills);
-  const years = profile.totalExperience || (resume ? yearsOfExperience(resume, now) : null);
-  if (years !== null && years !== "") skills.totalExperience = String(years);
+  const years = resume ? yearsOfExperience(resume, now) : null;
+  if (years !== null) skills.totalExperience = String(years);
   const degree = resume?.education[0];
   const education = profile.education || (degree ? [degree.degree, degree.fieldOfStudy, degree.institution].filter(Boolean).join(", ") : "");
   if (education) skills.education = education;
-  if (profile.certifications) skills.certifications = list(splitList(profile.certifications));
   if (analysis) {
     const required = [...analysis.matchedKeywords, ...analysis.missingKeywords];
     // Re-score against the candidate's current skills: some may have been added since the analysis.
@@ -235,10 +236,6 @@ export function prefillSubmission(
     jobTitle: job.title,
     jobLocation: job.location,
     workMode: workMode(job.location),
-    employmentType: profile.employmentType ?? "",
-    rate: profile.expectedRate ?? "",
-    workAuthorization: profile.workAuthorization ?? "",
-    availability: profile.availability ?? "",
     applyUrl: job.applyUrl,
   };
   return {

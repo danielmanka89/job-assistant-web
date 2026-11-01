@@ -18,7 +18,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 type State =
   | { status: "idle" }
   | { status: "uploading"; file: File; progress: number }
-  // The resume would change the profile: the user confirms before anything is saved.
+  // The resume would change the profile: nothing is saved unless the user confirms.
   | { status: "review"; file: File; compared: ResumeCompareResponse; saving: boolean; error?: string }
   | { status: "saving"; file: File }
   | { status: "error"; message: string };
@@ -55,7 +55,8 @@ export function ResumeDropzone() {
       setState((s) => (s.status === "uploading" ? { ...s, progress } : s)),
     );
     if (!result.ok) return fail(result.error);
-    if (result.data.changes.length === 0) return confirm(file, result.data); // profile already matches
+    // The first resume fills an empty profile, and a resume that changes nothing is saved as is.
+    if (!result.data.requiresConfirmation) return confirm(file, result.data);
     setState({ status: "review", file, compared: result.data, saving: false });
   }
 
@@ -289,8 +290,9 @@ function SavingProgress({ fileName }: { fileName: string }) {
 const empty = <span className="text-neutral-400 italic dark:text-neutral-500">Not set</span>;
 
 /**
- * Lists what the uploaded resume changes in the profile (Old Profile vs New Resume) and asks the
- * user to confirm. Uses <dialog> for focus trapping and Escape; nothing is saved on cancel.
+ * Red alert listing what the uploaded resume changes in the profile (Old Profile vs New Resume).
+ * The resume is added only if the user confirms; Cancel or Escape discards it. Uses <dialog> for
+ * focus trapping. The alert colors are rose, not brand, so it stays red in the black & white theme.
  */
 function SyncDialog({
   compared,
@@ -316,28 +318,31 @@ function SyncDialog({
   return (
     <dialog
       ref={ref}
+      role="alertdialog"
       aria-labelledby="sync-title"
       aria-describedby="sync-description"
       onCancel={(e) => {
         e.preventDefault(); // Escape: close through onCancel so state stays in step
         if (!saving) onCancel();
       }}
-      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-3xl border border-neutral-200 bg-white p-0 text-left shadow-2xl backdrop:bg-neutral-950/50 backdrop:backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900"
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-3xl border border-rose-300 bg-white p-0 text-left shadow-2xl shadow-rose-900/20 backdrop:bg-neutral-950/50 backdrop:backdrop-blur-sm dark:border-rose-500/40 dark:bg-neutral-900"
     >
       <div className="flex max-h-[90dvh] flex-col">
-        <div className="border-b border-neutral-100 px-6 pt-6 pb-5 sm:px-8 dark:border-neutral-800">
+        <div className="bg-rose-600 px-6 pt-6 pb-5 text-white sm:px-8">
           <div className="flex items-start gap-4">
-            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-6" aria-hidden="true">
-                <path d="M4 12a8 8 0 0 1 13.66-5.66L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.66 5.66L4 15.5M4 20v-4.5h4.5" strokeLinecap="round" strokeLinejoin="round" />
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/15">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6" aria-hidden="true">
+                <path d="M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" strokeLinejoin="round" />
+                <path d="M12 9v4.5M12 17h.01" strokeLinecap="round" />
               </svg>
             </span>
             <div>
-              <h2 id="sync-title" className="text-xl font-semibold text-neutral-900 dark:text-white">
-                Update your profile?
+              <h2 id="sync-title" className="text-xl font-semibold">
+                Confirm profile changes
               </h2>
-              <p id="sync-description" className="mt-1 text-[15px] text-neutral-600 dark:text-neutral-300">
-                We found new details in your resume. Your profile will be updated to match.
+              <p id="sync-description" className="mt-1 text-[15px] text-rose-50">
+                We found new details in your resume. Your profile will be updated to match.{" "}
+                <span className="font-semibold text-white">Your resume won&apos;t be added unless you confirm.</span>
               </p>
             </div>
           </div>
@@ -371,22 +376,19 @@ function SyncDialog({
                   </td>
                   <td className="border-t border-neutral-100 py-3 align-top break-words font-medium text-brand-700 max-sm:border-0 max-sm:py-0 dark:border-neutral-800 dark:text-brand-300">
                     <span className="font-normal text-neutral-500 sm:hidden dark:text-neutral-400">New: </span>
-                    {c.to || <span className="text-neutral-400 italic dark:text-neutral-500">Will be cleared</span>}
+                    {c.to || <span className="text-rose-600 italic dark:text-rose-400">Will be removed</span>}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="mt-4 text-xs text-neutral-500 dark:text-neutral-400">
-            Work authorization, rate, availability and certifications aren&apos;t on a resume, so they stay as they are.
-          </p>
         </div>
 
         <div className="space-y-3 border-t border-neutral-100 bg-neutral-50/70 px-6 py-5 sm:px-8 dark:border-neutral-800 dark:bg-neutral-950/40">
           {error && <ErrorAlert>{error}</ErrorAlert>}
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>
-              Cancel
+              Cancel, don&apos;t add
             </Button>
             <Button type="button" onClick={onConfirm} loading={saving}>
               {saving ? "Updating…" : "Confirm & Update Profile"}

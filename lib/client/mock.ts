@@ -10,8 +10,9 @@
 //   log in with an email containing "employer" -> employer account
 //   log in with an email containing "new" -> dashboard with no tailored resumes yet
 //   settings: current password "wrongpass" -> incorrect password; email taken@example.com -> already registered
-//   resume sync: compares the sample resume with the profile; "fail" in the file name -> parse error
-//   profile: starts empty with suggestions from the sample resume; a field containing "fail" -> save error
+//   resume sync: compares the sample resume with the profile; "changed" in the file name -> a resume
+//     with a new phone, location and skill (red alert); "fail" in the file name -> parse error
+//   profile: read-only, created from the sample resume (empty for "new" users)
 //   spreadsheet: starts with two sample rows (none for "new" users); a cell containing "fail" -> save error
 import type {
   AccountResponse,
@@ -45,7 +46,7 @@ import type {
   UserRole,
 } from "@/lib/types";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
-import { profileSuggestions, syncProfileToResume, validateProfile } from "@/lib/profile";
+import { isEmptyProfile, profileFromResume, syncProfileToResume } from "@/lib/profile";
 import { SHEETS, buildSubmissionWorkbook, prefillSubmission, validateSheetValues } from "@/lib/spreadsheet";
 import { XLSX_MIME } from "@/lib/xlsx";
 import type { ApiResult } from "./api";
@@ -161,7 +162,12 @@ async function uploadResume(
     });
   }
 
-  return { ok: true, data: sampleResume(file.name) };
+  const resume = sampleResume(file.name);
+  if (file.name.toLowerCase().includes("changed")) {
+    resume.contact = { ...resume.contact, phone: "+1 (301) 555-9876", location: "Frisco, TX" };
+    resume.skills = [...resume.skills, "AWS"];
+  }
+  return { ok: true, data: resume };
 }
 
 export function sampleResume(fileName = "Jane_Doe_CV.pdf"): Resume {
@@ -605,29 +611,18 @@ async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   };
 }
 
-// The saved profile, kept in memory for this page load.
+// The profile, kept in memory for this page load. Like the server, it's created from the
+// (sample) resume on first view and only changes through confirmResumeSync.
 let mockProfile: ProfileValues = {};
 let mockProfileSavedAt: string | null = null;
 
 async function getProfile(): Promise<ApiResult<ProfileResponse>> {
   await delay(400);
-  const user = readStoredUser() ?? { name: "Jane Doe", email: "jane@example.com" };
-  const suggestions = mockProfileSavedAt ? {} : profileSuggestions(user, isNewUser() ? null : sampleResume());
-  return { ok: true, data: { values: { ...mockProfile }, updatedAt: mockProfileSavedAt, suggestions } };
-}
-
-async function saveProfile(input: ProfileValues): Promise<ApiResult<ProfileResponse>> {
-  await delay(600);
-  if (Object.values(input).some((v) => v.toLowerCase().includes("fail"))) {
-    return fail({ code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." });
+  if (!mockProfileSavedAt && !isNewUser()) {
+    mockProfile = profileFromResume(sampleResume());
+    mockProfileSavedAt = new Date().toISOString();
   }
-  const { values, fieldErrors } = validateProfile(input);
-  if (Object.keys(fieldErrors).length) {
-    return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors });
-  }
-  mockProfile = values;
-  mockProfileSavedAt = new Date().toISOString();
-  return { ok: true, data: { values: { ...values }, updatedAt: mockProfileSavedAt, suggestions: {} } };
+  return { ok: true, data: { values: { ...mockProfile }, updatedAt: mockProfileSavedAt } };
 }
 
 async function compareResume(file: File, onProgress?: (percent: number) => void): Promise<ApiResult<ResumeCompareResponse>> {
@@ -636,7 +631,8 @@ async function compareResume(file: File, onProgress?: (percent: number) => void)
   const r = uploaded.data;
   const draft = { sourceFileName: r.sourceFileName, contact: r.contact, summary: r.summary, workExperience: r.workExperience, education: r.education, skills: r.skills };
   const { changes } = syncProfileToResume(mockProfile, draft);
-  return { ok: true, data: { draft, changes, syncToken: `mock.${Date.now()}` } };
+  const requiresConfirmation = changes.length > 0 && !isEmptyProfile(mockProfile);
+  return { ok: true, data: { draft, changes, requiresConfirmation, syncToken: `mock.${Date.now()}` } };
 }
 
 async function confirmResumeSync(_file: File, compared: ResumeCompareResponse): Promise<ApiResult<ResumeSyncResponse>> {
@@ -646,7 +642,7 @@ async function confirmResumeSync(_file: File, compared: ResumeCompareResponse): 
   mockProfileSavedAt = new Date().toISOString();
   const now = new Date().toISOString();
   const resume: Resume = { ...compared.draft, id: `resume_${Date.now()}`, userId: "user_mock_1", createdAt: now, updatedAt: now };
-  return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt, suggestions: {} }, changes } };
+  return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt }, changes } };
 }
 
 // Spreadsheet rows, kept in memory for this page load. Seeded on first use.
@@ -729,7 +725,6 @@ export const mockApi = {
   logout,
   getAccount,
   updateAccount,
-  uploadResume,
   saveResume,
   addSkills,
   analyzeGap,
@@ -742,7 +737,6 @@ export const mockApi = {
   getDashboardStats,
   listTailoredResumes,
   getProfile,
-  saveProfile,
   compareResume,
   confirmResumeSync,
   listSubmissions,
