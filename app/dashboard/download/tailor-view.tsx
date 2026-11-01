@@ -89,14 +89,14 @@ const FORMATS = {
     badge: "DOCX",
     hint: "Best for editing further",
     className:
-      "bg-gradient-to-br from-sky-600 to-blue-700 shadow-blue-600/25 hover:from-sky-500 hover:to-blue-600 focus-visible:ring-blue-500/40",
+      "mono-grayscale bg-gradient-to-br from-sky-600 to-blue-700 shadow-blue-600/25 hover:from-sky-500 hover:to-blue-600 focus-visible:ring-blue-500/40",
   },
   pdf: {
     label: "Download as PDF",
     badge: "PDF",
     hint: "Best for sending to employers",
     className:
-      "bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-600/25 hover:from-rose-400 hover:to-red-500 focus-visible:ring-rose-500/40",
+      "mono-grayscale bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-600/25 hover:from-rose-400 hover:to-red-500 focus-visible:ring-rose-500/40",
   },
 } as const;
 

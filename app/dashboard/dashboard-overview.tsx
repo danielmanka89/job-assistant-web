@@ -200,8 +200,8 @@ function ResumeList({ items }: { items: TailoredResumeWithFiles[] }) {
 }
 
 const FILE_STYLES = {
-  docx: { label: "DOCX", name: "Word", className: "border-sky-200 text-sky-700 hover:bg-sky-50 dark:border-sky-500/30 dark:text-sky-300 dark:hover:bg-sky-500/10" },
-  pdf: { label: "PDF", name: "PDF", className: "border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10" },
+  docx: { label: "DOCX", name: "Word", className: "mono-grayscale border-sky-200 text-sky-700 hover:bg-sky-50 dark:border-sky-500/30 dark:text-sky-300 dark:hover:bg-sky-500/10" },
+  pdf: { label: "PDF", name: "PDF", className: "mono-grayscale border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10" },
 } as const;
 
 function FileLink({ file, format }: { file?: GeneratedFile; format: "docx" | "pdf" }) {

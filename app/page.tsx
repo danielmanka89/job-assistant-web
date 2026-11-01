@@ -100,12 +100,12 @@ export default function Home() {
     <div className="relative min-h-dvh overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-[#0c0c0c] dark:text-white">
       {/* Red glow behind the hero, stronger in dark mode. */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.14),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(207,35,41,0.08),transparent)] dark:bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.32),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(143,25,30,0.3),transparent)]"
+        className="mono-grayscale pointer-events-none absolute inset-0 bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.14),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(207,35,41,0.08),transparent)] dark:bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.32),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(143,25,30,0.3),transparent)]"
         aria-hidden="true"
       />
 
       <header className="relative border-b border-neutral-200/80 dark:border-white/10">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 pr-16 pl-4 sm:pr-20 sm:pl-6 xl:pr-6">
           <Logo />
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
             <a
@@ -142,7 +142,7 @@ export default function Home() {
       <main className="relative">
         <section className="mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-14 sm:px-6 sm:pt-20 lg:grid-cols-[1.15fr_1fr] lg:pb-28">
           <div>
-            <span className="inline-block rounded-md bg-neutral-900 px-3 py-1.5 font-display text-sm font-medium uppercase tracking-widest text-brand-500 dark:bg-white/5">
+            <span className="theme-on-dark inline-block rounded-md bg-neutral-900 px-3 py-1.5 font-display text-sm font-medium uppercase tracking-widest text-brand-500 dark:bg-white/5">
               Resume tailoring, nothing made up
             </span>
             <h1 className="mt-6 text-5xl font-bold leading-[0.95] sm:text-7xl lg:whitespace-nowrap lg:text-[5rem]">
