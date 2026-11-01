@@ -10,13 +10,13 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique // stored lowercased
+  id              String            @id @default(cuid())
+  email           String            @unique // stored lowercased
   name            String
   passwordHash    String // bcrypt hash; never returned by the API
-  role            String           @default("SEEKER") // "SEEKER" | "EMPLOYER"
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  role            String            @default("SEEKER") // "SEEKER" | "EMPLOYER"
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   resumes         Resume[]
   gapAnalyses     GapAnalysis[]
   tailoredResumes TailoredResume[]
@@ -24,6 +24,7 @@ model User {
   jobPostings     JobPosting[]
   sessions        Session[]
   submissions     Submission[]
+  profile         CandidateProfile?
 }
 
 model Resume {
@@ -140,6 +141,16 @@ model Submission {
 
   @@unique([userId, jobPostingId]) // applying twice to the same job reuses the row
   @@index([userId, createdAt])
+}
+
+// The job seeker's saved profile, one per user. Used when they apply to a job (Spreadsheet row)
+// and when they tailor a resume; lib/profile.ts lists the fields.
+model CandidateProfile {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  values    Json // ProfileValues
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // A logged-in browser. The cookie holds a random token; only its HMAC is stored, so a copy of

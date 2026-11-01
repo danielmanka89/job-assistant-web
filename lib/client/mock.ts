@@ -10,6 +10,7 @@
 //   log in with an email containing "employer" -> employer account
 //   log in with an email containing "new" -> dashboard with no tailored resumes yet
 //   settings: current password "wrongpass" -> incorrect password; email taken@example.com -> already registered
+//   profile: starts empty with suggestions from the sample resume; a field containing "fail" -> save error
 //   spreadsheet: starts with two sample rows (none for "new" users); a cell containing "fail" -> save error
 import type {
   AccountResponse,
@@ -22,6 +23,8 @@ import type {
   GapAnalysisRequest,
   GapAnalysisResponse,
   LoginRequest,
+  ProfileResponse,
+  ProfileValues,
   RegisterRequest,
   GeneratedFile,
   JobPosting,
@@ -39,6 +42,7 @@ import type {
   UserRole,
 } from "@/lib/types";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
+import { profileSuggestions, validateProfile } from "@/lib/profile";
 import { SHEETS, buildSubmissionWorkbook, prefillSubmission, validateSheetValues } from "@/lib/spreadsheet";
 import { XLSX_MIME } from "@/lib/xlsx";
 import type { ApiResult } from "./api";
@@ -598,6 +602,31 @@ async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   };
 }
 
+// The saved profile, kept in memory for this page load.
+let mockProfile: ProfileValues = {};
+let mockProfileSavedAt: string | null = null;
+
+async function getProfile(): Promise<ApiResult<ProfileResponse>> {
+  await delay(400);
+  const user = readStoredUser() ?? { name: "Jane Doe", email: "jane@example.com" };
+  const suggestions = mockProfileSavedAt ? {} : profileSuggestions(user, isNewUser() ? null : sampleResume());
+  return { ok: true, data: { values: { ...mockProfile }, updatedAt: mockProfileSavedAt, suggestions } };
+}
+
+async function saveProfile(input: ProfileValues): Promise<ApiResult<ProfileResponse>> {
+  await delay(600);
+  if (Object.values(input).some((v) => v.toLowerCase().includes("fail"))) {
+    return fail({ code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." });
+  }
+  const { values, fieldErrors } = validateProfile(input);
+  if (Object.keys(fieldErrors).length) {
+    return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors });
+  }
+  mockProfile = values;
+  mockProfileSavedAt = new Date().toISOString();
+  return { ok: true, data: { values: { ...values }, updatedAt: mockProfileSavedAt, suggestions: {} } };
+}
+
 // Spreadsheet rows, kept in memory for this page load. Seeded on first use.
 let mockSubmissions: Submission[] | null = null;
 
@@ -609,7 +638,7 @@ function mockSubmissionRows(): Submission[] {
     .slice(0, 2)
     .map((job, i) => {
       const createdAt = daysAgo(i * 3 + 1);
-      const cells = prefillSubmission(job, resume, null, new Date(createdAt));
+      const cells = prefillSubmission(job, resume, null, mockProfile, new Date(createdAt));
       if (i === 1) {
         cells.submission.status = "Interview scheduled";
         cells.vendor = { vendorCompany: "Brightpath Staffing", vendorType: "Prime vendor", contactName: "Sam Lee", contactEmail: "sam@brightpath.example" };
@@ -632,7 +661,7 @@ async function createSubmission(request: CreateSubmissionRequest): Promise<ApiRe
   const job = request.jobId ? [...sampleJobs(), ...employerJobs].find((j) => j.id === request.jobId) : undefined;
   if (request.jobId && !job) return fail({ code: "JOB_NOT_FOUND", message: "That job is no longer listed" });
   const now = new Date().toISOString();
-  const cells = job ? prefillSubmission(job, sampleResume(), null) : { vendor: {}, submission: {}, skills: {}, client: {} };
+  const cells = job ? prefillSubmission(job, sampleResume(), null, mockProfile) : { vendor: {}, submission: {}, skills: {}, client: {} };
   const submission: Submission = { id: `submission_${Date.now()}`, jobId: job?.id ?? null, ...cells, createdAt: now, updatedAt: now };
   rows.unshift(submission);
   return { ok: true, data: { submission, created: true } };
@@ -690,6 +719,8 @@ export const mockApi = {
   listEmployerJobs,
   getDashboardStats,
   listTailoredResumes,
+  getProfile,
+  saveProfile,
   listSubmissions,
   createSubmission,
   updateSubmission,

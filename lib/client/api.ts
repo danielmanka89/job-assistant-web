@@ -11,6 +11,8 @@ import type {
   GapAnalysisResponse,
   JobPosting,
   LoginRequest,
+  ProfileResponse,
+  ProfileValues,
   RegisterRequest,
   Resume,
   Submission,
@@ -20,6 +22,7 @@ import type {
   TailoredResumeResponse,
   TailoredResumeWithFiles,
   UpdateAccountRequest,
+  UpdateProfileRequest,
   UpdateSubmissionRequest,
   UpdateSummaryRequest,
 } from "@/lib/types";
@@ -136,6 +139,34 @@ export async function getAccount(): Promise<ApiResult<AccountResponse>> {
 export function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<AccountResponse>> {
   if (USE_MOCK_API) return mockApi.updateAccount(request);
   return sendJson<UpdateAccountRequest, AccountResponse>("PATCH", "/api/account", request);
+}
+
+const toValues = (v: unknown): ProfileValues =>
+  v && typeof v === "object" && !Array.isArray(v)
+    ? Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === "string"))
+    : {};
+
+function toProfileResponse(body: unknown): ProfileResponse {
+  const b = (body ?? {}) as Partial<Record<keyof ProfileResponse, unknown>>;
+  return {
+    values: toValues(b.values),
+    updatedAt: typeof b.updatedAt === "string" ? b.updatedAt : null,
+    suggestions: toValues(b.suggestions),
+  };
+}
+
+/** The job seeker's saved profile (with suggestions until it's first saved), from GET /api/profile. */
+export async function getProfile(): Promise<ApiResult<ProfileResponse>> {
+  if (USE_MOCK_API) return mockApi.getProfile();
+  const result = await getJson("/api/profile");
+  return result.ok ? { ok: true, data: toProfileResponse(result.data) } : result;
+}
+
+/** Saves the whole profile with PUT /api/profile; blank fields are cleared. */
+export async function saveProfile(values: ProfileValues): Promise<ApiResult<ProfileResponse>> {
+  if (USE_MOCK_API) return mockApi.saveProfile(values);
+  const result = await sendJson<UpdateProfileRequest, unknown>("PUT", "/api/profile", { values });
+  return result.ok ? { ok: true, data: toProfileResponse(result.data) } : result;
 }
 
 /** The user's Spreadsheet rows, newest first, from GET /api/submissions. */

@@ -1,7 +1,8 @@
 // The Spreadsheet page's sheets and columns, shared by the API, the page and the Excel export
 // (no server-only imports). Cells are plain text; "date" cells hold "YYYY-MM-DD".
 
-import type { JobPosting, Resume, SheetKey, SheetValues, Submission } from "@/lib/types";
+import type { JobPosting, ProfileValues, Resume, SheetKey, SheetValues, Submission } from "@/lib/types";
+import { EMPLOYMENT_TYPES, splitList, withProfile } from "@/lib/profile";
 import { scoreText } from "@/lib/skills";
 
 export type ColumnType = "text" | "date" | "select" | "long";
@@ -63,7 +64,7 @@ export const SHEETS: readonly Sheet[] = [
       { key: "jobReference", label: "Job ID / Req #" },
       { key: "jobLocation", label: "Job Location", width: 24 },
       { key: "workMode", label: "Work Mode", type: "select", options: ["Onsite", "Hybrid", "Remote"], width: 12 },
-      { key: "employmentType", label: "Employment Type", type: "select", options: ["W2", "C2C", "1099", "Full-time", "Contract-to-hire"] },
+      { key: "employmentType", label: "Employment Type", type: "select", options: EMPLOYMENT_TYPES },
       { key: "rate", label: "Rate / Salary", width: 16 },
       { key: "workAuthorization", label: "Work Authorization", width: 20 },
       { key: "availability", label: "Availability" },
@@ -188,52 +189,61 @@ function workMode(location: string): string {
 
 /**
  * The cells a new submission starts with when the user clicks Apply: the job, the candidate from
- * their latest resume, and the keywords from their latest gap analysis of this job, if any.
- * Vendor details aren't known yet and start blank.
+ * their saved profile and latest resume (profile fields win), and the keywords from their latest
+ * gap analysis of this job, if any. Vendor details aren't known yet and start blank.
  */
 export function prefillSubmission(
   job: Pick<JobPosting, "title" | "company" | "location" | "description" | "applyUrl">,
   resume: Pick<Resume, "contact" | "skills" | "workExperience" | "education"> | null,
   analysis: { matchedKeywords: string[]; missingKeywords: string[] } | null,
+  profile: ProfileValues = {},
   now = new Date(),
 ): Pick<Submission, SheetKey> {
   const list = (items: string[]) => items.join(", ");
+  const blank: Pick<Resume, "contact" | "skills"> = { contact: { fullName: "", email: "" }, skills: [] };
+  const candidate = withProfile(resume ?? blank, profile);
+
   const skills: SheetValues = {};
-  if (resume) {
-    skills.candidateSkills = list(resume.skills);
-    const years = yearsOfExperience(resume, now);
-    if (years !== null) skills.totalExperience = String(years);
-    const degree = resume.education[0];
-    if (degree) skills.education = [degree.degree, degree.fieldOfStudy, degree.institution].filter(Boolean).join(", ");
-  }
+  if (candidate.skills.length) skills.candidateSkills = list(candidate.skills);
+  const years = profile.totalExperience || (resume ? yearsOfExperience(resume, now) : null);
+  if (years !== null && years !== "") skills.totalExperience = String(years);
+  const degree = resume?.education[0];
+  const education = profile.education || (degree ? [degree.degree, degree.fieldOfStudy, degree.institution].filter(Boolean).join(", ") : "");
+  if (education) skills.education = education;
+  if (profile.certifications) skills.certifications = list(splitList(profile.certifications));
   if (analysis) {
     const required = [...analysis.matchedKeywords, ...analysis.missingKeywords];
-    // Re-score against the resume's current skills: some may have been added since the analysis.
-    const match = resume ? scoreText(required, list(resume.skills)) : null;
+    // Re-score against the candidate's current skills: some may have been added since the analysis.
+    const match = candidate.skills.length ? scoreText(required, list(candidate.skills)) : null;
     skills.requiredSkills = list(required);
     skills.matchingSkills = list(match?.matchedKeywords ?? analysis.matchedKeywords);
     skills.missingSkills = list(match?.missingKeywords ?? analysis.missingKeywords);
     if (match && required.length) skills.matchPercent = `${match.matchPercent}%`;
-  } else if (resume) {
+  } else if (candidate.skills.length) {
     // Without an analysis we only know which of the candidate's skills the job mentions.
-    skills.matchingSkills = list(scoreText(resume.skills, job.description).matchedKeywords);
+    skills.matchingSkills = list(scoreText(candidate.skills, job.description).matchedKeywords);
   }
 
-  const contact = resume?.contact;
+  const contact = candidate.contact;
+  const submission: SheetValues = {
+    submittedOn: isoDate(now),
+    status: "Applied",
+    candidateName: contact.fullName,
+    candidateEmail: contact.email,
+    candidatePhone: contact.phone ?? "",
+    candidateLocation: contact.location ?? "",
+    jobTitle: job.title,
+    jobLocation: job.location,
+    workMode: workMode(job.location),
+    employmentType: profile.employmentType ?? "",
+    rate: profile.expectedRate ?? "",
+    workAuthorization: profile.workAuthorization ?? "",
+    availability: profile.availability ?? "",
+    applyUrl: job.applyUrl,
+  };
   return {
     vendor: {},
-    submission: {
-      submittedOn: isoDate(now),
-      status: "Applied",
-      ...(contact?.fullName ? { candidateName: contact.fullName } : {}),
-      ...(contact?.email ? { candidateEmail: contact.email } : {}),
-      ...(contact?.phone ? { candidatePhone: contact.phone } : {}),
-      ...(contact?.location ? { candidateLocation: contact.location } : {}),
-      jobTitle: job.title,
-      jobLocation: job.location,
-      ...(workMode(job.location) ? { workMode: workMode(job.location) } : {}),
-      applyUrl: job.applyUrl,
-    },
+    submission: Object.fromEntries(Object.entries(submission).filter(([, v]) => v)),
     skills,
     client: { clientCompany: job.company, clientLocation: job.location },
   };

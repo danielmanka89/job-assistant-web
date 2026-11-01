@@ -156,6 +156,11 @@ export function SpreadsheetView() {
       {saving.state === "error" && <ErrorAlert>{saving.message}</ErrorAlert>}
 
       <SheetTabs active={active} onChange={setActive} />
+      {rows.length > 0 && (
+        <p className="-mt-2 hidden text-xs text-neutral-500 [@media(pointer:fine)]:block dark:text-neutral-400">
+          Scroll over the Job column to move up and down. Scroll anywhere else to move left and right.
+        </p>
+      )}
 
       <div
         role="tabpanel"
@@ -251,13 +256,33 @@ function SheetTable({
   onDelete: (row: Submission) => void;
 }) {
   const th = "border-b border-neutral-200 px-3 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap text-neutral-500 uppercase dark:border-neutral-800 dark:text-neutral-400";
+  const scroller = useRef<HTMLDivElement>(null);
+
+  // The mouse wheel scrolls rows over the Job column and columns everywhere else, so the whole
+  // sheet can be read without dragging a scrollbar. Sideways gestures (trackpad, Shift+wheel) and
+  // pinch-zoom keep their usual behavior.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+      if (e.target instanceof Element && e.target.closest("[data-job-column]")) return;
+      if (el.scrollWidth <= el.clientWidth) return; // nothing to scroll sideways
+      const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? el.clientWidth : 1;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY * unit;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   return (
-    <div className="max-h-[70vh] overflow-auto">
+    <div ref={scroller} className="max-h-[70vh] overflow-auto">
       <table className="min-w-full border-separate border-spacing-0 text-sm">
         <caption className="sr-only">{sheet.title}</caption>
         <thead className="sticky top-0 z-20 bg-neutral-50 dark:bg-neutral-800">
           <tr>
-            <th scope="col" className={`${th} sticky left-0 z-10 min-w-36 bg-neutral-50 sm:min-w-56 dark:bg-neutral-800`}>
+            <th scope="col" data-job-column className={`${th} sticky left-0 z-10 min-w-36 bg-neutral-50 sm:min-w-56 dark:bg-neutral-800`}>
               Job
             </th>
             {sheet.columns.map((c) => (
@@ -277,6 +302,7 @@ function SheetTable({
               <tr key={row.id} className="group">
                 <th
                   scope="row"
+                  data-job-column
                   className="sticky left-0 z-10 max-w-40 min-w-36 border-b sm:max-w-64 sm:min-w-56 border-neutral-100 bg-white px-3 py-2 text-left align-top font-normal group-hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:group-hover:bg-neutral-800"
                 >
                   <span className="block truncate font-semibold text-neutral-900 dark:text-white" title={title}>
