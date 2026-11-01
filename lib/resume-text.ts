@@ -1,5 +1,10 @@
 import mammoth from "mammoth";
+// Must load before pdf-parse: it defines DOMMatrix (missing in Vercel's Node runtime) and
+// points pdf.js at a worker file that exists in the deployed function.
+import { getPath } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
+
+PDFParse.setWorker(getPath());
 
 /** Extracts plain text from an uploaded PDF or DOCX. Returns "" if the file has no readable text. */
 export async function extractResumeText(bytes: Buffer, fileType: "pdf" | "docx"): Promise<string> {
