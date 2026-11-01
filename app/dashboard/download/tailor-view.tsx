@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { GeneratedFile, Resume, SuggestedBullet, TailoredResumeResponse } from "@/lib/types";
+import { scoreLevel } from "@/components/ui/score-badge";
 import { ResumePreview } from "./resume-preview";
 
 type Props = {
@@ -55,22 +56,6 @@ export function TailorView({ original, response, suggestions }: Props) {
       </div>
     </div>
   );
-}
-
-const CHECK_ICON =
-  "M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z";
-const ALERT_ICON =
-  "M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z";
-
-// Darker shades than the analyze ring so white text stays readable on every color.
-function scoreLevel(percent: number) {
-  if (percent >= 80) {
-    return { className: "from-emerald-600 to-emerald-700 shadow-emerald-700/25", icon: CHECK_ICON };
-  }
-  if (percent >= 50) {
-    return { className: "from-amber-600 to-orange-700 shadow-orange-700/25", icon: ALERT_ICON };
-  }
-  return { className: "from-rose-600 to-red-700 shadow-red-700/25", icon: ALERT_ICON };
 }
 
 function FinalScore({ percent }: { percent: number }) {
