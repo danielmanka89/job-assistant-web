@@ -10,6 +10,7 @@
 //   log in with an email containing "employer" -> employer account
 //   log in with an email containing "new" -> dashboard with no tailored resumes yet
 //   settings: current password "wrongpass" -> incorrect password; email taken@example.com -> already registered
+//   resume sync: compares the sample resume with the profile; "fail" in the file name -> parse error
 //   profile: starts empty with suggestions from the sample resume; a field containing "fail" -> save error
 //   spreadsheet: starts with two sample rows (none for "new" users); a cell containing "fail" -> save error
 import type {
@@ -29,6 +30,8 @@ import type {
   GeneratedFile,
   JobPosting,
   Resume,
+  ResumeCompareResponse,
+  ResumeSyncResponse,
   Submission,
   SummaryGenerateRequest,
   SummaryGenerateResponse,
@@ -42,7 +45,7 @@ import type {
   UserRole,
 } from "@/lib/types";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
-import { profileSuggestions, validateProfile } from "@/lib/profile";
+import { profileSuggestions, syncProfileToResume, validateProfile } from "@/lib/profile";
 import { SHEETS, buildSubmissionWorkbook, prefillSubmission, validateSheetValues } from "@/lib/spreadsheet";
 import { XLSX_MIME } from "@/lib/xlsx";
 import type { ApiResult } from "./api";
@@ -627,6 +630,25 @@ async function saveProfile(input: ProfileValues): Promise<ApiResult<ProfileRespo
   return { ok: true, data: { values: { ...values }, updatedAt: mockProfileSavedAt, suggestions: {} } };
 }
 
+async function compareResume(file: File, onProgress?: (percent: number) => void): Promise<ApiResult<ResumeCompareResponse>> {
+  const uploaded = await uploadResume(file, onProgress);
+  if (!uploaded.ok) return uploaded;
+  const r = uploaded.data;
+  const draft = { sourceFileName: r.sourceFileName, contact: r.contact, summary: r.summary, workExperience: r.workExperience, education: r.education, skills: r.skills };
+  const { changes } = syncProfileToResume(mockProfile, draft);
+  return { ok: true, data: { draft, changes, syncToken: `mock.${Date.now()}` } };
+}
+
+async function confirmResumeSync(_file: File, compared: ResumeCompareResponse): Promise<ApiResult<ResumeSyncResponse>> {
+  await delay(700);
+  const { values, changes } = syncProfileToResume(mockProfile, compared.draft);
+  mockProfile = values;
+  mockProfileSavedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+  const resume: Resume = { ...compared.draft, id: `resume_${Date.now()}`, userId: "user_mock_1", createdAt: now, updatedAt: now };
+  return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt, suggestions: {} }, changes } };
+}
+
 // Spreadsheet rows, kept in memory for this page load. Seeded on first use.
 let mockSubmissions: Submission[] | null = null;
 
@@ -721,6 +743,8 @@ export const mockApi = {
   listTailoredResumes,
   getProfile,
   saveProfile,
+  compareResume,
+  confirmResumeSync,
   listSubmissions,
   createSubmission,
   updateSubmission,
