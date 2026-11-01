@@ -1,37 +1,22 @@
-import type { GeneratedFile } from "@/lib/types";
+import type { DashboardStats, GeneratedFile, TailoredResumeListResponse, TailoredResumeWithFiles } from "@/lib/types";
 
-// Response shapes for the dashboard endpoints. They live here until Daniel adds
-// them to lib/types.ts; the parsers below accept missing fields so the page
-// doesn't break if the API sends slightly less.
-
-/** GET /api/dashboard-stats */
-export interface DashboardStats {
-  resumesUploaded: number;
-  resumesTailored: number;
-  averageMatchPercent: number | null; // null until a tailored resume has a score
-  bestMatchPercent: number | null;
-}
-
-/** One entry in GET /api/tailored-resumes ({ tailoredResumes: [...] }, newest first). */
-export interface TailoredResumeSummary {
-  id: string;
-  createdAt: string; // ISO 8601
-  jobTitle?: string; // short label for the job, if the API has one
-  finalMatchPercent: number | null; // null for resumes tailored before the score was saved
-  files: GeneratedFile[];
-}
+// Parsers for the dashboard endpoints. They fill in safe defaults so one bad
+// field doesn't blank the whole page.
 
 const toCount = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : 0);
-const toPercent = (v: unknown) =>
+
+/** A 0-100 score, or null when it's missing (older tailored resumes have none). */
+export const toPercent = (v: unknown) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(100, Math.max(0, Math.round(v))) : null;
 
+/** Body of GET /api/dashboard-stats. */
 export function toDashboardStats(body: unknown): DashboardStats {
-  const b = (body ?? {}) as Record<string, unknown>;
+  const b = (body ?? {}) as Partial<Record<keyof DashboardStats, unknown>>;
+  const jobs = (b.jobs ?? {}) as Partial<Record<keyof DashboardStats["jobs"], unknown>>;
   return {
-    resumesUploaded: toCount(b.resumesUploaded),
-    resumesTailored: toCount(b.resumesTailored),
+    tailoredResumeCount: toCount(b.tailoredResumeCount),
     averageMatchPercent: toPercent(b.averageMatchPercent),
-    bestMatchPercent: toPercent(b.bestMatchPercent),
+    jobs: { total: toCount(jobs.total), native: toCount(jobs.native), external: toCount(jobs.external) },
   };
 }
 
@@ -40,15 +25,14 @@ function isFile(f: unknown): f is GeneratedFile {
   return !!v && (v.format === "docx" || v.format === "pdf") && typeof v.downloadUrl === "string";
 }
 
-export function toTailoredResumeList(body: unknown): TailoredResumeSummary[] {
-  const list = (body as { tailoredResumes?: unknown } | null)?.tailoredResumes;
+/** Body of GET /api/tailored-resumes, skipping malformed entries. */
+export function toTailoredResumeList(body: unknown): TailoredResumeWithFiles[] {
+  const list = (body as Partial<TailoredResumeListResponse> | null)?.tailoredResumes;
   if (!Array.isArray(list)) return [];
   return list
-    .filter((r): r is Record<string, unknown> => !!r && typeof r.id === "string" && typeof r.createdAt === "string")
+    .filter((r) => !!r && typeof r.id === "string" && typeof r.createdAt === "string")
     .map((r) => ({
-      id: r.id as string,
-      createdAt: r.createdAt as string,
-      jobTitle: typeof r.jobTitle === "string" && r.jobTitle.trim() ? r.jobTitle.trim() : undefined,
+      ...r,
       finalMatchPercent: toPercent(r.finalMatchPercent),
       files: Array.isArray(r.files) ? r.files.filter(isFile) : [],
     }));

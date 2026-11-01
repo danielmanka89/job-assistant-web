@@ -4,6 +4,7 @@ import type {
   AuthResponse,
   GapAnalysisRequest,
   CreateJobPostingRequest,
+  DashboardStats,
   GapAnalysisResponse,
   JobPosting,
   LoginRequest,
@@ -13,10 +14,11 @@ import type {
   SummaryGenerateResponse,
   TailoredResumeRequest,
   TailoredResumeResponse,
+  TailoredResumeWithFiles,
   UpdateSummaryRequest,
 } from "@/lib/types";
 import { clearUser } from "./current-user";
-import { toDashboardStats, toTailoredResumeList, type DashboardStats, type TailoredResumeSummary } from "./dashboard";
+import { toDashboardStats, toTailoredResumeList } from "./dashboard";
 import { toJobList } from "./jobs";
 import { mockApi } from "./mock";
 
@@ -110,7 +112,7 @@ export async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
 }
 
 /** The user's tailored resumes, newest first, from GET /api/tailored-resumes ({ tailoredResumes: [...] }). */
-export async function listTailoredResumes(): Promise<ApiResult<TailoredResumeSummary[]>> {
+export async function listTailoredResumes(): Promise<ApiResult<TailoredResumeWithFiles[]>> {
   if (USE_MOCK_API) return mockApi.listTailoredResumes();
   const result = await getJson("/api/tailored-resumes");
   return result.ok ? { ok: true, data: toTailoredResumeList(result.data) } : result;

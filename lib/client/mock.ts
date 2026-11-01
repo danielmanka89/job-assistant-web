@@ -13,6 +13,7 @@ import type {
   ApiError,
   AuthResponse,
   CreateJobPostingRequest,
+  DashboardStats,
   GapAnalysisRequest,
   GapAnalysisResponse,
   LoginRequest,
@@ -25,12 +26,12 @@ import type {
   TailoredResume,
   TailoredResumeRequest,
   TailoredResumeResponse,
+  TailoredResumeWithFiles,
   User,
   UserRole,
 } from "@/lib/types";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
 import type { ApiResult } from "./api";
-import type { DashboardStats, TailoredResumeSummary } from "./dashboard";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
 
@@ -500,24 +501,34 @@ function mockFile(tailoredResumeId: string, format: "docx" | "pdf", createdAt: s
   };
 }
 
-const MOCK_HISTORY: { id: string; jobTitle?: string; days: number; score: number | null }[] = [
-  { id: "tailored_mock_3", jobTitle: "Senior Frontend Engineer · Lumen Health", days: 1, score: 88 },
-  { id: "tailored_mock_2", jobTitle: "Full Stack Developer · Northwind", days: 6, score: 64 },
+const MOCK_HISTORY: { id: string; days: number; score: number | null }[] = [
+  { id: "tailored_mock_3", days: 1, score: 88 },
+  { id: "tailored_mock_2", days: 6, score: 64 },
   { id: "tailored_mock_1", days: 21, score: 42 },
+  { id: "tailored_mock_0", days: 40, score: null }, // tailored before scores were saved
 ];
 
-async function listTailoredResumes(): Promise<ApiResult<TailoredResumeSummary[]>> {
+async function listTailoredResumes(): Promise<ApiResult<TailoredResumeWithFiles[]>> {
   await delay(700);
   if (isNewUser()) return { ok: true, data: [] };
+  const base = sampleResume();
   return {
     ok: true,
     data: MOCK_HISTORY.map((r) => {
       const createdAt = daysAgo(r.days);
       return {
         id: r.id,
-        createdAt,
-        jobTitle: r.jobTitle,
+        userId: base.userId,
+        sourceResumeId: base.id,
+        gapAnalysisId: `analysis_${r.id}`,
+        acceptedBulletIds: [],
+        contact: base.contact,
+        summary: base.summary,
+        workExperience: base.workExperience,
+        education: base.education,
+        skills: base.skills,
         finalMatchPercent: r.score,
+        createdAt,
         files: [mockFile(r.id, "docx", createdAt), mockFile(r.id, "pdf", createdAt)],
       };
     }),
@@ -526,17 +537,19 @@ async function listTailoredResumes(): Promise<ApiResult<TailoredResumeSummary[]>
 
 async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   await delay(500);
+  const jobs = sampleJobs();
+  const native = employerJobs.length;
+  const external = jobs.length;
   if (isNewUser()) {
-    return { ok: true, data: { resumesUploaded: 0, resumesTailored: 0, averageMatchPercent: null, bestMatchPercent: null } };
+    return { ok: true, data: { tailoredResumeCount: 0, averageMatchPercent: null, jobs: { total: native + external, native, external } } };
   }
   const scores = MOCK_HISTORY.map((r) => r.score).filter((s): s is number => s !== null);
   return {
     ok: true,
     data: {
-      resumesUploaded: 2,
-      resumesTailored: MOCK_HISTORY.length,
+      tailoredResumeCount: MOCK_HISTORY.length,
       averageMatchPercent: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-      bestMatchPercent: Math.max(...scores),
+      jobs: { total: native + external, native, external },
     },
   };
 }

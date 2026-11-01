@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ApiError, GeneratedFile } from "@/lib/types";
+import type { ApiError, DashboardStats, GeneratedFile, TailoredResumeWithFiles } from "@/lib/types";
 import { getDashboardStats, listTailoredResumes, logout } from "@/lib/client/api";
-import type { DashboardStats, TailoredResumeSummary } from "@/lib/client/dashboard";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { ErrorAlert } from "@/components/ui/alert";
 import { ScoreBadge } from "@/components/ui/score-badge";
@@ -21,7 +20,7 @@ export function DashboardOverview() {
   const router = useRouter();
   const user = useCurrentUser();
   const [stats, setStats] = useState<Load<DashboardStats>>({ status: "loading" });
-  const [resumes, setResumes] = useState<Load<TailoredResumeSummary[]>>({ status: "loading" });
+  const [resumes, setResumes] = useState<Load<TailoredResumeWithFiles[]>>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -80,7 +79,7 @@ export function DashboardOverview() {
         </div>
       )}
 
-      <StatCards stats={stats} />
+      <StatCards stats={stats} resumes={resumes} />
 
       <section aria-labelledby="my-resumes">
         <h2 id="my-resumes" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
@@ -99,14 +98,32 @@ export function DashboardOverview() {
 
 const percentText = (v: number | null) => (v === null ? "—" : `${v}%`);
 
-function StatCards({ stats }: { stats: Load<DashboardStats> }) {
+function StatCards({ stats, resumes }: { stats: Load<DashboardStats>; resumes: Load<TailoredResumeWithFiles[]> }) {
   if (stats.status === "error") return null;
   const s = stats.status === "ready" ? stats.data : null;
+  // The stats endpoint has no best score, so take it from the saved scores in the list.
+  const best =
+    resumes.status === "ready"
+      ? resumes.data.reduce<number | null>(
+          (max, r) => (r.finalMatchPercent === null ? max : Math.max(max ?? 0, r.finalMatchPercent)),
+          null,
+        )
+      : undefined;
   const cards = [
-    { label: "Resumes Tailored", value: s && String(s.resumesTailored), hint: "Ready to download", icon: <SparkIcon /> },
+    { label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
     { label: "Average Match", value: s && percentText(s.averageMatchPercent), hint: "Final keyword match", icon: <GaugeIcon /> },
-    { label: "Best Match", value: s && percentText(s.bestMatchPercent), hint: "Your top result", icon: <TrophyIcon /> },
-    { label: "Resumes Uploaded", value: s && String(s.resumesUploaded), hint: "Original files", icon: <FileIcon /> },
+    {
+      label: "Best Match",
+      value: best === undefined ? (resumes.status === "error" ? "—" : null) : percentText(best),
+      hint: "Your top result",
+      icon: <TrophyIcon />,
+    },
+    {
+      label: "Open Jobs",
+      value: s && String(s.jobs.total),
+      hint: s ? `${s.jobs.native} posted on JobAssistant` : "On the job board",
+      icon: <BriefcaseIcon />,
+    },
   ];
 
   return (
@@ -149,7 +166,9 @@ function formatDate(iso: string) {
   return Number.isNaN(d.getTime()) ? "" : dateFormat.format(d);
 }
 
-function ResumeList({ items }: { items: TailoredResumeSummary[] }) {
+const bulletsText = (n: number) => (n === 0 ? "No bullet changes" : `${n} ${n === 1 ? "bullet" : "bullets"} updated`);
+
+function ResumeList({ items }: { items: TailoredResumeWithFiles[] }) {
   return (
     <ul className="divide-y divide-neutral-100 overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
       {items.map((item) => (
@@ -159,9 +178,11 @@ function ResumeList({ items }: { items: TailoredResumeSummary[] }) {
               <FileIcon />
             </span>
             <div className="min-w-0">
-              <p className="truncate font-semibold text-neutral-900 dark:text-white">{item.jobTitle ?? "Tailored resume"}</p>
+              <p className="truncate font-semibold text-neutral-900 dark:text-white">Tailored resume</p>
               <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
                 <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
+                <span className="mx-1.5 text-neutral-300 dark:text-neutral-600" aria-hidden="true">·</span>
+                {bulletsText(item.acceptedBulletIds?.length ?? 0)}
               </p>
             </div>
           </div>
@@ -297,6 +318,15 @@ function TrophyIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
       <path d="M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BriefcaseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18" strokeLinecap="round" />
     </svg>
   );
 }
