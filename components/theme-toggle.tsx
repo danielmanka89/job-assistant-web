@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 
 // The choice lives in this browser only. THEME_INIT_SCRIPT applies it before the first paint
 // so the page doesn't flash the wrong theme on load. With no choice saved, the site follows
@@ -90,96 +90,38 @@ const OPTIONS: { theme: Theme; label: string; icon: ReactNode }[] = [
   },
 ];
 
-/** Round button pinned to the top-right corner; opens a menu to pick Light, Dark or Black & White. */
+/**
+ * Round button pinned to the top-right corner. Each click moves to the next theme:
+ * Light → Dark → Black & White → Light. The icon shows the theme on screen now.
+ */
 export function ThemeToggle() {
   const theme = useSyncExternalStore<Theme | null>(subscribe, currentTheme, () => null);
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const current = OPTIONS.find((o) => o.theme === theme);
+  // Set only on click, so screen readers hear the change but nothing is announced on page load.
+  const [announcement, setAnnouncement] = useState("");
+  const index = OPTIONS.findIndex((o) => o.theme === theme);
+  const current = OPTIONS[index];
+  const next = OPTIONS[(index + 1) % OPTIONS.length];
 
-  useEffect(() => {
-    if (!open) return;
-    rootRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();
-    // Close when the user clicks or tabs anywhere outside the menu.
-    const onOutside = (e: Event) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", onOutside);
-    document.addEventListener("focusin", onOutside);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onOutside);
-      document.removeEventListener("focusin", onOutside);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  function cycle() {
+    choose(next.theme);
+    setAnnouncement(`${next.label} theme`);
+  }
 
   return (
-    <div ref={rootRef} className="fixed top-3 right-3 z-[60]">
+    <>
       <button
-        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls="theme-menu"
-        // The accessible name stays the same (aria-pressed on each option carries the choice); the tooltip shows it.
+        onClick={cycle}
+        // The accessible name stays the same on every click; the live region below says what changed.
         aria-label="Theme"
-        title={current ? `Theme: ${current.label}` : "Theme"}
-        className="grid size-10 place-items-center rounded-full border border-neutral-200 bg-white/90 text-neutral-800 shadow-md backdrop-blur transition outline-none hover:border-neutral-300 hover:bg-white focus-visible:ring-4 focus-visible:ring-brand-500/30 dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-neutral-100 dark:hover:border-neutral-500 dark:hover:bg-neutral-900"
+        title={current ? `Theme: ${current.label} (click for ${next.label})` : "Theme"}
+        className="fixed top-3 right-3 z-[60] grid size-10 place-items-center rounded-full border border-neutral-200 bg-white/90 text-neutral-800 shadow-md backdrop-blur transition outline-none hover:border-neutral-300 hover:bg-white focus-visible:ring-4 focus-visible:ring-brand-500/30 active:scale-95 dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-neutral-100 dark:hover:border-neutral-500 dark:hover:bg-neutral-900"
       >
         {current?.icon ?? <span className="size-5" aria-hidden="true" />}
       </button>
-
-      {open && (
-        <div
-          id="theme-menu"
-          role="group"
-          aria-label="Theme"
-          className="absolute top-12 right-0 w-52 rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
-        >
-          <p className="px-3 pt-1.5 pb-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
-            Theme
-          </p>
-          {OPTIONS.map((option) => {
-            const selected = option.theme === theme;
-            return (
-              <button
-                key={option.theme}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => {
-                  choose(option.theme);
-                  setOpen(false);
-                  triggerRef.current?.focus();
-                }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${
-                  selected
-                    ? "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
-                    : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                }`}
-              >
-                {option.icon}
-                <span className="flex-1 whitespace-nowrap">{option.label}</span>
-                {selected && (
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
-                    <path
-                      fillRule="evenodd"
-                      d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+      <span role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </span>
+    </>
   );
 }
