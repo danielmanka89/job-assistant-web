@@ -163,6 +163,9 @@ export interface TailoredResume {
 export interface TailoredResumeResponse {
   tailoredResume: TailoredResume;
   files: GeneratedFile[]; // one per requested format
+  // The analysis's keywords found in the text read back from the generated file (PDF when requested),
+  // the same way an uploaded resume is read. matched / (matched + missing), rounded; 0 when no keywords.
+  finalMatchPercent: number;
 }
 
 /** A generated resume file ready for download. */
