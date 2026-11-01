@@ -122,6 +122,8 @@ function ProfileForm({
   const [pending, setPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
+  // Bumped to focus the first invalid field after the next render, once the fieldset is enabled again.
+  const [focusRequest, setFocusRequest] = useState(0);
   // A new profile can be saved as suggested; a saved one only once something changed.
   const dirty = !updatedAt || !sameValues(values, saved);
 
@@ -131,6 +133,10 @@ function ProfileForm({
     feedbackRef.current?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
   }, [success, formError]);
 
+  useEffect(() => {
+    if (focusRequest) formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [focusRequest]);
+
   function update(key: string, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
     setSuccess(false);
@@ -139,7 +145,7 @@ function ProfileForm({
 
   function showErrors(fieldErrors: Record<string, string>) {
     setErrors(fieldErrors);
-    requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+    setFocusRequest((n) => n + 1);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -250,7 +256,11 @@ function Field({ field, value, error, onChange }: { field: ProfileField; value: 
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`${SELECT} ${error ? "border-rose-400" : "border-neutral-200 focus:border-brand-500 focus:ring-brand-500/15 dark:border-neutral-700"}`}
+          className={`${SELECT} ${
+            error
+              ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/15 dark:border-rose-500/70"
+              : "border-neutral-200 focus:border-brand-500 focus:ring-brand-500/15 dark:border-neutral-700 dark:focus:border-brand-400"
+          }`}
         >
           <option value="">Not set</option>
           {field.options?.map((o) => (
