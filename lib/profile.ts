@@ -2,7 +2,7 @@
 // (no server-only imports). Filled-in profile fields win over what's read from the resume when a
 // job is applied to (Spreadsheet row) or a resume is tailored (contact details and skills).
 
-import type { ProfileValues, Resume, User } from "@/lib/types";
+import type { ProfileChange, ProfileValues, Resume, User } from "@/lib/types";
 import { mergeSkills } from "@/lib/skills";
 
 export type ProfileFieldType = "text" | "email" | "url" | "tel" | "select" | "long" | "years";
@@ -133,4 +133,67 @@ export function profileSuggestions(user: Pick<User, "name" | "email">, resume: P
     education: degree ? [degree.degree, degree.fieldOfStudy, degree.institution].filter(Boolean).join(", ") : "",
   };
   return Object.fromEntries(Object.entries(suggestions).filter(([, v]) => v));
+}
+
+/**
+ * Profile fields that come from the resume. The resume is the source of truth for these: syncing
+ * sets each one to the resume's value, and clears it when the resume doesn't have one. The other
+ * fields (work details, years, certifications) aren't on a resume and are left alone.
+ */
+export const RESUME_PROFILE_FIELDS = ["fullName", "email", "phone", "location", "linkedinUrl", "websiteUrl", "education", "skills"] as const;
+
+const withScheme = (url: string | undefined) => (url && !/^https?:\/\//i.test(url) ? `https://${url}` : (url ?? ""));
+
+/** Cuts a comma-separated list at the last whole item that fits. */
+function clipList(items: string[], max: number): string {
+  let out = "";
+  for (const item of items) {
+    const next = out ? `${out}, ${item}` : item;
+    if (next.length > max) break;
+    out = next;
+  }
+  return out;
+}
+
+/** The profile values the resume implies, for the fields in RESUME_PROFILE_FIELDS. */
+export function profileFromResume(resume: Pick<Resume, "contact" | "skills" | "education">): Record<(typeof RESUME_PROFILE_FIELDS)[number], string> {
+  const field = (key: string) => PROFILE_FIELDS.find((f) => f.key === key)!;
+  const clip = (key: string, value: string | undefined) => (value ?? "").trim().slice(0, field(key).maxLength ?? 200);
+  const c = resume.contact;
+  const degree = resume.education[0];
+  return {
+    fullName: clip("fullName", c.fullName),
+    email: clip("email", c.email),
+    phone: clip("phone", c.phone),
+    location: clip("location", c.location),
+    linkedinUrl: clip("linkedinUrl", withScheme(c.linkedinUrl)),
+    websiteUrl: clip("websiteUrl", withScheme(c.websiteUrl)),
+    education: clip("education", degree ? [degree.degree, degree.fieldOfStudy, degree.institution].filter(Boolean).join(", ") : ""),
+    skills: clipList(resume.skills, field("skills").maxLength ?? 2000),
+  };
+}
+
+/** The profile after syncing it to the resume, and what changed (in form order). */
+export function syncProfileToResume(
+  current: ProfileValues,
+  resume: Pick<Resume, "contact" | "skills" | "education">,
+): { values: ProfileValues; changes: ProfileChange[] } {
+  const fromResume = profileFromResume(resume);
+  const values: ProfileValues = { ...current };
+  const changes: ProfileChange[] = [];
+  for (const key of RESUME_PROFILE_FIELDS) {
+    const from = (current[key] ?? "").trim();
+    const to = fromResume[key];
+    if (to) values[key] = to;
+    else delete values[key];
+    // Skills that differ only in order or case aren't a change worth confirming.
+    const same = key === "skills" ? sameList(from, to) : from === to;
+    if (!same) changes.push({ field: key, label: PROFILE_FIELDS.find((f) => f.key === key)!.label, from, to });
+  }
+  return { values, changes };
+}
+
+function sameList(a: string, b: string): boolean {
+  const norm = (s: string) => [...new Set(splitList(s).map((x) => x.toLowerCase()))].sort().join("\n");
+  return norm(a) === norm(b);
 }

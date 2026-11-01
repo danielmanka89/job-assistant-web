@@ -306,3 +306,31 @@ export interface ProfileResponse {
 export interface UpdateProfileRequest {
   values: ProfileValues;
 }
+
+/** A resume read from an uploaded file but not saved yet (POST /api/resume/compare). */
+export type ResumeDraft = Omit<Resume, "id" | "userId" | "createdAt" | "updatedAt">;
+
+/** One profile field the uploaded resume would change. "" means empty. */
+export interface ProfileChange {
+  field: string; // profile field key, e.g. "phone"
+  label: string; // e.g. "Phone"
+  from: string; // current profile value
+  to: string; // value from the resume
+}
+
+/**
+ * Returned by POST /api/resume/compare: the parsed resume (not saved), how it would change the
+ * profile, and a token that POST /api/resume/confirm-sync needs, valid for one hour.
+ */
+export interface ResumeCompareResponse {
+  draft: ResumeDraft;
+  changes: ProfileChange[];
+  syncToken: string;
+}
+
+/** Returned by POST /api/resume/confirm-sync: the saved resume and the updated profile. */
+export interface ResumeSyncResponse {
+  resume: Resume;
+  profile: ProfileResponse;
+  changes: ProfileChange[];
+}

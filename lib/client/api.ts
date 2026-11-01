@@ -15,6 +15,8 @@ import type {
   ProfileValues,
   RegisterRequest,
   Resume,
+  ResumeCompareResponse,
+  ResumeSyncResponse,
   Submission,
   SummaryGenerateRequest,
   SummaryGenerateResponse,
@@ -305,10 +307,47 @@ export function uploadResume(
   onProgress?: (percent: number) => void,
 ): Promise<ApiResult<Resume>> {
   if (USE_MOCK_API) return mockApi.uploadResume(file, onProgress);
+  const form = new FormData();
+  form.append("file", file);
+  return sendForm<Resume>("/api/upload", form, onProgress);
+}
 
+/**
+ * Step 1 of uploading a resume: POST /api/resume/compare reads the file and lists how it would
+ * change the profile. Nothing is saved until confirmResumeSync.
+ */
+export async function compareResume(file: File, onProgress?: (percent: number) => void): Promise<ApiResult<ResumeCompareResponse>> {
+  if (USE_MOCK_API) return mockApi.compareResume(file, onProgress);
+  const form = new FormData();
+  form.append("file", file);
+  const result = await sendForm<ResumeCompareResponse>("/api/resume/compare", form, onProgress);
+  if (!result.ok) return result;
+  const d = result.data;
+  return d && d.draft?.contact && Array.isArray(d.changes) && typeof d.syncToken === "string"
+    ? result
+    : { ok: false, error: toApiError(null, 500) };
+}
+
+/** Step 2: POST /api/resume/confirm-sync saves the compared resume and updates the profile to match. */
+export async function confirmResumeSync(file: File, compared: ResumeCompareResponse): Promise<ApiResult<ResumeSyncResponse>> {
+  if (USE_MOCK_API) return mockApi.confirmResumeSync(file, compared);
+  const form = new FormData();
+  form.append("file", file);
+  form.append("draft", JSON.stringify(compared.draft));
+  form.append("syncToken", compared.syncToken);
+  const result = await sendForm<ResumeSyncResponse>("/api/resume/confirm-sync", form);
+  if (!result.ok) return result;
+  return result.data?.resume?.contact ? result : { ok: false, error: toApiError(null, 500) };
+}
+
+/**
+ * Posts multipart/form-data. Uses XMLHttpRequest instead of fetch so we can report upload
+ * progress; the server keeps working after 100%, which the UI shows as a separate step.
+ */
+function sendForm<T>(url: string, form: FormData, onProgress?: (percent: number) => void): Promise<ApiResult<T>> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/upload");
+    xhr.open("POST", url);
     xhr.withCredentials = true;
 
     xhr.upload.onprogress = (event) => {
@@ -318,7 +357,6 @@ export function uploadResume(
     };
 
     // Some browsers skip the final progress event, so mark the upload done explicitly.
-    // The server keeps parsing after this, which the UI shows as a separate step.
     xhr.upload.onload = () => onProgress?.(100);
 
     xhr.onload = () => {
@@ -329,16 +367,13 @@ export function uploadResume(
         // non-JSON body; handled below
       }
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve({ ok: true, data: body as Resume });
+        resolve({ ok: true, data: body as T });
       } else {
         resolve({ ok: false, error: toApiError(body, xhr.status) });
       }
     };
 
     xhr.onerror = () => resolve({ ok: false, error: NETWORK_ERROR });
-
-    const form = new FormData();
-    form.append("file", file);
     xhr.send(form);
   });
 }

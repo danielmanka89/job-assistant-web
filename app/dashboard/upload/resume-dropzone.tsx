@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Resume } from "@/lib/types";
-import { logout, uploadResume } from "@/lib/client/api";
+import type { ApiError, ResumeCompareResponse } from "@/lib/types";
+import { compareResume, confirmResumeSync, logout } from "@/lib/client/api";
 import { storeResume } from "@/lib/client/resume-storage";
+import { ErrorAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx"];
@@ -18,8 +18,12 @@ const MAX_BYTES = 10 * 1024 * 1024;
 type State =
   | { status: "idle" }
   | { status: "uploading"; file: File; progress: number }
-  | { status: "success"; file: File; resume: Resume }
+  // The resume would change the profile: the user confirms before anything is saved.
+  | { status: "review"; file: File; compared: ResumeCompareResponse; saving: boolean; error?: string }
+  | { status: "saving"; file: File }
   | { status: "error"; message: string };
+
+const isUnauthorized = (e: ApiError) => e.code === "UNAUTHORIZED" || e.code === "HTTP_401";
 
 function checkFile(file: File): string | null {
   const name = file.name.toLowerCase();
@@ -29,11 +33,6 @@ function checkFile(file: File): string | null {
   if (file.size > MAX_BYTES) return "That file is over 10 MB. Try a smaller export.";
   if (file.size === 0) return "That file is empty.";
   return null;
-}
-
-function formatSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function ResumeDropzone() {
@@ -50,22 +49,37 @@ export function ResumeDropzone() {
       return;
     }
 
+    // Read the file and compare it with the profile; nothing is saved yet.
     setState({ status: "uploading", file, progress: 0 });
-    const result = await uploadResume(file, (progress) =>
+    const result = await compareResume(file, (progress) =>
       setState((s) => (s.status === "uploading" ? { ...s, progress } : s)),
     );
+    if (!result.ok) return fail(result.error);
+    if (result.data.changes.length === 0) return confirm(file, result.data); // profile already matches
+    setState({ status: "review", file, compared: result.data, saving: false });
+  }
 
-    if (result.ok) {
-      storeResume(result.data);
-      setState({ status: "success", file, resume: result.data });
+  /** Saves the resume and updates the profile to match, then goes to the dashboard. */
+  async function confirm(file: File, compared: ResumeCompareResponse) {
+    setState((s) => (s.status === "review" ? { ...s, saving: true, error: undefined } : { status: "saving", file }));
+    const result = await confirmResumeSync(file, compared);
+    if (!result.ok) {
+      if (isUnauthorized(result.error)) return fail(result.error);
+      const message = result.error.message;
+      setState((s) => (s.status === "review" ? { ...s, saving: false, error: message } : { status: "error", message }));
       return;
     }
-    if (result.error.code === "UNAUTHORIZED" || result.error.code === "HTTP_401") {
+    storeResume(result.data.resume);
+    router.push(`/dashboard?resume=synced&changes=${result.data.changes.length}`);
+  }
+
+  async function fail(error: ApiError) {
+    if (isUnauthorized(error)) {
       await logout();
       router.replace("/login");
       return;
     }
-    setState({ status: "error", message: result.error.message });
+    setState({ status: "error", message: error.message });
   }
 
   function onDragEnter(e: DragEvent) {
@@ -84,7 +98,7 @@ export function ResumeDropzone() {
     e.preventDefault();
     dragDepth.current = 0;
     setDragging(false);
-    if (state.status === "uploading") return;
+    if (busy) return;
     const file = e.dataTransfer.files?.[0];
     if (file) void start(file);
   }
@@ -94,11 +108,7 @@ export function ResumeDropzone() {
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  if (state.status === "success") {
-    return <UploadSuccess resume={state.resume} file={state.file} onReplace={reset} />;
-  }
-
-  const uploading = state.status === "uploading";
+  const busy = state.status === "uploading" || state.status === "review" || state.status === "saving";
 
   return (
     <div>
@@ -129,12 +139,14 @@ export function ResumeDropzone() {
           </svg>
         </div>
 
-        {uploading ? (
+        {state.status === "uploading" ? (
           state.progress < 100 ? (
             <UploadProgress fileName={state.file.name} progress={state.progress} />
           ) : (
             <ReadingProgress fileName={state.file.name} />
           )
+        ) : state.status === "saving" || state.status === "review" ? (
+          <SavingProgress fileName={state.file.name} />
         ) : (
           <>
             <p className="mt-6 text-lg font-semibold text-neutral-900 dark:text-white">
@@ -177,6 +189,16 @@ export function ResumeDropzone() {
           </svg>
           {state.message}
         </p>
+      )}
+
+      {state.status === "review" && (
+        <SyncDialog
+          compared={state.compared}
+          saving={state.saving}
+          error={state.error}
+          onConfirm={() => confirm(state.file, state.compared)}
+          onCancel={reset}
+        />
       )}
     </div>
   );
@@ -255,87 +277,123 @@ function ReadingProgress({ fileName }: { fileName: string }) {
   );
 }
 
-function UploadSuccess({ resume, file, onReplace }: { resume: Resume; file: File; onReplace: () => void }) {
-  const roles = resume.workExperience.length;
-  const schools = resume.education.length;
+function SavingProgress({ fileName }: { fileName: string }) {
+  return (
+    <div className="mt-6 w-full max-w-sm" role="status">
+      <p className="truncate text-base font-semibold text-neutral-900 dark:text-white">{fileName}</p>
+      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Saving your resume and profile…</p>
+    </div>
+  );
+}
+
+const empty = <span className="text-neutral-400 italic dark:text-neutral-500">Not set</span>;
+
+/**
+ * Lists what the uploaded resume changes in the profile (Old Profile vs New Resume) and asks the
+ * user to confirm. Uses <dialog> for focus trapping and Escape; nothing is saved on cancel.
+ */
+function SyncDialog({
+  compared,
+  saving,
+  error,
+  onConfirm,
+  onCancel,
+}: {
+  compared: ResumeCompareResponse;
+  saving: boolean;
+  error?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => dialog?.close();
+  }, []);
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-xl shadow-neutral-200/50 dark:border-neutral-800 dark:bg-neutral-900/60 dark:shadow-none">
-      <div className="flex flex-col gap-4 border-b border-neutral-100 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8 dark:border-neutral-800">
-        <div className="flex items-center gap-4">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="size-6" aria-hidden="true">
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </span>
-          <div className="min-w-0">
-            <p className="text-base font-semibold text-neutral-900 dark:text-white">Resume uploaded</p>
-            <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">
-              {resume.sourceFileName ?? file.name} · {formatSize(file.size)}
-            </p>
+    <dialog
+      ref={ref}
+      aria-labelledby="sync-title"
+      aria-describedby="sync-description"
+      onCancel={(e) => {
+        e.preventDefault(); // Escape: close through onCancel so state stays in step
+        if (!saving) onCancel();
+      }}
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-3xl border border-neutral-200 bg-white p-0 text-left shadow-2xl backdrop:bg-neutral-950/50 backdrop:backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900"
+    >
+      <div className="flex max-h-[90dvh] flex-col">
+        <div className="border-b border-neutral-100 px-6 pt-6 pb-5 sm:px-8 dark:border-neutral-800">
+          <div className="flex items-start gap-4">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-6" aria-hidden="true">
+                <path d="M4 12a8 8 0 0 1 13.66-5.66L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.66 5.66L4 15.5M4 20v-4.5h4.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <div>
+              <h2 id="sync-title" className="text-xl font-semibold text-neutral-900 dark:text-white">
+                Update your profile?
+              </h2>
+              <p id="sync-description" className="mt-1 text-[15px] text-neutral-600 dark:text-neutral-300">
+                We found new details in your resume. Your profile will be updated to match.
+              </p>
+            </div>
           </div>
         </div>
-        <Button type="button" variant="secondary" onClick={onReplace}>
-          Upload a different file
-        </Button>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-8">
+          <table className="w-full border-separate border-spacing-0 text-sm">
+            <caption className="sr-only">Profile changes from your resume</caption>
+            <thead className="max-sm:sr-only">
+              <tr className="text-left text-xs font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+                <th scope="col" className="w-1/5 pb-2">
+                  Field
+                </th>
+                <th scope="col" className="w-2/5 pb-2">
+                  Old Profile
+                </th>
+                <th scope="col" className="w-2/5 pb-2">
+                  New Resume
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {compared.changes.map((c) => (
+                <tr key={c.field} className="max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:border-t max-sm:border-neutral-100 max-sm:py-3 max-sm:dark:border-neutral-800">
+                  <th scope="row" className="border-t border-neutral-100 py-3 pr-4 text-left align-top font-semibold text-neutral-900 max-sm:border-0 max-sm:py-0 dark:border-neutral-800 dark:text-white">
+                    {c.label}
+                  </th>
+                  <td className="border-t border-neutral-100 py-3 pr-4 align-top break-words text-neutral-500 max-sm:border-0 max-sm:py-0 dark:border-neutral-800 dark:text-neutral-400">
+                    <span className="sm:hidden">Old: </span>
+                    {c.from ? <span className="line-through decoration-neutral-300 dark:decoration-neutral-600">{c.from}</span> : empty}
+                  </td>
+                  <td className="border-t border-neutral-100 py-3 align-top break-words font-medium text-brand-700 max-sm:border-0 max-sm:py-0 dark:border-neutral-800 dark:text-brand-300">
+                    <span className="font-normal text-neutral-500 sm:hidden dark:text-neutral-400">New: </span>
+                    {c.to || <span className="text-neutral-400 italic dark:text-neutral-500">Will be cleared</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-4 text-xs text-neutral-500 dark:text-neutral-400">
+            Work authorization, rate, availability and certifications aren&apos;t on a resume, so they stay as they are.
+          </p>
+        </div>
+
+        <div className="space-y-3 border-t border-neutral-100 bg-neutral-50/70 px-6 py-5 sm:px-8 dark:border-neutral-800 dark:bg-neutral-950/40">
+          {error && <ErrorAlert>{error}</ErrorAlert>}
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={onConfirm} loading={saving}>
+              {saving ? "Updating…" : "Confirm & Update Profile"}
+            </Button>
+          </div>
+        </div>
       </div>
-
-      <div className="p-6 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">We found</p>
-        <p className="mt-2 text-xl font-semibold text-neutral-900 dark:text-white">{resume.contact.fullName}</p>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          {[resume.contact.email, resume.contact.location].filter(Boolean).join(" · ")}
-        </p>
-
-        <dl className="mt-6 grid grid-cols-3 gap-3">
-          {[
-            { label: roles === 1 ? "Role" : "Roles", value: roles },
-            { label: schools === 1 ? "School" : "Schools", value: schools },
-            { label: resume.skills.length === 1 ? "Skill" : "Skills", value: resume.skills.length },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-neutral-800/60">
-              <dt className="text-xs text-neutral-500 dark:text-neutral-400">{stat.label}</dt>
-              <dd className="mt-0.5 text-2xl font-semibold text-neutral-900 dark:text-white">{stat.value}</dd>
-            </div>
-          ))}
-        </dl>
-
-        {resume.skills.length > 0 && (
-          <ul className="mt-6 flex flex-wrap gap-2">
-            {resume.skills.map((skill) => (
-              <li
-                key={skill}
-                className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
-              >
-                {skill}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3 border-t border-neutral-100 bg-neutral-50/70 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:border-neutral-800 dark:bg-neutral-950/40">
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-          Check these details and fill in anything we missed.
-        </p>
-        <Link
-          href="/dashboard/review"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 font-display text-[15px] font-medium uppercase tracking-wider text-white shadow-sm shadow-brand-600/30 transition hover:bg-brand-500 focus-visible:ring-4 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:bg-brand-500 dark:hover:bg-brand-400"
-        >
-          Review details
-          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
-            <path
-              fillRule="evenodd"
-              d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </Link>
-      </div>
-    </div>
+    </dialog>
   );
 }

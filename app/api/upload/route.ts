@@ -1,111 +1,39 @@
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
-import { parseResumeText, type ParsedResume } from "@/lib/ai";
-import { aiErrorResponse, apiError, toResume } from "@/lib/api";
+import { apiError, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { extractResumeText } from "@/lib/resume-text";
-import type { Resume, ResumeContact } from "@/lib/types";
+import { FILE_TYPES, parseResumeUpload, readResumeUpload } from "@/lib/resume-upload";
+import type { Resume } from "@/lib/types";
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_TEXT_CHARS = 100_000; // well beyond any real resume; rejected rather than truncated
-
-const FILE_TYPES = {
-  pdf: { mimeType: "application/pdf", magic: [0x25, 0x50, 0x44, 0x46] }, // "%PDF"
-  docx: {
-    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    magic: [0x50, 0x4b, 0x03, 0x04], // ZIP container
-  },
-} as const;
-
-/** Detects PDF or DOCX from the file extension and its leading bytes; null if neither. */
-function detectFileType(fileName: string, bytes: Buffer): keyof typeof FILE_TYPES | null {
-  const ext = path.extname(fileName).slice(1).toLowerCase();
-  if (ext !== "pdf" && ext !== "docx") return null;
-  const { magic } = FILE_TYPES[ext];
-  return magic.every((byte, i) => bytes[i] === byte) ? ext : null;
-}
-
+/**
+ * POST /api/upload — parses and saves a resume without touching the profile.
+ * The upload page uses /api/resume/compare and /api/resume/confirm-sync instead.
+ */
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to upload a resume");
 
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_FILE_BYTES + 64 * 1024) {
-    return apiError(413, "FILE_TOO_LARGE", "File must be 10 MB or smaller", { file: "File must be 10 MB or smaller" });
-  }
-
-  let file: FormDataEntryValue | null;
-  try {
-    file = (await request.formData()).get("file");
-  } catch {
-    return apiError(400, "INVALID_FORM_DATA", "Send the resume as multipart/form-data in a field named \"file\"");
-  }
-  if (!(file instanceof File) || file.size === 0) {
-    return apiError(400, "VALIDATION_ERROR", "Please choose a resume file", { file: "A PDF or DOCX file is required" });
-  }
-  if (file.size > MAX_FILE_BYTES) {
-    return apiError(413, "FILE_TOO_LARGE", "File must be 10 MB or smaller", { file: "File must be 10 MB or smaller" });
-  }
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const fileType = detectFileType(file.name, bytes);
-  if (!fileType) {
-    return apiError(415, "UNSUPPORTED_FILE", "Only PDF and DOCX files are supported", {
-      file: "Upload a .pdf or .docx file",
-    });
-  }
-
-  let text: string;
-  try {
-    text = await extractResumeText(bytes, fileType);
-  } catch (error) {
-    console.error("text extraction failed", error);
-    text = "";
-  }
-  if (!text) {
-    return apiError(422, "PARSE_FAILED", "We couldn't read any text in this file. Scanned PDFs aren't supported yet.", {
-      file: "Upload a PDF or DOCX that contains selectable text",
-    });
-  }
-  if (text.length > MAX_TEXT_CHARS) {
-    return apiError(422, "RESUME_TOO_LONG", "This file has more text than a resume usually does", {
-      file: "Upload a resume of a few pages",
-    });
-  }
-
-  let parsed: ParsedResume;
-  try {
-    parsed = await parseResumeText(text);
-  } catch (error) {
-    console.error("resume parsing failed", error);
-    return aiErrorResponse(error, {
-      code: "PARSE_FAILED",
-      message: "We couldn't read this resume. Try exporting it again as PDF or DOCX.",
-    });
-  }
-
-  // Name and email fall back to the account when the document doesn't include them.
-  const contact: ResumeContact = {
-    ...parsed.contact,
-    fullName: parsed.contact.fullName ?? user.name,
-    email: parsed.contact.email ?? user.email,
-  };
+  const upload = await readResumeUpload(request);
+  if ("error" in upload) return upload.error;
+  const parsed = await parseResumeUpload(upload.file, user);
+  if ("error" in parsed) return parsed.error;
+  const { draft } = parsed;
 
   try {
     const resume = await prisma.resume.create({
       data: {
         userId: user.id,
-        sourceFileName: path.basename(file.name),
-        storedFileName: `${randomUUID()}.${fileType}`,
-        mimeType: FILE_TYPES[fileType].mimeType,
-        fileSize: bytes.length,
-        data: new Uint8Array(bytes),
-        contact: { ...contact },
-        summary: parsed.summary ?? null,
-        workExperience: parsed.workExperience as object[],
-        education: parsed.education as object[],
-        skills: parsed.skills,
+        sourceFileName: upload.file.name,
+        storedFileName: `${randomUUID()}.${upload.file.fileType}`,
+        mimeType: FILE_TYPES[upload.file.fileType].mimeType,
+        fileSize: upload.file.bytes.length,
+        data: new Uint8Array(upload.file.bytes),
+        contact: { ...draft.contact },
+        summary: draft.summary ?? null,
+        workExperience: draft.workExperience as object[],
+        education: draft.education as object[],
+        skills: draft.skills,
       },
     });
     return NextResponse.json<Resume>(toResume(resume), { status: 201 });
