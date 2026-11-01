@@ -41,3 +41,29 @@ export function withAddedSkills(
   const missingKeywords = analysis.missingKeywords.filter((k) => !covered.has(key(k)));
   return { matchedKeywords, missingKeywords, matchPercent: matchPercent(matchedKeywords.length, missingKeywords.length) };
 }
+
+// Lowercase, with punctuation (except the + and # in "C++", "C#") and line breaks turned into single spaces.
+const normalizeText = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9+#]+/g, " ")
+    .trim();
+
+/**
+ * Scores text against a fixed keyword list: a keyword matches when it appears as a whole term,
+ * ignoring case, punctuation and line breaks ("Node.js" matches "node js"). Deterministic, so the
+ * same file always gets the same score.
+ */
+export function scoreText(keywords: string[], text: string): KeywordMatch {
+  const haystack = ` ${normalizeText(text)} `;
+  const matchedKeywords: string[] = [];
+  const missingKeywords: string[] = [];
+  const seen = new Set<string>();
+  for (const keyword of keywords) {
+    const needle = normalizeText(keyword);
+    if (!needle || seen.has(needle)) continue;
+    seen.add(needle);
+    (haystack.includes(` ${needle} `) ? matchedKeywords : missingKeywords).push(keyword);
+  }
+  return { matchedKeywords, missingKeywords, matchPercent: matchPercent(matchedKeywords.length, missingKeywords.length) };
+}

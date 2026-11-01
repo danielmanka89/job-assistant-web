@@ -27,7 +27,7 @@ import type {
   User,
   UserRole,
 } from "@/lib/types";
-import { matchPercent, mergeSkills } from "@/lib/skills";
+import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
 import type { ApiResult } from "./api";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
@@ -225,23 +225,6 @@ function mentions(text: string, keyword: string): boolean {
   return new RegExp(`(^|[^a-z0-9])${escapeRegExp(keyword.toLowerCase())}($|[^a-z0-9])`).test(text);
 }
 
-/** Which of the job's known keywords a resume mentions. */
-function matchKeywords(jobDescription: string, resume: Pick<Resume, "summary" | "skills" | "workExperience">) {
-  const jd = jobDescription.toLowerCase();
-  const resumeText = [
-    resume.summary ?? "",
-    ...resume.skills,
-    ...resume.workExperience.flatMap((w) => [w.jobTitle, ...w.bullets.map((b) => b.text)]),
-  ]
-    .join(" ")
-    .toLowerCase();
-  const inJob = KNOWN_KEYWORDS.filter((k) => mentions(jd, k));
-  return {
-    matchedKeywords: inJob.filter((k) => mentions(resumeText, k)),
-    missingKeywords: inJob.filter((k) => !mentions(resumeText, k)),
-  };
-}
-
 async function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAnalysisResponse>> {
   await delay(1400);
   const jd = request.jobDescription.toLowerCase();
@@ -253,10 +236,17 @@ async function analyzeGap(request: GapAnalysisRequest): Promise<ApiResult<GapAna
   }
 
   const resume = sampleResume();
-  const { matchedKeywords, missingKeywords } = matchKeywords(jd, {
-    ...resume,
-    skills: mergeSkills(resume.skills, mockAddedSkills),
-  });
+  const resumeText = [
+    resume.summary ?? "",
+    ...mergeSkills(resume.skills, mockAddedSkills),
+    ...resume.workExperience.flatMap((w) => [w.jobTitle, ...w.bullets.map((b) => b.text)]),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  const inJob = KNOWN_KEYWORDS.filter((k) => mentions(jd, k));
+  const matchedKeywords = inJob.filter((k) => mentions(resumeText, k));
+  const missingKeywords = inJob.filter((k) => !mentions(resumeText, k));
   const focus = missingKeywords[0] ?? matchedKeywords[0] ?? "the role";
 
   return {
@@ -368,14 +358,10 @@ async function tailorResume(request: TailoredResumeRequest): Promise<ApiResult<T
     createdAt: now,
   }));
 
-  // Scored on the generated text itself, like the real API's finalMatchPercent.
-  const final = matchKeywords(request.jobDescription, tailoredResume);
-  const data = {
-    tailoredResume,
-    files,
-    finalMatchPercent: matchPercent(final.matchedKeywords.length, final.missingKeywords.length),
-  };
-  return { ok: true, data };
+  const jobKeywords = KNOWN_KEYWORDS.filter((k) => mentions(request.jobDescription.toLowerCase(), k));
+  const finalMatchPercent = scoreText(jobKeywords, text).matchPercent;
+
+  return { ok: true, data: { tailoredResume, files, finalMatchPercent } };
 }
 
 function daysAgo(days: number): string {

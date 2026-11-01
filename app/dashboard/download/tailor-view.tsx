@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import type { GeneratedFile, Resume, SuggestedBullet, TailoredResumeResponse } from "@/lib/types";
-import { readFinalMatchPercent } from "@/lib/client/final-score";
 import { ResumePreview } from "./resume-preview";
 
 type Props = {
@@ -16,7 +15,8 @@ export function TailorView({ original, response, suggestions }: Props) {
   const acceptedIds = new Set(tailoredResume.acceptedBulletIds);
   const accepted = suggestions.filter((b) => acceptedIds.has(b.id));
   const changes = tailoredResume.acceptedBulletIds.length;
-  const finalPercent = readFinalMatchPercent(response);
+  // Results saved in this tab before the score existed don't have it.
+  const finalPercent = typeof response.finalMatchPercent === "number" ? Math.round(response.finalMatchPercent) : null;
 
   return (
     <div className="space-y-8">
