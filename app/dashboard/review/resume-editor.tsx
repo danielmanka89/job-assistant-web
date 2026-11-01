@@ -263,6 +263,22 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
               onChange={(e) => setContact("websiteUrl", e.target.value)}
               error={errors["contact.websiteUrl"]}
             />
+            <TextField
+              label="Visa / work authorization (optional)"
+              placeholder="H-1B, Green Card, US Citizen"
+              hint="Not printed on tailored resumes. Filled into job submissions."
+              value={resume.contact.workAuthorization ?? ""}
+              onChange={(e) => setContact("workAuthorization", e.target.value)}
+              error={errors["contact.workAuthorization"]}
+            />
+            <TextField
+              label="Pay rate looking for (optional)"
+              placeholder="$65/hr or $120,000/yr"
+              hint="Not printed on tailored resumes. Filled into job submissions."
+              value={resume.contact.desiredPay ?? ""}
+              onChange={(e) => setContact("desiredPay", e.target.value)}
+              error={errors["contact.desiredPay"]}
+            />
             <TextArea
               className="sm:col-span-2"
               label="Professional summary (optional)"

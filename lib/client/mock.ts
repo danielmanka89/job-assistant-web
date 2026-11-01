@@ -180,6 +180,9 @@ export function sampleResume(fileName = "Jane_Doe_CV.pdf"): Resume {
       fullName: "Jane Doe",
       email: "jane.doe@example.com",
       location: "Berlin, Germany",
+      linkedinUrl: "https://linkedin.com/in/janedoe",
+      workAuthorization: "EU Blue Card",
+      desiredPay: "€75,000/yr",
     },
     summary: "Frontend engineer with 5 years of experience building React apps.",
     workExperience: [
@@ -214,6 +217,7 @@ export function sampleResume(fileName = "Jane_Doe_CV.pdf"): Resume {
       },
     ],
     skills: ["React", "TypeScript", "Next.js", "Tailwind CSS", "Testing Library", "Figma"],
+    certifications: ["AWS Certified Developer – Associate", "Google UX Design Certificate"],
     createdAt: now,
     updatedAt: now,
   };
@@ -615,6 +619,7 @@ async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
 // (sample) resume on first view and only changes through confirmResumeSync.
 let mockProfile: ProfileValues = {};
 let mockProfileSavedAt: string | null = null;
+let mockLatestResume: Resume | null = null;
 
 async function getProfile(): Promise<ApiResult<ProfileResponse>> {
   await delay(400);
@@ -622,14 +627,15 @@ async function getProfile(): Promise<ApiResult<ProfileResponse>> {
     mockProfile = profileFromResume(sampleResume());
     mockProfileSavedAt = new Date().toISOString();
   }
-  return { ok: true, data: { values: { ...mockProfile }, updatedAt: mockProfileSavedAt } };
+  const resume = mockProfileSavedAt ? (mockLatestResume ?? sampleResume()) : null;
+  return { ok: true, data: { values: { ...mockProfile }, updatedAt: mockProfileSavedAt, resume } };
 }
 
 async function compareResume(file: File, onProgress?: (percent: number) => void): Promise<ApiResult<ResumeCompareResponse>> {
   const uploaded = await uploadResume(file, onProgress);
   if (!uploaded.ok) return uploaded;
   const r = uploaded.data;
-  const draft = { sourceFileName: r.sourceFileName, contact: r.contact, summary: r.summary, workExperience: r.workExperience, education: r.education, skills: r.skills };
+  const draft = { sourceFileName: r.sourceFileName, contact: r.contact, summary: r.summary, workExperience: r.workExperience, education: r.education, skills: r.skills, certifications: r.certifications };
   const { changes } = syncProfileToResume(mockProfile, draft);
   const requiresConfirmation = changes.length > 0 && !isEmptyProfile(mockProfile);
   return { ok: true, data: { draft, changes, requiresConfirmation, syncToken: `mock.${Date.now()}` } };
@@ -642,7 +648,8 @@ async function confirmResumeSync(_file: File, compared: ResumeCompareResponse): 
   mockProfileSavedAt = new Date().toISOString();
   const now = new Date().toISOString();
   const resume: Resume = { ...compared.draft, id: `resume_${Date.now()}`, userId: "user_mock_1", createdAt: now, updatedAt: now };
-  return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt }, changes } };
+  mockLatestResume = resume;
+  return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt, resume }, changes } };
 }
 
 // Spreadsheet rows, kept in memory for this page load. Seeded on first use.

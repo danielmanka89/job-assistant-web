@@ -66,6 +66,8 @@ export interface ResumeContact {
   location?: string; // e.g. "Berlin, Germany"
   linkedinUrl?: string;
   websiteUrl?: string;
+  workAuthorization?: string; // visa / work authorization, only if the resume states it, e.g. "H-1B"
+  desiredPay?: string; // pay rate or salary the candidate asks for, only if the resume states it
 }
 
 /** One job entry on a resume. */
@@ -102,6 +104,7 @@ export interface Resume {
   workExperience: WorkExperience[];
   education: Education[];
   skills: string[];
+  certifications?: string[]; // omitted for resumes uploaded before certifications were read
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
 }
@@ -299,6 +302,7 @@ export type ProfileValues = Record<string, string>;
 export interface ProfileResponse {
   values: ProfileValues;
   updatedAt: string | null;
+  resume: Resume | null; // the latest resume, shown in full on the Profile page
 }
 
 /** A resume read from an uploaded file but not saved yet (POST /api/resume/compare). */

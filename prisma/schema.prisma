@@ -41,6 +41,7 @@ model Resume {
   workExperience Json // WorkExperience[]
   education      Json // Education[]
   skills         Json // string[]
+  certifications Json? // string[]; null for resumes uploaded before certifications were read
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   gapAnalyses    GapAnalysis[]

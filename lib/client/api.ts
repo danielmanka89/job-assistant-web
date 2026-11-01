@@ -147,7 +147,8 @@ function toProfileResponse(body: unknown): ProfileResponse {
     b.values && typeof b.values === "object" && !Array.isArray(b.values)
       ? Object.fromEntries(Object.entries(b.values).filter((e): e is [string, string] => typeof e[1] === "string"))
       : {};
-  return { values, updatedAt: typeof b.updatedAt === "string" ? b.updatedAt : null };
+  const resume = b.resume && typeof b.resume === "object" && (b.resume as Resume).contact ? (b.resume as Resume) : null;
+  return { values, updatedAt: typeof b.updatedAt === "string" ? b.updatedAt : null, resume };
 }
 
 /** The job seeker's profile (read-only, from their resume), from GET /api/profile. */
