@@ -335,3 +335,48 @@ export interface ResumeSyncResponse {
   profile: ProfileResponse;
   changes: ProfileChange[];
 }
+
+/** A skill the candidate's resume doesn't show that open jobs ask for. */
+export interface MissingSkill {
+  skill: string; // e.g. "AWS"
+  jobCount: number; // open jobs on the Job Board that mention it
+  gainPercent: number; // roughly how much Market Reach would rise with it
+}
+
+export type LearningStatus = "interested" | "in_progress" | "completed";
+
+/** A skill the user chose to learn, with their progress through its roadmap. */
+export interface LearningPath {
+  id: string;
+  skillName: string;
+  status: LearningStatus;
+  progress: number; // 0-100
+  completedSteps: string[]; // roadmap step ids the user ticked
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+}
+
+/**
+ * Returned by GET /api/learning: Market Reach from the latest resume against open jobs, the
+ * missing skills worth learning, and the user's learning paths. hasResume is false until a
+ * resume is uploaded, and the numbers are then 0 and empty.
+ */
+export interface LearningInsights {
+  hasResume: boolean;
+  marketReachPercent: number;
+  baselinePercent: number | null; // Market Reach when the latest resume was uploaded
+  jobsAnalyzed: number;
+  missingSkills: MissingSkill[];
+  paths: LearningPath[];
+}
+
+/** POST /api/learning/paths: start learning these skills (already-started ones are kept as they are). */
+export interface StartLearningRequest {
+  skills: string[];
+}
+
+/** PATCH /api/learning/paths/:id: tick roadmap steps or change the status. Progress follows the steps. */
+export interface UpdateLearningPathRequest {
+  status?: LearningStatus;
+  completedSteps?: string[];
+}

@@ -25,27 +25,29 @@ model User {
   sessions        Session[]
   submissions     Submission[]
   profile         CandidateProfile?
+  learningPaths   LearningPath[]
 }
 
 model Resume {
-  id             String           @id @default(cuid())
-  userId         String
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sourceFileName String? // original upload name, e.g. "Jane_Doe_CV.pdf"
-  storedFileName String // unique file name; older rows keep the file in /uploads
-  mimeType       String // application/pdf or DOCX
-  fileSize       Int // bytes
-  data           Bytes? // file contents (serverless hosts have no persistent disk)
-  contact        Json // ResumeContact
-  summary        String?
-  workExperience Json // WorkExperience[]
-  education      Json // Education[]
-  skills         Json // string[]
-  certifications Json? // string[]; null for resumes uploaded before certifications were read
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  gapAnalyses    GapAnalysis[]
-  tailored       TailoredResume[]
+  id                 String           @id @default(cuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceFileName     String? // original upload name, e.g. "Jane_Doe_CV.pdf"
+  storedFileName     String // unique file name; older rows keep the file in /uploads
+  mimeType           String // application/pdf or DOCX
+  fileSize           Int // bytes
+  data               Bytes? // file contents (serverless hosts have no persistent disk)
+  contact            Json // ResumeContact
+  summary            String?
+  workExperience     Json // WorkExperience[]
+  education          Json // Education[]
+  skills             Json // string[]
+  certifications     Json? // string[]; null for resumes uploaded before certifications were read
+  marketReachPercent Int? // Market Reach when uploaded (baseline); null for older resumes until first viewed
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  gapAnalyses        GapAnalysis[]
+  tailored           TailoredResume[]
 
   @@index([userId])
 }
@@ -152,6 +154,21 @@ model CandidateProfile {
   values    Json // ProfileValues
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A skill the user chose to learn from the Learning page, with their roadmap progress.
+model LearningPath {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillName      String
+  status         String   @default("interested") // "interested" | "in_progress" | "completed"
+  progress       Int      @default(0) // 0-100, share of roadmap steps completed
+  completedSteps Json     @default("[]") // string[] of roadmap step ids
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, skillName])
 }
 
 // A logged-in browser. The cookie holds a random token; only its HMAC is stored, so a copy of

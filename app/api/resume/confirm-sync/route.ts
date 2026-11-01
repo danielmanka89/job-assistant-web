@@ -4,6 +4,8 @@ import { apiError, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { syncProfileToResume } from "@/lib/profile";
+import { recentJobDescriptions } from "@/lib/learning-store";
+import { marketReach } from "@/lib/market-reach";
 import { checkResumeSync } from "@/lib/resume-sync-token";
 import { FILE_TYPES, readResumeUpload } from "@/lib/resume-upload";
 import type { ProfileValues, ResumeDraft, ResumeSyncResponse } from "@/lib/types";
@@ -41,6 +43,9 @@ export async function POST(request: NextRequest) {
     return apiError(400, "SYNC_MISMATCH", "The file or details don't match what was compared. Upload the resume again.");
   }
 
+  // Market Reach when the resume is added: the baseline the Learning dashboard compares against.
+  const baseline = marketReach(draft, await recentJobDescriptions()).percent;
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.candidateProfile.findUnique({ where: { userId: user.id } });
@@ -59,6 +64,7 @@ export async function POST(request: NextRequest) {
           education: draft.education as object[],
           skills: draft.skills,
           ...(draft.certifications?.length ? { certifications: draft.certifications } : {}),
+          marketReachPercent: baseline,
         },
         omit: { data: true },
       });

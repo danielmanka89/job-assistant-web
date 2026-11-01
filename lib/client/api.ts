@@ -10,6 +10,8 @@ import type {
   DashboardStats,
   GapAnalysisResponse,
   JobPosting,
+  LearningInsights,
+  LearningPath,
   LoginRequest,
   ProfileResponse,
   RegisterRequest,
@@ -22,7 +24,9 @@ import type {
   TailoredResumeRequest,
   TailoredResumeResponse,
   TailoredResumeWithFiles,
+  StartLearningRequest,
   UpdateAccountRequest,
+  UpdateLearningPathRequest,
   UpdateSubmissionRequest,
   UpdateSummaryRequest,
 } from "@/lib/types";
@@ -156,6 +160,55 @@ export async function getProfile(): Promise<ApiResult<ProfileResponse>> {
   if (USE_MOCK_API) return mockApi.getProfile();
   const result = await getJson("/api/profile");
   return result.ok ? { ok: true, data: toProfileResponse(result.data) } : result;
+}
+
+const isPath = (p: unknown): p is LearningPath => !!p && typeof (p as LearningPath).id === "string" && typeof (p as LearningPath).skillName === "string";
+
+/** Market Reach, missing skills and learning paths, from GET /api/learning. */
+export async function getLearningInsights(): Promise<ApiResult<LearningInsights>> {
+  if (USE_MOCK_API) return mockApi.getLearningInsights();
+  const result = await getJson("/api/learning");
+  if (!result.ok) return result;
+  const b = (result.data ?? {}) as Partial<LearningInsights>;
+  return {
+    ok: true,
+    data: {
+      hasResume: b.hasResume === true,
+      marketReachPercent: typeof b.marketReachPercent === "number" ? b.marketReachPercent : 0,
+      baselinePercent: typeof b.baselinePercent === "number" ? b.baselinePercent : null,
+      jobsAnalyzed: typeof b.jobsAnalyzed === "number" ? b.jobsAnalyzed : 0,
+      missingSkills: Array.isArray(b.missingSkills) ? b.missingSkills.filter((m) => m && typeof m.skill === "string") : [],
+      paths: Array.isArray(b.paths) ? b.paths.filter(isPath) : [],
+    },
+  };
+}
+
+/** Starts learning paths for skills with POST /api/learning/paths and returns all of the user's paths. */
+export async function startLearning(skills: string[]): Promise<ApiResult<LearningPath[]>> {
+  if (USE_MOCK_API) return mockApi.startLearning(skills);
+  const result = await postJson<StartLearningRequest, unknown>("/api/learning/paths", { skills });
+  return result.ok ? { ok: true, data: Array.isArray(result.data) ? result.data.filter(isPath) : [] } : result;
+}
+
+/** Ticks roadmap steps or changes status with PATCH /api/learning/paths/:id. */
+export async function updateLearningPath(id: string, changes: UpdateLearningPathRequest): Promise<ApiResult<LearningPath>> {
+  if (USE_MOCK_API) return mockApi.updateLearningPath(id, changes);
+  const result = await sendJson<UpdateLearningPathRequest, unknown>("PATCH", `/api/learning/paths/${encodeURIComponent(id)}`, changes);
+  if (!result.ok) return result;
+  return isPath(result.data) ? { ok: true, data: result.data } : { ok: false, error: toApiError(null, 500) };
+}
+
+/** Stops following a learning path with DELETE /api/learning/paths/:id. */
+export async function removeLearningPath(id: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) return mockApi.removeLearningPath(id);
+  let res: Response;
+  try {
+    res = await fetch(`/api/learning/paths/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "same-origin" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (res.ok) return { ok: true, data: null };
+  return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
 }
 
 /** The user's Spreadsheet rows, newest first, from GET /api/submissions. */

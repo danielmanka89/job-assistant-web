@@ -47,6 +47,17 @@ const NAV: NavItem[] = [
     ),
   },
   {
+    href: "/dashboard/learning",
+    label: "Learning",
+    match: (p) => under(p, "/dashboard/learning"),
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
+        <path d="m2.5 9 9.5-4.5L21.5 9 12 13.5 2.5 9Z" strokeLinejoin="round" />
+        <path d="M6.5 11v4.5c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3V11M21.5 9v5.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/dashboard/jobs",
     label: "Job Board",
     match: (p) => under(p, "/dashboard/jobs"),

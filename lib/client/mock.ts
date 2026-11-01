@@ -12,6 +12,7 @@
 //   settings: current password "wrongpass" -> incorrect password; email taken@example.com -> already registered
 //   resume sync: compares the sample resume with the profile; "changed" in the file name -> a resume
 //     with a new phone, location and skill (red alert); "fail" in the file name -> parse error
+//   learning: Market Reach of the sample resume against the sample jobs; paths kept in memory
 //   profile: read-only, created from the sample resume (empty for "new" users)
 //   spreadsheet: starts with two sample rows (none for "new" users); a cell containing "fail" -> save error
 import type {
@@ -30,6 +31,8 @@ import type {
   RegisterRequest,
   GeneratedFile,
   JobPosting,
+  LearningInsights,
+  LearningPath,
   Resume,
   ResumeCompareResponse,
   ResumeSyncResponse,
@@ -41,11 +44,14 @@ import type {
   TailoredResumeResponse,
   TailoredResumeWithFiles,
   UpdateAccountRequest,
+  UpdateLearningPathRequest,
   UpdateSubmissionRequest,
   User,
   UserRole,
 } from "@/lib/types";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
+import { roadmapStepIds } from "@/lib/learning-content";
+import { marketReach } from "@/lib/market-reach";
 import { isEmptyProfile, profileFromResume, syncProfileToResume } from "@/lib/profile";
 import { SHEETS, buildSubmissionWorkbook, prefillSubmission, validateSheetValues } from "@/lib/spreadsheet";
 import { XLSX_MIME } from "@/lib/xlsx";
@@ -652,6 +658,51 @@ async function confirmResumeSync(_file: File, compared: ResumeCompareResponse): 
   return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt, resume }, changes } };
 }
 
+// Learning paths, kept in memory for this page load.
+let mockPaths: LearningPath[] = [];
+
+async function getLearningInsights(): Promise<ApiResult<LearningInsights>> {
+  await delay(500);
+  if (isNewUser() && !mockLatestResume) {
+    return { ok: true, data: { hasResume: false, marketReachPercent: 0, baselinePercent: null, jobsAnalyzed: 0, missingSkills: [], paths: [...mockPaths] } };
+  }
+  const reach = marketReach(mockLatestResume ?? sampleResume(), sampleJobs().map((j) => j.description));
+  return {
+    ok: true,
+    data: { hasResume: true, marketReachPercent: reach.percent, baselinePercent: Math.max(0, reach.percent - 6), jobsAnalyzed: reach.jobsAnalyzed, missingSkills: reach.missingSkills, paths: [...mockPaths] },
+  };
+}
+
+async function startLearning(skills: string[]): Promise<ApiResult<LearningPath[]>> {
+  await delay(400);
+  const now = new Date().toISOString();
+  for (const skillName of skills) {
+    if (!mockPaths.some((p) => p.skillName === skillName)) {
+      mockPaths.push({ id: `path_${skillName}_${Date.now()}`, skillName, status: "interested", progress: 0, completedSteps: [], createdAt: now, updatedAt: now });
+    }
+  }
+  return { ok: true, data: [...mockPaths] };
+}
+
+async function updateLearningPath(id: string, changes: UpdateLearningPathRequest): Promise<ApiResult<LearningPath>> {
+  await delay(250);
+  const path = mockPaths.find((p) => p.id === id);
+  if (!path) return fail({ code: "PATH_NOT_FOUND", message: "That learning path was removed" });
+  const steps = roadmapStepIds(path.skillName);
+  const completedSteps = changes.completedSteps ?? path.completedSteps;
+  const progress = Math.round((completedSteps.length / steps.length) * 100);
+  const status = changes.status ?? (progress === 100 ? "completed" : progress > 0 ? "in_progress" : path.status === "completed" ? "in_progress" : path.status);
+  const next: LearningPath = { ...path, completedSteps, progress, status, updatedAt: new Date().toISOString() };
+  mockPaths = mockPaths.map((p) => (p.id === id ? next : p));
+  return { ok: true, data: next };
+}
+
+async function removeLearningPath(id: string): Promise<ApiResult<null>> {
+  await delay(250);
+  mockPaths = mockPaths.filter((p) => p.id !== id);
+  return { ok: true, data: null };
+}
+
 // Spreadsheet rows, kept in memory for this page load. Seeded on first use.
 let mockSubmissions: Submission[] | null = null;
 
@@ -746,6 +797,10 @@ export const mockApi = {
   getProfile,
   compareResume,
   confirmResumeSync,
+  getLearningInsights,
+  startLearning,
+  updateLearningPath,
+  removeLearningPath,
   listSubmissions,
   createSubmission,
   updateSubmission,
