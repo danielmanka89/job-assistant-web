@@ -264,7 +264,7 @@ function EmptyState() {
 /** Two stacked documents with a sparkle: a resume about to be tailored. */
 function EmptyIllustration() {
   return (
-    <svg viewBox="0 0 200 150" className="mx-auto h-36 w-auto" aria-hidden="true">
+    <svg viewBox="0 0 200 150" className="mono-grayscale mx-auto h-36 w-auto" aria-hidden="true">
       <ellipse cx="100" cy="138" rx="62" ry="7" className="fill-neutral-100 dark:fill-neutral-800/70" />
       <g transform="rotate(-8 82 70)">
         <rect x="44" y="20" width="76" height="100" rx="10" className="fill-neutral-100 stroke-neutral-200 dark:fill-neutral-800 dark:stroke-neutral-700" strokeWidth="2" />

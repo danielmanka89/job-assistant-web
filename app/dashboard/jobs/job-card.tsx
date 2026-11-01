@@ -56,7 +56,7 @@ export function JobCard({
     >
       <div className="flex items-start gap-4">
         <span
-          className={`grid size-12 shrink-0 place-items-center rounded-2xl text-lg font-bold ${avatarColor(job.company)}`}
+          className={`mono-grayscale grid size-12 shrink-0 place-items-center rounded-2xl text-lg font-bold ${avatarColor(job.company)}`}
           aria-hidden="true"
         >
           {job.company.trim().charAt(0).toUpperCase() || "?"}
