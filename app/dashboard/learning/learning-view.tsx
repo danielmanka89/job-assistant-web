@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ApiError, LearningInsights, LearningPath, LearningStatus } from "@/lib/types";
@@ -28,6 +28,7 @@ export function LearningView() {
   const [picked, setPicked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     let live = true;
@@ -91,6 +92,18 @@ export function LearningView() {
   const { data } = load;
   const fromLink = params.get("skill");
   const active = data.paths.find((p) => p.skillName === (picked ?? fromLink)) ?? data.paths[0] ?? null;
+  // Arrow keys, Home and End move between tabs, like the Spreadsheet's sheet tabs.
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const count = data.paths.length;
+    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    const target = event.key === "Home" ? 0 : event.key === "End" ? count - 1 : step ? (index + step + count) % count : null;
+    if (target === null) return;
+    event.preventDefault();
+    const path = data.paths[target];
+    setPicked(path.skillName);
+    tabRefs.current[path.id]?.focus();
+  }
+
   const suggestions = data.missingSkills.filter((m) => !data.paths.some((p) => p.skillName === m.skill));
 
   return (
@@ -149,16 +162,22 @@ export function LearningView() {
       ) : (
         <>
           <div role="tablist" aria-label="Your learning paths" className="flex gap-1 overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-            {data.paths.map((p) => {
+            {data.paths.map((p, i) => {
               const selected = p.id === active.id;
               return (
                 <button
                   key={p.id}
+                  ref={(el) => {
+                    tabRefs.current[p.id] = el;
+                  }}
                   type="button"
                   role="tab"
+                  id={`learning-tab-${p.id}`}
                   aria-selected={selected}
                   aria-controls="learning-panel"
+                  tabIndex={selected ? 0 : -1}
                   onClick={() => setPicked(p.skillName)}
+                  onKeyDown={(e) => onTabKeyDown(e, i)}
                   className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 ${
                     selected ? "bg-brand-600 text-white shadow-md shadow-brand-600/25" : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                   }`}
@@ -199,7 +218,7 @@ function SkillPanel({
   const toggle = (id: string) => onUpdate({ completedSteps: done.has(id) ? path.completedSteps.filter((s) => s !== id) : [...path.completedSteps, id] });
 
   return (
-    <div id="learning-panel" role="tabpanel" className="space-y-6">
+    <div id="learning-panel" role="tabpanel" aria-labelledby={`learning-tab-${path.id}`} className="space-y-6">
       <div className="rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -284,7 +303,7 @@ function SkillPanel({
 
 function Section({ id, title, note, placeholder = false, children }: { id: string; title: string; note?: string; placeholder?: boolean; children: ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-6 rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-sm sm:p-8 dark:border-neutral-800 dark:bg-neutral-900/60">
+    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 rounded-3xl lg:scroll-mt-6 border border-neutral-200/80 bg-white p-6 shadow-sm sm:p-8 dark:border-neutral-800 dark:bg-neutral-900/60">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 id={`${id}-title`} className="text-xl font-semibold text-neutral-900 uppercase dark:text-white">
           {title}
