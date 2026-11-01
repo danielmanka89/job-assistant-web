@@ -57,6 +57,12 @@ export async function deleteSession(token: string | undefined): Promise<void> {
   await prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } });
 }
 
+/** Deletes every session of the user except the one behind `keepToken`, e.g. after a password change. */
+export async function deleteOtherSessions(userId: string, keepToken: string | undefined): Promise<void> {
+  const keep = keepToken && keepToken.length <= 200 ? hashToken(keepToken) : undefined;
+  await prisma.session.deleteMany({ where: { userId, ...(keep ? { NOT: { tokenHash: keep } } : {}) } });
+}
+
 /** Expires the session cookie on a response. */
 export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set(SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 });

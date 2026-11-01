@@ -1,4 +1,5 @@
 import type {
+  AccountResponse,
   AddSkillsRequest,
   ApiError,
   AuthResponse,
@@ -15,6 +16,7 @@ import type {
   TailoredResumeRequest,
   TailoredResumeResponse,
   TailoredResumeWithFiles,
+  UpdateAccountRequest,
   UpdateSummaryRequest,
 } from "@/lib/types";
 import { clearUser } from "./current-user";
@@ -116,6 +118,19 @@ export async function listTailoredResumes(): Promise<ApiResult<TailoredResumeWit
   if (USE_MOCK_API) return mockApi.listTailoredResumes();
   const result = await getJson("/api/tailored-resumes");
   return result.ok ? { ok: true, data: toTailoredResumeList(result.data) } : result;
+}
+
+/** The logged-in user, from GET /api/account. */
+export async function getAccount(): Promise<ApiResult<AccountResponse>> {
+  if (USE_MOCK_API) return mockApi.getAccount();
+  const result = await getJson("/api/account");
+  return result.ok ? { ok: true, data: result.data as AccountResponse } : result;
+}
+
+/** Changes name, email and/or password with PATCH /api/account and returns the updated user. */
+export function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<AccountResponse>> {
+  if (USE_MOCK_API) return mockApi.updateAccount(request);
+  return sendJson<UpdateAccountRequest, AccountResponse>("PATCH", "/api/account", request);
 }
 
 export function register(payload: RegisterRequest): Promise<ApiResult<AuthResponse>> {
