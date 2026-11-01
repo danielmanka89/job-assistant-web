@@ -101,7 +101,8 @@ export function ThemeToggle() {
   useEffect(() => {
     if (!open) return;
     rootRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();
-    const onPointerDown = (e: PointerEvent) => {
+    // Close when the user clicks or tabs anywhere outside the menu.
+    const onOutside = (e: Event) => {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
@@ -109,10 +110,12 @@ export function ThemeToggle() {
       setOpen(false);
       triggerRef.current?.focus();
     };
-    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("pointerdown", onOutside);
+    document.addEventListener("focusin", onOutside);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("pointerdown", onOutside);
+      document.removeEventListener("focusin", onOutside);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
