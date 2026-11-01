@@ -531,7 +531,7 @@ export function ResumeEditor({ initial }: { initial: Resume }) {
           </p>
           <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
             <Link
-              href="/dashboard"
+              href="/dashboard/upload"
               className="rounded-xl px-4 py-2.5 text-[15px] font-semibold text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
             >
               Back

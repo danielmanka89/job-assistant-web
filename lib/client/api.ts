@@ -16,6 +16,7 @@ import type {
   UpdateSummaryRequest,
 } from "@/lib/types";
 import { clearUser } from "./current-user";
+import { toDashboardStats, toTailoredResumeList, type DashboardStats, type TailoredResumeSummary } from "./dashboard";
 import { toJobList } from "./jobs";
 import { mockApi } from "./mock";
 
@@ -99,6 +100,20 @@ export async function listEmployerJobs(): Promise<ApiResult<JobPosting[]>> {
   if (USE_MOCK_API) return mockApi.listEmployerJobs();
   const result = await getJson("/api/employer/jobs");
   return result.ok ? { ok: true, data: toJobList(result.data) } : result;
+}
+
+/** Totals for the dashboard cards, from GET /api/dashboard-stats. */
+export async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
+  if (USE_MOCK_API) return mockApi.getDashboardStats();
+  const result = await getJson("/api/dashboard-stats");
+  return result.ok ? { ok: true, data: toDashboardStats(result.data) } : result;
+}
+
+/** The user's tailored resumes, newest first, from GET /api/tailored-resumes ({ tailoredResumes: [...] }). */
+export async function listTailoredResumes(): Promise<ApiResult<TailoredResumeSummary[]>> {
+  if (USE_MOCK_API) return mockApi.listTailoredResumes();
+  const result = await getJson("/api/tailored-resumes");
+  return result.ok ? { ok: true, data: toTailoredResumeList(result.data) } : result;
 }
 
 export function register(payload: RegisterRequest): Promise<ApiResult<AuthResponse>> {

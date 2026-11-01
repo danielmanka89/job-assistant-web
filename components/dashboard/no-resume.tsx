@@ -4,7 +4,7 @@ import Link from "next/link";
 export function NoResume({
   title,
   children,
-  href = "/dashboard",
+  href = "/dashboard/upload",
   action = "Upload a resume",
 }: {
   title: string;

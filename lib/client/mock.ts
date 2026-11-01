@@ -8,6 +8,7 @@
 //   tailoring with "tailor-fail" in the job description -> generation error
 //   posting a job titled with "fail" in it -> server error
 //   log in with an email containing "employer" -> employer account
+//   log in with an email containing "new" -> dashboard with no tailored resumes yet
 import type {
   ApiError,
   AuthResponse,
@@ -29,6 +30,7 @@ import type {
 } from "@/lib/types";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
 import type { ApiResult } from "./api";
+import type { DashboardStats, TailoredResumeSummary } from "./dashboard";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
 
@@ -481,6 +483,63 @@ async function listEmployerJobs(): Promise<ApiResult<JobPosting[]>> {
   return { ok: true, data: [...employerJobs] };
 }
 
+function isNewUser(): boolean {
+  return readStoredUser()?.email.toLowerCase().includes("new") ?? false;
+}
+
+function mockFile(tailoredResumeId: string, format: "docx" | "pdf", createdAt: string): GeneratedFile {
+  return {
+    id: `file_${tailoredResumeId}_${format}`,
+    resumeId: "resume_mock_1",
+    tailoredResumeId,
+    format,
+    fileName: `Jane_Doe_Resume.mock-${format}.txt`,
+    downloadUrl: URL.createObjectURL(new Blob([`Mock ${format} for ${tailoredResumeId}`], { type: "text/plain" })),
+    createdAt,
+  };
+}
+
+const MOCK_HISTORY: { id: string; jobTitle?: string; days: number; score: number | null }[] = [
+  { id: "tailored_mock_3", jobTitle: "Senior Frontend Engineer · Lumen Health", days: 1, score: 88 },
+  { id: "tailored_mock_2", jobTitle: "Full Stack Developer · Northwind", days: 6, score: 64 },
+  { id: "tailored_mock_1", days: 21, score: 42 },
+];
+
+async function listTailoredResumes(): Promise<ApiResult<TailoredResumeSummary[]>> {
+  await delay(700);
+  if (isNewUser()) return { ok: true, data: [] };
+  return {
+    ok: true,
+    data: MOCK_HISTORY.map((r) => {
+      const createdAt = daysAgo(r.days);
+      return {
+        id: r.id,
+        createdAt,
+        jobTitle: r.jobTitle,
+        finalMatchPercent: r.score,
+        files: [mockFile(r.id, "docx", createdAt), mockFile(r.id, "pdf", createdAt)],
+      };
+    }),
+  };
+}
+
+async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
+  await delay(500);
+  if (isNewUser()) {
+    return { ok: true, data: { resumesUploaded: 0, resumesTailored: 0, averageMatchPercent: null, bestMatchPercent: null } };
+  }
+  const scores = MOCK_HISTORY.map((r) => r.score).filter((s): s is number => s !== null);
+  return {
+    ok: true,
+    data: {
+      resumesUploaded: 2,
+      resumesTailored: MOCK_HISTORY.length,
+      averageMatchPercent: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+      bestMatchPercent: Math.max(...scores),
+    },
+  };
+}
+
 export const mockApi = {
   register,
   login,
@@ -495,4 +554,6 @@ export const mockApi = {
   listJobs,
   postJob,
   listEmployerJobs,
+  getDashboardStats,
+  listTailoredResumes,
 };
