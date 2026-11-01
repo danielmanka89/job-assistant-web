@@ -23,6 +23,7 @@ model User {
   generatedFiles  GeneratedFile[]
   jobPostings     JobPosting[]
   sessions        Session[]
+  submissions     Submission[]
 }
 
 model Resume {
@@ -105,7 +106,7 @@ model GeneratedFile {
 
 // Jobs posted on the site ("native") or pulled from an external provider.
 model JobPosting {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   company     String
   location    String
@@ -114,11 +115,31 @@ model JobPosting {
   source      String // "native" | "adzuna" | "mock"
   externalId  String? // the provider's id; null for native jobs
   postedById  String? // user who posted a native job
-  postedBy    User?    @relation(fields: [postedById], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
+  postedBy    User?        @relation(fields: [postedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  submissions Submission[]
 
   @@unique([source, externalId])
   @@index([createdAt])
+}
+
+// One job application, shown as a row on each of the four Spreadsheet sheets. Each sheet's cells
+// are a JSON object of column key -> text; lib/spreadsheet.ts lists the columns.
+model Submission {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobPostingId String? // the job applied to; null for rows added by hand or whose job was removed
+  jobPosting   JobPosting? @relation(fields: [jobPostingId], references: [id], onDelete: SetNull)
+  vendor       Json // SheetValues: Vendor Information
+  submission   Json // SheetValues: Submission Details
+  skills       Json // SheetValues: Skill Matrix
+  client       Json // SheetValues: Client Information
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([userId, jobPostingId]) // applying twice to the same job reuses the row
+  @@index([userId, createdAt])
 }
 
 // A logged-in browser. The cookie holds a random token; only its HMAC is stored, so a copy of

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { listJobs, logout } from "@/lib/client/api";
+import { createSubmission, listJobs, listSubmissions, logout } from "@/lib/client/api";
 import type { JobPosting } from "@/lib/types";
 import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,29 @@ export function JobBoard() {
   const [query, setQuery] = useState("");
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [navigating, startNavigation] = useTransition();
+  // Jobs with a row in the Spreadsheet, and the message about the latest Apply click.
+  const [appliedIds, setAppliedIds] = useState<ReadonlySet<string>>(new Set());
+  const [notice, setNotice] = useState<{ id: number; text: string; error?: boolean } | null>(null);
+  const noticeCount = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    // Only marks jobs as applied; the board works without it.
+    listSubmissions().then((result) => {
+      if (!active || !result.ok) return;
+      const ids = result.data.map((s) => s.jobId).filter((id): id is string => id !== null);
+      setAppliedIds((prev) => new Set([...prev, ...ids]));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice((n) => (n?.id === notice.id ? null : n)), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     let active = true;
@@ -55,6 +78,19 @@ export function JobBoard() {
     storePendingJob({ id: job.id, title: job.title, company: job.company, description: job.description });
     setOpeningId(job.id);
     startNavigation(() => router.push("/dashboard/analyze"));
+  }
+
+  async function recordApplication(job: JobPosting) {
+    const result = await createSubmission({ jobId: job.id });
+    if (result.ok) {
+      setAppliedIds((prev) => new Set(prev).add(job.id));
+      const text = result.data.created
+        ? `Added "${job.title}" to your Spreadsheet.`
+        : `"${job.title}" is already in your Spreadsheet.`;
+      setNotice({ id: ++noticeCount.current, text });
+    } else {
+      setNotice({ id: ++noticeCount.current, text: `Couldn't add "${job.title}" to your Spreadsheet: ${result.error.message}`, error: true });
+    }
   }
 
   if (state.status === "loading") return <BoardSkeleton />;
@@ -117,6 +153,8 @@ export function JobBoard() {
               <JobCard
                 job={job}
                 onTailor={() => tailorFor(job)}
+                onApply={() => void recordApplication(job)}
+                applied={appliedIds.has(job.id)}
                 opening={navigating && openingId === job.id}
                 disabled={navigating}
               />
@@ -124,6 +162,20 @@ export function JobBoard() {
           ))}
         </ul>
       )}
+
+      <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-6 z-50 flex justify-center lg:left-72">
+        {notice && (
+          <p
+            className={`pointer-events-auto max-w-md rounded-2xl px-4 py-3 text-sm font-medium shadow-lg ${
+              notice.error
+                ? "bg-rose-600 text-white"
+                : "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+            }`}
+          >
+            {notice.text}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
