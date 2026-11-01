@@ -6,11 +6,13 @@ import { ProfileView } from "./profile-view";
 export const metadata: Metadata = { title: "My Profile" };
 
 // On large screens the page fills the window and the two columns scroll on their own, so Market
-// Reach stays in view while reading the profile (and the other way round). Phones scroll as one page.
+// Reach stays in view while reading the profile (and the other way round). The scrollbars are hidden
+// to keep the page calm; the columns still scroll with the wheel, trackpad and keyboard. Phones
+// scroll as one page.
 // The columns can be focused at every size (tabIndex can't be responsive), so the focus ring shows at
 // every size too; otherwise phone keyboard users would land on an invisible focus stop.
 const column =
-  "rounded-3xl outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1 lg:pb-6";
+  "rounded-3xl outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-none lg:px-1 lg:pb-6";
 
 export default function ProfilePage() {
   return (
