@@ -255,7 +255,12 @@ function SheetTable({
   onSave: (row: Submission, sheet: SheetKey, column: string, value: string) => void;
   onDelete: (row: Submission) => void;
 }) {
-  const th = "border-b border-neutral-200 px-3 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap text-neutral-500 uppercase dark:border-neutral-800 dark:text-neutral-400";
+  // Grid lines like a spreadsheet: every cell has a right border, and each row draws the line above
+  // it (on its own cells, so the frozen Job column can't cover it). The header and the Job column
+  // get a darker line so they read as labels.
+  const grid = "border-r border-t border-neutral-200 dark:border-neutral-700 [tbody>tr:first-child>&]:border-t-0";
+  const th = `border-r border-b border-neutral-200 border-b-neutral-300 px-3 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap text-neutral-500 uppercase dark:border-neutral-700 dark:border-b-neutral-600 dark:text-neutral-400`;
+  const jobColumn = "sticky left-0 z-10 min-w-36 border-r-neutral-300 sm:min-w-56 dark:border-r-neutral-600";
   const scroller = useRef<HTMLDivElement>(null);
 
   // The mouse wheel scrolls rows over the Job column and columns everywhere else, so the whole
@@ -286,7 +291,10 @@ function SheetTable({
         <caption className="sr-only">{sheet.title}</caption>
         <thead className="sticky top-0 z-20 bg-neutral-50 dark:bg-neutral-800">
           <tr>
-            <th scope="col" data-job-column className={`${th} sticky left-0 z-10 min-w-36 bg-neutral-50 sm:min-w-56 dark:bg-neutral-800`}>
+            <th scope="col" data-job-column className={`${th} ${jobColumn} bg-neutral-50 dark:bg-neutral-800`}>
+              <span className="inline-block w-7" aria-hidden="true">
+                #
+              </span>
               Job
             </th>
             {sheet.columns.map((c) => (
@@ -294,28 +302,33 @@ function SheetTable({
                 {c.label}
               </th>
             ))}
-            <th scope="col" className={th}>
+            <th scope="col" className={`${th} border-r-0`}>
               <span className="sr-only">Delete</span>
             </th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
+          {rows.map((row, i) => {
             const { title, company } = rowLabel(row);
             return (
               <tr key={row.id} className="group">
                 <th
                   scope="row"
                   data-job-column
-                  className="sticky left-0 z-10 max-w-40 min-w-36 border-b sm:max-w-64 sm:min-w-56 border-neutral-100 bg-white px-3 py-2 text-left align-top font-normal group-hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:group-hover:bg-neutral-800"
+                  className={`${grid} ${jobColumn} max-w-40 bg-white px-3 py-2 text-left align-middle font-normal group-hover:bg-neutral-50 sm:max-w-64 dark:bg-neutral-900 dark:group-hover:bg-neutral-800`}
                 >
-                  <span className="block truncate font-semibold text-neutral-900 dark:text-white" title={title}>
-                    {title}
-                  </span>
-                  {company && <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{company}</span>}
+                  <div className="flex items-baseline">
+                    <span className="w-7 shrink-0 text-xs text-neutral-400 tabular-nums dark:text-neutral-500">{i + 1}</span>
+                    <div className="min-w-0">
+                      <span className="block truncate font-semibold text-neutral-900 dark:text-white" title={title}>
+                        {title}
+                      </span>
+                      {company && <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{company}</span>}
+                    </div>
+                  </div>
                 </th>
                 {sheet.columns.map((c) => (
-                  <td key={c.key} className="border-b border-neutral-100 px-1.5 py-1.5 align-top group-hover:bg-neutral-50 dark:border-neutral-800 dark:group-hover:bg-neutral-800">
+                  <td key={c.key} className={`${grid} px-1 py-1 align-middle group-hover:bg-neutral-50 dark:group-hover:bg-neutral-800`}>
                     <Cell
                       column={c}
                       value={row[sheet.key][c.key] ?? ""}
@@ -324,7 +337,7 @@ function SheetTable({
                     />
                   </td>
                 ))}
-                <td className="border-b border-neutral-100 px-2 py-1.5 align-top group-hover:bg-neutral-50 dark:border-neutral-800 dark:group-hover:bg-neutral-800">
+                <td className={`${grid} border-r-0 px-2 py-1 align-middle group-hover:bg-neutral-50 dark:group-hover:bg-neutral-800`}>
                   <button
                     type="button"
                     onClick={() => onDelete(row)}
@@ -347,7 +360,7 @@ function SheetTable({
 }
 
 const CELL =
-  "block w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-300 hover:border-neutral-200 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15 dark:text-neutral-100 dark:placeholder:text-neutral-600 dark:hover:border-neutral-700 dark:focus:bg-neutral-900";
+  "block w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 dark:text-neutral-100 dark:placeholder:text-neutral-600 dark:focus:bg-neutral-900";
 
 /** One editable cell. Text saves when it loses focus (or on Enter); dropdowns and dates save on change. */
 function Cell({ column, value, label, onSave }: { column: Column; value: string; label: string; onSave: (value: string) => void }) {
