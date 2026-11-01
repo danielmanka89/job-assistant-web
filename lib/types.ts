@@ -245,3 +245,46 @@ export interface CreateJobPostingRequest {
 export interface JobListResponse {
   jobs: JobPosting[];
 }
+
+/** The four sheets of the Spreadsheet page. Every submission has one row on each. */
+export type SheetKey = "vendor" | "submission" | "skills" | "client";
+
+/** One sheet's cells for a submission: column key -> text. Column keys are listed in lib/spreadsheet.ts. */
+export type SheetValues = Record<string, string>;
+
+/**
+ * A job application. Created when the user clicks Apply on a job (prefilled from the job and their
+ * latest resume) or added by hand on the Spreadsheet page; every cell can be edited afterwards.
+ */
+export interface Submission {
+  id: string;
+  jobId: string | null; // the JobPosting applied to; null for rows added by hand
+  vendor: SheetValues;
+  submission: SheetValues;
+  skills: SheetValues;
+  client: SheetValues;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+}
+
+/** Returned by GET /api/submissions: the user's submissions, newest first. */
+export interface SubmissionListResponse {
+  submissions: Submission[];
+}
+
+/** POST /api/submissions. With jobId the row is prefilled from that job; without it the row starts blank. */
+export interface CreateSubmissionRequest {
+  jobId?: string;
+}
+
+/** Returned by POST /api/submissions. created is false when the user had already applied to the job. */
+export interface CreateSubmissionResponse {
+  submission: Submission;
+  created: boolean;
+}
+
+/**
+ * PATCH /api/submissions/:id: cells to change, by sheet. Only the given cells change; "" clears one.
+ * Returns the updated Submission.
+ */
+export type UpdateSubmissionRequest = Partial<Record<SheetKey, SheetValues>>;

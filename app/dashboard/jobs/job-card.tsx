@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { JobPosting, JobSource } from "@/lib/types";
 import { descriptionSnippet as snippet, safeApplyUrl } from "@/lib/client/jobs";
 
@@ -35,11 +36,17 @@ function postedLabel(iso?: string) {
 export function JobCard({
   job,
   onTailor,
+  onApply,
+  applied = false,
   opening = false,
   disabled = false,
 }: {
   job: JobPosting;
   onTailor: () => void;
+  /** Called when the Apply link is clicked; the link still opens the job's page in a new tab. */
+  onApply: () => void;
+  /** The job already has a row in the user's Spreadsheet. */
+  applied?: boolean;
   /** This card's job is being opened on the job match page. */
   opening?: boolean;
   disabled?: boolean;
@@ -113,13 +120,25 @@ export function JobCard({
             href={applyUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={onApply}
             className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
           >
-            Apply
+            {applied ? "Apply again" : "Apply"}
             <span className="sr-only"> to {job.title} (opens in a new tab)</span>
           </a>
         )}
       </div>
+      {applied && (
+        <p className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
+            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+          </svg>
+          Applied ·
+          <Link href="/dashboard/spreadsheet" className="underline-offset-2 hover:underline">
+            View in Spreadsheet
+          </Link>
+        </p>
+      )}
     </article>
   );
 }

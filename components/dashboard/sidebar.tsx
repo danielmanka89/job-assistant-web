@@ -46,6 +46,17 @@ const NAV: NavItem[] = [
     ),
   },
   {
+    href: "/dashboard/spreadsheet",
+    label: "Spreadsheet",
+    match: (p) => under(p, "/dashboard/spreadsheet"),
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
+        <rect x="3.5" y="4" width="17" height="16" rx="2" />
+        <path d="M3.5 9.5h17M3.5 14.75h17M9.5 9.5V20" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/dashboard/upload",
     label: "Upload Resume",
     match: (p) => TAILOR_FLOW.some((prefix) => under(p, prefix)),

@@ -10,11 +10,14 @@
 //   log in with an email containing "employer" -> employer account
 //   log in with an email containing "new" -> dashboard with no tailored resumes yet
 //   settings: current password "wrongpass" -> incorrect password; email taken@example.com -> already registered
+//   spreadsheet: starts with two sample rows (none for "new" users); a cell containing "fail" -> save error
 import type {
   AccountResponse,
   ApiError,
   AuthResponse,
   CreateJobPostingRequest,
+  CreateSubmissionRequest,
+  CreateSubmissionResponse,
   DashboardStats,
   GapAnalysisRequest,
   GapAnalysisResponse,
@@ -23,6 +26,7 @@ import type {
   GeneratedFile,
   JobPosting,
   Resume,
+  Submission,
   SummaryGenerateRequest,
   SummaryGenerateResponse,
   TailoredResume,
@@ -30,10 +34,13 @@ import type {
   TailoredResumeResponse,
   TailoredResumeWithFiles,
   UpdateAccountRequest,
+  UpdateSubmissionRequest,
   User,
   UserRole,
 } from "@/lib/types";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
+import { SHEETS, buildSubmissionWorkbook, prefillSubmission, validateSheetValues } from "@/lib/spreadsheet";
+import { XLSX_MIME } from "@/lib/xlsx";
 import type { ApiResult } from "./api";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
@@ -591,6 +598,80 @@ async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   };
 }
 
+// Spreadsheet rows, kept in memory for this page load. Seeded on first use.
+let mockSubmissions: Submission[] | null = null;
+
+function mockSubmissionRows(): Submission[] {
+  if (mockSubmissions) return mockSubmissions;
+  if (isNewUser()) return (mockSubmissions = []);
+  const resume = sampleResume();
+  mockSubmissions = sampleJobs()
+    .slice(0, 2)
+    .map((job, i) => {
+      const createdAt = daysAgo(i * 3 + 1);
+      const cells = prefillSubmission(job, resume, null, new Date(createdAt));
+      if (i === 1) {
+        cells.submission.status = "Interview scheduled";
+        cells.vendor = { vendorCompany: "Brightpath Staffing", vendorType: "Prime vendor", contactName: "Sam Lee", contactEmail: "sam@brightpath.example" };
+      }
+      return { id: `submission_mock_${i}`, jobId: job.id, ...cells, createdAt, updatedAt: createdAt };
+    });
+  return mockSubmissions;
+}
+
+async function listSubmissions(): Promise<ApiResult<Submission[]>> {
+  await delay(500);
+  return { ok: true, data: [...mockSubmissionRows()] };
+}
+
+async function createSubmission(request: CreateSubmissionRequest): Promise<ApiResult<CreateSubmissionResponse>> {
+  await delay(400);
+  const rows = mockSubmissionRows();
+  const existing = request.jobId ? rows.find((r) => r.jobId === request.jobId) : undefined;
+  if (existing) return { ok: true, data: { submission: existing, created: false } };
+  const job = request.jobId ? [...sampleJobs(), ...employerJobs].find((j) => j.id === request.jobId) : undefined;
+  if (request.jobId && !job) return fail({ code: "JOB_NOT_FOUND", message: "That job is no longer listed" });
+  const now = new Date().toISOString();
+  const cells = job ? prefillSubmission(job, sampleResume(), null) : { vendor: {}, submission: {}, skills: {}, client: {} };
+  const submission: Submission = { id: `submission_${Date.now()}`, jobId: job?.id ?? null, ...cells, createdAt: now, updatedAt: now };
+  rows.unshift(submission);
+  return { ok: true, data: { submission, created: true } };
+}
+
+async function updateSubmission(id: string, changes: UpdateSubmissionRequest): Promise<ApiResult<Submission>> {
+  await delay(300);
+  const rows = mockSubmissionRows();
+  const index = rows.findIndex((r) => r.id === id);
+  if (index < 0) return fail({ code: "SUBMISSION_NOT_FOUND", message: "That row was deleted" });
+  const next: Submission = { ...rows[index], updatedAt: new Date().toISOString() };
+  for (const sheet of SHEETS) {
+    if (!changes[sheet.key]) continue;
+    const { values, fieldErrors } = validateSheetValues(sheet, changes[sheet.key]);
+    if (Object.values(values).some((v) => v.toLowerCase().includes("fail"))) {
+      return fail({ code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." });
+    }
+    if (Object.keys(fieldErrors).length) {
+      return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted cells", fieldErrors });
+    }
+    const merged = { ...next[sheet.key], ...values };
+    for (const [key, value] of Object.entries(merged)) if (!value) delete merged[key];
+    next[sheet.key] = merged;
+  }
+  rows[index] = next;
+  return { ok: true, data: next };
+}
+
+async function deleteSubmission(id: string): Promise<ApiResult<null>> {
+  await delay(300);
+  mockSubmissions = mockSubmissionRows().filter((r) => r.id !== id);
+  return { ok: true, data: null };
+}
+
+async function exportSubmissions(): Promise<ApiResult<Blob>> {
+  const bytes = await buildSubmissionWorkbook(mockSubmissionRows());
+  return { ok: true, data: new Blob([new Uint8Array(bytes)], { type: XLSX_MIME }) };
+}
+
 export const mockApi = {
   register,
   login,
@@ -609,4 +690,9 @@ export const mockApi = {
   listEmployerJobs,
   getDashboardStats,
   listTailoredResumes,
+  listSubmissions,
+  createSubmission,
+  updateSubmission,
+  deleteSubmission,
+  exportSubmissions,
 };

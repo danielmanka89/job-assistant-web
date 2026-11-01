@@ -4,6 +4,7 @@ import type {
   GeneratedFile as GeneratedFileRow,
   JobPosting as JobPostingRow,
   Resume as ResumeRow,
+  Submission as SubmissionRow,
   TailoredResume as TailoredResumeRow,
   User as UserRow,
 } from "@/lib/generated/prisma/client";
@@ -15,6 +16,8 @@ import type {
   JobSource,
   Resume,
   ResumeContact,
+  SheetValues,
+  Submission,
   TailoredResume,
   User,
   UserRole,
@@ -130,5 +133,19 @@ export function toGeneratedFile(row: Omit<GeneratedFileRow, "data">, sourceResum
     fileName: row.fileName,
     downloadUrl: `/api/files/${row.id}`,
     createdAt: row.createdAt.toISOString(),
+  };
+}
+
+/** Maps a database submission to the Submission type. */
+export function toSubmission(row: SubmissionRow): Submission {
+  return {
+    id: row.id,
+    jobId: row.jobPostingId,
+    vendor: row.vendor as SheetValues,
+    submission: row.submission as SheetValues,
+    skills: row.skills as SheetValues,
+    client: row.client as SheetValues,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }

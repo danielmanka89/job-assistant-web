@@ -3,6 +3,8 @@ import type {
   AddSkillsRequest,
   ApiError,
   AuthResponse,
+  CreateSubmissionRequest,
+  CreateSubmissionResponse,
   GapAnalysisRequest,
   CreateJobPostingRequest,
   DashboardStats,
@@ -11,17 +13,20 @@ import type {
   LoginRequest,
   RegisterRequest,
   Resume,
+  Submission,
   SummaryGenerateRequest,
   SummaryGenerateResponse,
   TailoredResumeRequest,
   TailoredResumeResponse,
   TailoredResumeWithFiles,
   UpdateAccountRequest,
+  UpdateSubmissionRequest,
   UpdateSummaryRequest,
 } from "@/lib/types";
 import { clearUser } from "./current-user";
 import { toDashboardStats, toTailoredResumeList } from "./dashboard";
 import { toJobList } from "./jobs";
+import { toCreateSubmissionResponse, toSubmission, toSubmissionList } from "./submissions";
 import { mockApi } from "./mock";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -131,6 +136,60 @@ export async function getAccount(): Promise<ApiResult<AccountResponse>> {
 export function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<AccountResponse>> {
   if (USE_MOCK_API) return mockApi.updateAccount(request);
   return sendJson<UpdateAccountRequest, AccountResponse>("PATCH", "/api/account", request);
+}
+
+/** The user's Spreadsheet rows, newest first, from GET /api/submissions. */
+export async function listSubmissions(): Promise<ApiResult<Submission[]>> {
+  if (USE_MOCK_API) return mockApi.listSubmissions();
+  const result = await getJson("/api/submissions");
+  return result.ok ? { ok: true, data: toSubmissionList(result.data) } : result;
+}
+
+/**
+ * Records an application with POST /api/submissions. With a jobId the row is prefilled from the job
+ * and the user's resume; applying to the same job again returns the existing row (created: false).
+ */
+export async function createSubmission(request: CreateSubmissionRequest): Promise<ApiResult<CreateSubmissionResponse>> {
+  if (USE_MOCK_API) return mockApi.createSubmission(request);
+  const result = await postJson<CreateSubmissionRequest, unknown>("/api/submissions", request);
+  if (!result.ok) return result;
+  const data = toCreateSubmissionResponse(result.data);
+  return data ? { ok: true, data } : { ok: false, error: toApiError(null, 500) };
+}
+
+/** Changes cells with PATCH /api/submissions/:id ("" clears a cell) and returns the stored row. */
+export async function updateSubmission(id: string, changes: UpdateSubmissionRequest): Promise<ApiResult<Submission>> {
+  if (USE_MOCK_API) return mockApi.updateSubmission(id, changes);
+  const result = await sendJson<UpdateSubmissionRequest, unknown>("PATCH", `/api/submissions/${encodeURIComponent(id)}`, changes);
+  if (!result.ok) return result;
+  const data = toSubmission(result.data);
+  return data ? { ok: true, data } : { ok: false, error: toApiError(null, 500) };
+}
+
+/** Removes a row from every sheet with DELETE /api/submissions/:id. */
+export async function deleteSubmission(id: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) return mockApi.deleteSubmission(id);
+  let res: Response;
+  try {
+    res = await fetch(`/api/submissions/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "same-origin" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (res.ok) return { ok: true, data: null };
+  return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
+}
+
+/** The Spreadsheet as an .xlsx file (one worksheet per sheet), from GET /api/submissions/export. */
+export async function exportSubmissions(): Promise<ApiResult<Blob>> {
+  if (USE_MOCK_API) return mockApi.exportSubmissions();
+  let res: Response;
+  try {
+    res = await fetch("/api/submissions/export", { credentials: "same-origin", cache: "no-store" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (res.ok) return { ok: true, data: await res.blob() };
+  return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
 }
 
 export function register(payload: RegisterRequest): Promise<ApiResult<AuthResponse>> {
