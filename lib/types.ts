@@ -293,18 +293,12 @@ export type UpdateSubmissionRequest = Partial<Record<SheetKey, SheetValues>>;
 export type ProfileValues = Record<string, string>;
 
 /**
- * Returned by GET and PUT /api/profile. updatedAt is null until the profile is first saved;
- * suggestions (from the account and latest resume) are for filling an empty profile.
+ * Returned by GET /api/profile. The profile comes only from the resume and can't be edited;
+ * updatedAt is null when there's no resume yet.
  */
 export interface ProfileResponse {
   values: ProfileValues;
   updatedAt: string | null;
-  suggestions: ProfileValues;
-}
-
-/** PUT /api/profile: the whole profile. Fields left out or blank are cleared. */
-export interface UpdateProfileRequest {
-  values: ProfileValues;
 }
 
 /** A resume read from an uploaded file but not saved yet (POST /api/resume/compare). */
@@ -321,10 +315,13 @@ export interface ProfileChange {
 /**
  * Returned by POST /api/resume/compare: the parsed resume (not saved), how it would change the
  * profile, and a token that POST /api/resume/confirm-sync needs, valid for one hour.
+ * requiresConfirmation is true when an existing profile would change: the user must confirm the
+ * changes, or the resume isn't added. The first resume fills an empty profile without asking.
  */
 export interface ResumeCompareResponse {
   draft: ResumeDraft;
   changes: ProfileChange[];
+  requiresConfirmation: boolean;
   syncToken: string;
 }
 

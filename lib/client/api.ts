@@ -12,7 +12,6 @@ import type {
   JobPosting,
   LoginRequest,
   ProfileResponse,
-  ProfileValues,
   RegisterRequest,
   Resume,
   ResumeCompareResponse,
@@ -24,7 +23,6 @@ import type {
   TailoredResumeResponse,
   TailoredResumeWithFiles,
   UpdateAccountRequest,
-  UpdateProfileRequest,
   UpdateSubmissionRequest,
   UpdateSummaryRequest,
 } from "@/lib/types";
@@ -143,31 +141,19 @@ export function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<
   return sendJson<UpdateAccountRequest, AccountResponse>("PATCH", "/api/account", request);
 }
 
-const toValues = (v: unknown): ProfileValues =>
-  v && typeof v === "object" && !Array.isArray(v)
-    ? Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === "string"))
-    : {};
-
 function toProfileResponse(body: unknown): ProfileResponse {
   const b = (body ?? {}) as Partial<Record<keyof ProfileResponse, unknown>>;
-  return {
-    values: toValues(b.values),
-    updatedAt: typeof b.updatedAt === "string" ? b.updatedAt : null,
-    suggestions: toValues(b.suggestions),
-  };
+  const values =
+    b.values && typeof b.values === "object" && !Array.isArray(b.values)
+      ? Object.fromEntries(Object.entries(b.values).filter((e): e is [string, string] => typeof e[1] === "string"))
+      : {};
+  return { values, updatedAt: typeof b.updatedAt === "string" ? b.updatedAt : null };
 }
 
-/** The job seeker's saved profile (with suggestions until it's first saved), from GET /api/profile. */
+/** The job seeker's profile (read-only, from their resume), from GET /api/profile. */
 export async function getProfile(): Promise<ApiResult<ProfileResponse>> {
   if (USE_MOCK_API) return mockApi.getProfile();
   const result = await getJson("/api/profile");
-  return result.ok ? { ok: true, data: toProfileResponse(result.data) } : result;
-}
-
-/** Saves the whole profile with PUT /api/profile; blank fields are cleared. */
-export async function saveProfile(values: ProfileValues): Promise<ApiResult<ProfileResponse>> {
-  if (USE_MOCK_API) return mockApi.saveProfile(values);
-  const result = await sendJson<UpdateProfileRequest, unknown>("PUT", "/api/profile", { values });
   return result.ok ? { ok: true, data: toProfileResponse(result.data) } : result;
 }
 
@@ -302,16 +288,6 @@ export function tailorResume(request: TailoredResumeRequest): Promise<ApiResult<
  * Uploads a resume as multipart/form-data (field name "file").
  * Uses XMLHttpRequest instead of fetch so we can report upload progress.
  */
-export function uploadResume(
-  file: File,
-  onProgress?: (percent: number) => void,
-): Promise<ApiResult<Resume>> {
-  if (USE_MOCK_API) return mockApi.uploadResume(file, onProgress);
-  const form = new FormData();
-  form.append("file", file);
-  return sendForm<Resume>("/api/upload", form, onProgress);
-}
-
 /**
  * Step 1 of uploading a resume: POST /api/resume/compare reads the file and lists how it would
  * change the profile. Nothing is saved until confirmResumeSync.
@@ -323,7 +299,7 @@ export async function compareResume(file: File, onProgress?: (percent: number) =
   const result = await sendForm<ResumeCompareResponse>("/api/resume/compare", form, onProgress);
   if (!result.ok) return result;
   const d = result.data;
-  return d && d.draft?.contact && Array.isArray(d.changes) && typeof d.syncToken === "string"
+  return d && d.draft?.contact && Array.isArray(d.changes) && typeof d.requiresConfirmation === "boolean" && typeof d.syncToken === "string"
     ? result
     : { ok: false, error: toApiError(null, 500) };
 }

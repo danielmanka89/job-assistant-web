@@ -6,8 +6,9 @@ import { aiErrorResponse, apiError } from "@/lib/api";
 import { extractResumeText } from "@/lib/resume-text";
 import type { ApiError, ResumeContact, ResumeDraft } from "@/lib/types";
 
-// Reading and parsing an uploaded resume file, shared by POST /api/upload, /api/resume/compare
-// and /api/resume/confirm-sync.
+// Reading and parsing an uploaded resume file, shared by POST /api/resume/compare and
+// /api/resume/confirm-sync. Resumes are only saved through confirm-sync, so the profile always
+// matches the latest resume.
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_TEXT_CHARS = 100_000; // well beyond any real resume; rejected rather than truncated

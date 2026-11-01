@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, readJsonObject, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { syncProfileToEditedResume } from "@/lib/profile-store";
 import { validateNewSkills, validateResumeUpdate } from "@/lib/resume-validation";
 import { mergeSkills } from "@/lib/skills";
 import type { Resume } from "@/lib/types";
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest, { params }: Context) {
 /**
  * PUT /api/resumes/:id — replaces the editable fields (contact, summary, workExperience,
  * education, skills). id, userId, sourceFileName and timestamps are ignored if sent.
+ * Editing the latest resume updates the profile to match it.
  */
 export async function PUT(request: NextRequest, { params }: Context) {
   const user = await getSessionUser(request);
@@ -53,6 +55,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
     if (count === 0) return NOT_FOUND();
 
     const updated = await prisma.resume.findUniqueOrThrow({ where: { id } });
+    await syncProfileToEditedResume(updated);
     return NextResponse.json<Resume>(toResume(updated));
   } catch (error) {
     console.error("resume update failed", error);
@@ -63,6 +66,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
 /**
  * PATCH /api/resumes/:id — appends { newSkills: string[] } to the resume's skills.
  * Skills it already has (case-insensitive) are skipped. Re-run the gap analysis to get the new score.
+ * Adding skills to the latest resume updates the profile to match it.
  */
 export async function PATCH(request: NextRequest, { params }: Context) {
   const user = await getSessionUser(request);
@@ -85,6 +89,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
       return tx.resume.update({ where: { id }, data: { skills: mergeSkills(toResume(row).skills, result.data) } });
     }, { isolationLevel: "Serializable" });
     if (!updated) return NOT_FOUND();
+    await syncProfileToEditedResume(updated);
     return NextResponse.json<Resume>(toResume(updated));
   } catch (error) {
     console.error("adding skills failed", error);
