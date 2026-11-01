@@ -57,16 +57,33 @@ export function TailorView({ original, response, suggestions }: Props) {
   );
 }
 
+const CHECK_ICON =
+  "M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z";
+const ALERT_ICON =
+  "M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z";
+
+// Darker shades than the analyze ring so white text stays readable on every color.
+function scoreLevel(percent: number) {
+  if (percent >= 80) {
+    return { className: "from-emerald-600 to-emerald-700 shadow-emerald-700/25", icon: CHECK_ICON };
+  }
+  if (percent >= 50) {
+    return { className: "from-amber-600 to-orange-700 shadow-orange-700/25", icon: ALERT_ICON };
+  }
+  return { className: "from-rose-600 to-red-700 shadow-red-700/25", icon: ALERT_ICON };
+}
+
 function FinalScore({ percent }: { percent: number }) {
+  const level = scoreLevel(percent);
   return (
     <section aria-labelledby="final-score" className="flex flex-col items-start gap-3">
       <p
         id="final-score"
-        className="inline-flex items-center gap-3 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 py-2.5 pr-6 pl-2.5 text-white shadow-lg shadow-emerald-700/25 ring-1 ring-white/10 sm:gap-4 sm:py-3 sm:pr-8 sm:pl-3"
+        className={`inline-flex items-center gap-3 rounded-full bg-gradient-to-br py-2.5 pr-6 pl-2.5 text-white shadow-lg ring-1 ring-white/10 sm:gap-4 sm:py-3 sm:pr-8 sm:pl-3 ${level.className}`}
       >
         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/20 sm:size-12">
           <svg viewBox="0 0 20 20" fill="currentColor" className="size-5 sm:size-6" aria-hidden="true">
-            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+            <path fillRule="evenodd" d={level.icon} clipRule="evenodd" />
           </svg>
         </span>
         <span className="font-display text-xl font-medium tracking-wide uppercase sm:text-3xl">
@@ -74,8 +91,8 @@ function FinalScore({ percent }: { percent: number }) {
         </span>
       </p>
       <p className="max-w-2xl text-xs leading-relaxed text-neutral-500 sm:text-sm dark:text-neutral-400">
-        This score is locked to the exact text of this downloaded file. Re-uploading it may slightly alter the score due to
-        PDF text-extraction quirks.
+        Note: This score is a strict keyword match of the exact file you downloaded. If you re-upload this PDF to run a
+        new analysis, the AI&apos;s score may vary slightly.
       </p>
     </section>
   );
