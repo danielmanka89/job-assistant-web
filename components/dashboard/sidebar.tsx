@@ -108,7 +108,7 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 px-4 backdrop-blur sm:px-6 lg:hidden dark:border-neutral-800 dark:bg-neutral-950/90">
+      <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 pr-16 pl-4 backdrop-blur sm:pl-6 lg:hidden dark:border-neutral-800 dark:bg-neutral-950/90">
         <Logo />
         <button
           type="button"
