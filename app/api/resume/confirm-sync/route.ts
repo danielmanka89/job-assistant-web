@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
           workExperience: draft.workExperience as object[],
           education: draft.education as object[],
           skills: draft.skills,
+          ...(draft.certifications?.length ? { certifications: draft.certifications } : {}),
         },
         omit: { data: true },
       });
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json<ResumeSyncResponse>(
       {
         resume: toResume(result.resume),
-        profile: { values: result.values, updatedAt: result.profile.updatedAt.toISOString() },
+        profile: { values: result.values, updatedAt: result.profile.updatedAt.toISOString(), resume: toResume(result.resume) },
         changes: result.changes,
       },
       { status: 201 },

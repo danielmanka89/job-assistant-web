@@ -196,7 +196,7 @@ function workMode(location: string): string {
  */
 export function prefillSubmission(
   job: Pick<JobPosting, "title" | "company" | "location" | "description" | "applyUrl">,
-  resume: Pick<Resume, "contact" | "skills" | "workExperience" | "education"> | null,
+  resume: Pick<Resume, "contact" | "skills" | "workExperience" | "education" | "certifications"> | null,
   analysis: { matchedKeywords: string[]; missingKeywords: string[] } | null,
   profile: ProfileValues = {},
   now = new Date(),
@@ -212,6 +212,8 @@ export function prefillSubmission(
   const degree = resume?.education[0];
   const education = profile.education || (degree ? [degree.degree, degree.fieldOfStudy, degree.institution].filter(Boolean).join(", ") : "");
   if (education) skills.education = education;
+  const certifications = profile.certifications || (resume?.certifications ?? []).join(", ");
+  if (certifications) skills.certifications = certifications;
   if (analysis) {
     const required = [...analysis.matchedKeywords, ...analysis.missingKeywords];
     // Re-score against the candidate's current skills: some may have been added since the analysis.
@@ -236,6 +238,8 @@ export function prefillSubmission(
     jobTitle: job.title,
     jobLocation: job.location,
     workMode: workMode(job.location),
+    workAuthorization: profile.workAuthorization || (contact.workAuthorization ?? ""),
+    rate: profile.desiredPay || (contact.desiredPay ?? ""),
     applyUrl: job.applyUrl,
   };
   return {

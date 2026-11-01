@@ -63,7 +63,7 @@ export function validateResumeUpdate(
     fullName: requiredText(c, "fullName", "contact.fullName"),
     email: requiredText(c, "email", "contact.email"),
   };
-  for (const key of ["phone", "location", "linkedinUrl", "websiteUrl"] as const) {
+  for (const key of ["phone", "location", "linkedinUrl", "websiteUrl", "workAuthorization", "desiredPay"] as const) {
     const v = optionalText(c, key, `contact.${key}`);
     if (v) contact[key] = v;
   }

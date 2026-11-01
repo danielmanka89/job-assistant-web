@@ -74,6 +74,7 @@ export interface ParsedResume {
   workExperience: WorkExperience[];
   education: Education[];
   skills: string[];
+  certifications: string[];
 }
 
 // Missing values are null rather than optional so the model always states "not present".
@@ -86,6 +87,8 @@ const ParsedResumeSchema = z.object({
     location: z.string().nullable(),
     linkedinUrl: z.string().nullable(),
     websiteUrl: z.string().nullable(),
+    workAuthorization: z.string().nullable().describe('Visa or work authorization exactly as stated, e.g. "H-1B", "US Citizen", "Green Card"'),
+    desiredPay: z.string().nullable().describe('Pay rate or salary the candidate asks for, as stated, e.g. "$65/hr"'),
   }),
   summary: z.string().nullable(),
   workExperience: z.array(
@@ -110,6 +113,7 @@ const ParsedResumeSchema = z.object({
     }),
   ),
   skills: z.array(z.string()),
+  certifications: z.array(z.string()).describe("Certifications and licenses, each as one entry with its issuer if given"),
 });
 
 const PARSE_SYSTEM_PROMPT = `You convert the text of a resume into structured data for a resume-tailoring app.
@@ -120,7 +124,9 @@ The output is shown back to the resume's owner and used to build applications in
 - Dates: use "YYYY-MM". If only a year is given, use "YYYY-01". Spell-out months ("Mar 2021") become "2021-03".
 - A role marked "Present", "Current", or similar has endDate null and isCurrent true. Education that is ongoing or expected has inProgress true.
 - Keep entries in the order they appear in the document.
-- Text from PDFs may have scrambled column order; use the headings to work out which lines belong together.`;
+- Text from PDFs may have scrambled column order; use the headings to work out which lines belong together.
+- Links appear as [text](url), or in a "Links in this document" list at the end. Use the URL for linkedinUrl (a linkedin.com address) and websiteUrl (a portfolio or personal site; not LinkedIn, GitHub repositories of others, or company sites).
+- workAuthorization and desiredPay are only filled when the resume states them (e.g. "Visa: H-1B", "Expected rate: $65/hr"). Never infer them from location or nationality.`;
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -140,7 +146,7 @@ export async function parseResumeText(text: string): Promise<ParsedResume> {
   const parsed = await callStructured(ParsedResumeSchema, PARSE_SYSTEM_PROMPT, `<resume>\n${text}\n</resume>`);
 
   const contact: Partial<ResumeContact> = {};
-  for (const key of ["fullName", "email", "phone", "location", "linkedinUrl", "websiteUrl"] as const) {
+  for (const key of ["fullName", "email", "phone", "location", "linkedinUrl", "websiteUrl", "workAuthorization", "desiredPay"] as const) {
     const v = clean(parsed.contact[key]);
     if (v) contact[key] = v;
   }
@@ -171,6 +177,7 @@ export async function parseResumeText(text: string): Promise<ParsedResume> {
       return entry;
     }),
     skills: [...new Set(parsed.skills.map((s) => s.trim()).filter(Boolean))],
+    certifications: [...new Set(parsed.certifications.map((s) => s.trim()).filter(Boolean))],
   };
 }
 

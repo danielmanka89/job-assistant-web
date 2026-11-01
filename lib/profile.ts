@@ -7,7 +7,19 @@ import type { ProfileChange, ProfileValues, Resume } from "@/lib/types";
 import { mergeSkills } from "@/lib/skills";
 
 /** The profile fields, all read from the resume. */
-export const RESUME_PROFILE_FIELDS = ["fullName", "email", "phone", "location", "linkedinUrl", "websiteUrl", "education", "skills"] as const;
+export const RESUME_PROFILE_FIELDS = [
+  "fullName",
+  "email",
+  "phone",
+  "location",
+  "linkedinUrl",
+  "websiteUrl",
+  "workAuthorization",
+  "desiredPay",
+  "education",
+  "skills",
+  "certifications",
+] as const;
 
 export interface ProfileField {
   key: (typeof RESUME_PROFILE_FIELDS)[number];
@@ -17,6 +29,7 @@ export interface ProfileField {
 }
 
 export interface ProfileSection {
+  id: "contact" | "work" | "education" | "skills";
   title: string;
   description: string;
   fields: readonly ProfileField[];
@@ -24,6 +37,7 @@ export interface ProfileSection {
 
 export const PROFILE_SECTIONS: readonly ProfileSection[] = [
   {
+    id: "contact",
     title: "Contact details",
     description: "Shown at the top of every tailored resume and filled into each submission.",
     fields: [
@@ -36,11 +50,27 @@ export const PROFILE_SECTIONS: readonly ProfileSection[] = [
     ],
   },
   {
-    title: "Education and skills",
+    id: "work",
+    title: "Work authorization and pay",
+    description: "Filled into each submission. Only shown when your resume states them.",
+    fields: [
+      { key: "workAuthorization", label: "Visa / work authorization" },
+      { key: "desiredPay", label: "Pay rate looking for" },
+    ],
+  },
+  {
+    id: "education",
+    title: "Education",
+    description: "Your most recent degree, filled into each submission's skill matrix.",
+    fields: [{ key: "education", label: "Highest education" }],
+  },
+  {
+    id: "skills",
+    title: "Skills and certifications",
     description: "Used to match you to jobs and filled into each submission's skill matrix.",
     fields: [
-      { key: "education", label: "Highest education" },
       { key: "skills", label: "Skills", type: "list", maxLength: 2000 },
+      { key: "certifications", label: "Certifications", type: "list", maxLength: 2000 },
     ],
   },
 ];
@@ -82,7 +112,7 @@ function clipList(items: string[], max: number): string {
 }
 
 /** The profile a resume gives, with blank fields left out. */
-export function profileFromResume(resume: Pick<Resume, "contact" | "skills" | "education">): ProfileValues {
+export function profileFromResume(resume: Pick<Resume, "contact" | "skills" | "education" | "certifications">): ProfileValues {
   const max = (key: string) => PROFILE_FIELDS.find((f) => f.key === key)?.maxLength ?? 200;
   const clip = (key: string, value: string | undefined) => (value ?? "").trim().slice(0, max(key));
   const c = resume.contact;
@@ -94,8 +124,11 @@ export function profileFromResume(resume: Pick<Resume, "contact" | "skills" | "e
     location: clip("location", c.location),
     linkedinUrl: clip("linkedinUrl", withScheme(c.linkedinUrl)),
     websiteUrl: clip("websiteUrl", withScheme(c.websiteUrl)),
+    workAuthorization: clip("workAuthorization", c.workAuthorization),
+    desiredPay: clip("desiredPay", c.desiredPay),
     education: clip("education", degree ? [degree.degree, degree.fieldOfStudy, degree.institution].filter(Boolean).join(", ") : ""),
     skills: clipList(resume.skills, max("skills")),
+    certifications: clipList(resume.certifications ?? [], max("certifications")),
   };
   return Object.fromEntries(Object.entries(values).filter(([, v]) => v));
 }
@@ -103,15 +136,15 @@ export function profileFromResume(resume: Pick<Resume, "contact" | "skills" | "e
 /** The profile after syncing it to the resume (the resume's values, nothing else), and what changed. */
 export function syncProfileToResume(
   current: ProfileValues,
-  resume: Pick<Resume, "contact" | "skills" | "education">,
+  resume: Pick<Resume, "contact" | "skills" | "education" | "certifications">,
 ): { values: ProfileValues; changes: ProfileChange[] } {
   const values = profileFromResume(resume);
   const changes: ProfileChange[] = [];
   for (const field of PROFILE_FIELDS) {
     const from = (current[field.key] ?? "").trim();
     const to = values[field.key] ?? "";
-    // Skills that differ only in order or case aren't a change worth confirming.
-    const same = field.key === "skills" ? sameList(from, to) : from === to;
+    // Lists that differ only in order or case aren't a change worth confirming.
+    const same = field.type === "list" ? sameList(from, to) : from === to;
     if (!same) changes.push({ field: field.key, label: field.label, from, to });
   }
   return { values, changes };

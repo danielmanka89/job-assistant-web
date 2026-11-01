@@ -103,7 +103,7 @@ export function validateResume(resume: Resume): FormErrors {
 
 // Field paths the form can show an error under. Bullet errors use the bullet id, not its index.
 const SHOWN_FIELDS = [
-  /^contact\.(fullName|email|phone|location|linkedinUrl|websiteUrl)$/,
+  /^contact\.(fullName|email|phone|location|linkedinUrl|websiteUrl|workAuthorization|desiredPay)$/,
   /^summary$/,
   /^workExperience\.\d+\.(jobTitle|company|location|startDate|endDate)$/,
   /^workExperience\.\d+\.bullets\.[^.]+$/,
@@ -178,6 +178,8 @@ export function normalizeResume(resume: Resume): Resume {
     location: optional(c.location),
     linkedinUrl: linkedin && withProtocol(linkedin),
     websiteUrl: website && withProtocol(website),
+    workAuthorization: optional(c.workAuthorization),
+    desiredPay: optional(c.desiredPay),
   });
 
   const workExperience = resume.workExperience.map((w) =>

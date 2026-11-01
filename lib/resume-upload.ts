@@ -72,7 +72,7 @@ export async function readResumeUpload(request: Request): Promise<(Failure & { f
 export async function parseResumeUpload(file: UploadedFile, user: Pick<UserRow, "name" | "email">): Promise<Failure | { draft: ResumeDraft }> {
   let text: string;
   try {
-    text = await extractResumeText(file.bytes, file.fileType);
+    text = await extractResumeText(file.bytes, file.fileType, { links: true });
   } catch (error) {
     console.error("text extraction failed", error);
     text = "";
@@ -105,6 +105,7 @@ export async function parseResumeUpload(file: UploadedFile, user: Pick<UserRow, 
         workExperience: parsed.workExperience,
         education: parsed.education,
         skills: parsed.skills,
+        ...(parsed.certifications.length ? { certifications: parsed.certifications } : {}),
       },
     };
   } catch (error) {

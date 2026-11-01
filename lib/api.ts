@@ -86,6 +86,7 @@ export function toResume(row: Omit<ResumeRow, "data">): Resume {
     workExperience: row.workExperience as unknown as WorkExperience[],
     education: row.education as unknown as Education[],
     skills: row.skills as unknown as string[],
+    ...(Array.isArray(row.certifications) && row.certifications.length ? { certifications: row.certifications as string[] } : {}),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
