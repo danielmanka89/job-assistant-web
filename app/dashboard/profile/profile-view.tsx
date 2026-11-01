@@ -8,7 +8,6 @@ import { PROFILE_SECTIONS, splitList, type ProfileField, type ProfileSection } f
 import { yearsOfExperience } from "@/lib/spreadsheet";
 import { getProfile, logout } from "@/lib/client/api";
 import { safeApplyUrl } from "@/lib/client/jobs";
-import { storeResume } from "@/lib/client/resume-storage";
 import { ErrorAlert } from "@/components/ui/alert";
 
 type Load =
@@ -88,7 +87,7 @@ export function ProfileView() {
     );
   }
 
-  const { values, resume } = load;
+  const { values } = load;
   const sections = (...ids: ProfileSection["id"][]) =>
     PROFILE_SECTIONS.filter((section) => ids.includes(section.id)).map((section) => (
       <Card key={section.id} id={`profile-${section.id}`} title={section.title} description={section.description}>
@@ -97,7 +96,7 @@ export function ProfileView() {
             <div key={field.key} className={field.type === "list" ? "sm:col-span-2" : undefined}>
               <dt className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{field.label}</dt>
               <dd className="mt-1 text-[15px] break-words text-neutral-900 dark:text-white">
-                <Value field={field} value={values[field.key] ?? ""} resume={resume} />
+                <Value field={field} value={values[field.key] ?? ""} />
               </dd>
             </div>
           ))}
@@ -118,7 +117,7 @@ export function ProfileView() {
             <span className="font-semibold text-neutral-900 dark:text-white">
               {new Date(load.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
             </span>
-            . It can&apos;t be edited here; upload an updated resume to change it.
+            . To change it, use Add to your resume above or upload an updated resume.
           </span>
         </p>
         <Link href="/dashboard/upload" className={`${uploadLink} shrink-0`}>
@@ -252,31 +251,13 @@ function EducationCard({ education }: { education: Education[] }) {
   );
 }
 
-function Missing({ resume, editable = false }: { resume?: Resume | null; editable?: boolean }) {
-  return (
-    <span className="text-neutral-400 italic dark:text-neutral-500">
-      Not on your resume
-      {editable && resume && (
-        <>
-          {" · "}
-          <Link
-            href="/dashboard/review"
-            onClick={() => storeResume(resume)}
-            className="font-medium text-brand-700 not-italic underline-offset-2 hover:underline dark:text-brand-300"
-          >
-            Add it to your resume
-          </Link>
-        </>
-      )}
-    </span>
-  );
+// Missing details are added with the one "Add to your resume" button next to the page title.
+function Missing() {
+  return <span className="text-neutral-400 italic dark:text-neutral-500">Not on your resume</span>;
 }
 
-// Visa and pay rate are often left off a resume; they can be added on the Review page.
-const ADDABLE = new Set(["workAuthorization", "desiredPay"]);
-
-function Value({ field, value, resume }: { field: ProfileField; value: string; resume: Resume | null }) {
-  if (!value) return <Missing resume={resume} editable={ADDABLE.has(field.key)} />;
+function Value({ field, value }: { field: ProfileField; value: string }) {
+  if (!value) return <Missing />;
   if (field.type === "list") {
     return (
       <ul className="mt-1 flex flex-wrap gap-2">
