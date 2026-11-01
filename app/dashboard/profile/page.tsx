@@ -16,7 +16,8 @@ export default function ProfilePage() {
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
         <ProfileView />
-        <aside aria-label="Market Reach" className="order-first lg:sticky lg:top-6 lg:order-none">
+        {/* top-16 keeps the sticky panel clear of the fixed theme button in the top-right corner. */}
+        <aside aria-label="Market Reach" className="order-first lg:sticky lg:top-16 lg:order-none">
           <MarketReachPanel />
         </aside>
       </div>
