@@ -42,6 +42,22 @@ export interface AuthResponse {
   user: User;
 }
 
+/**
+ * Input for PATCH /api/account. Send only the fields being changed.
+ * Changing email or password requires currentPassword; a new password signs out the user's other sessions.
+ */
+export interface UpdateAccountRequest {
+  name?: string;
+  email?: string;
+  newPassword?: string; // plain text over HTTPS only; hashed with bcrypt before storage
+  currentPassword?: string; // required when email or newPassword is sent
+}
+
+/** Returned by GET and PATCH /api/account: the logged-in user as stored. */
+export interface AccountResponse {
+  user: User;
+}
+
 /** Contact details shown at the top of a resume. */
 export interface ResumeContact {
   fullName: string;

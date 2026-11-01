@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { emailError, nameError, normalizeEmail, passwordError } from "@/lib/account-validation";
 import { apiError, readJsonObject, toUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { createSession } from "@/lib/session";
 import type { AuthResponse, RegisterRequest, UserRole } from "@/lib/types";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 /** Returns per-field errors for a register body, or the cleaned request if valid. */
 function validate(body: Record<string, unknown>): { fieldErrors: Record<string, string> } | { data: RegisterRequest } {
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const email = typeof body.email === "string" ? normalizeEmail(body.email) : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
   const role = body.role === undefined ? "SEEKER" : body.role;
   const fieldErrors: Record<string, string> = {};
 
-  if (!EMAIL_PATTERN.test(email)) fieldErrors.email = "Enter a valid email address";
-  if (!name) fieldErrors.name = "Name is required";
-  else if (name.length > 100) fieldErrors.name = "Name must be 100 characters or fewer";
-  if (password.length < 8) fieldErrors.password = "Password must be at least 8 characters";
-  else if (Buffer.byteLength(password) > 72) fieldErrors.password = "Password must be 72 bytes or fewer";
+  const errors = { email: emailError(email), name: nameError(name), password: passwordError(password) };
+  for (const [field, message] of Object.entries(errors)) if (message) fieldErrors[field] = message;
   if (role !== "SEEKER" && role !== "EMPLOYER") fieldErrors.role = 'Choose "SEEKER" or "EMPLOYER"';
 
   return Object.keys(fieldErrors).length

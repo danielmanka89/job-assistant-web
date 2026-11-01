@@ -9,7 +9,9 @@
 //   posting a job titled with "fail" in it -> server error
 //   log in with an email containing "employer" -> employer account
 //   log in with an email containing "new" -> dashboard with no tailored resumes yet
+//   settings: current password "wrongpass" -> incorrect password; email taken@example.com -> already registered
 import type {
+  AccountResponse,
   ApiError,
   AuthResponse,
   CreateJobPostingRequest,
@@ -27,6 +29,7 @@ import type {
   TailoredResumeRequest,
   TailoredResumeResponse,
   TailoredResumeWithFiles,
+  UpdateAccountRequest,
   User,
   UserRole,
 } from "@/lib/types";
@@ -90,6 +93,40 @@ async function login(payload: LoginRequest): Promise<ApiResult<AuthResponse>> {
 async function logout(): Promise<void> {
   await delay(150);
   clearMockSession();
+}
+
+async function getAccount(): Promise<ApiResult<AccountResponse>> {
+  await delay(300);
+  return { ok: true, data: { user: readStoredUser() ?? mockUser("jane@example.com", "Jane Doe") } };
+}
+
+async function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<AccountResponse>> {
+  await delay(600);
+  if ((request.email !== undefined || request.newPassword !== undefined) && request.currentPassword === "wrongpass") {
+    return fail({
+      code: "INVALID_PASSWORD",
+      message: "Your current password is incorrect",
+      fieldErrors: { currentPassword: "Current password is incorrect" },
+    });
+  }
+  if (request.email?.trim().toLowerCase() === "taken@example.com") {
+    return fail({
+      code: "EMAIL_TAKEN",
+      message: "An account with this email already exists",
+      fieldErrors: { email: "Already registered" },
+    });
+  }
+  const user = readStoredUser() ?? mockUser("jane@example.com", "Jane Doe");
+  return {
+    ok: true,
+    data: {
+      user: {
+        ...user,
+        ...(request.name !== undefined ? { name: request.name.trim() } : {}),
+        ...(request.email !== undefined ? { email: request.email.trim().toLowerCase() } : {}),
+      },
+    },
+  };
 }
 
 async function uploadResume(
@@ -558,6 +595,8 @@ export const mockApi = {
   register,
   login,
   logout,
+  getAccount,
+  updateAccount,
   uploadResume,
   saveResume,
   addSkills,
