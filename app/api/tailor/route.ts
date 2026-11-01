@@ -1,6 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, readJsonObject, toGeneratedFile, toResume, toTailoredResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
@@ -8,8 +6,6 @@ import { prisma } from "@/lib/db";
 import { renderDocx, renderPdf, resumeFileName } from "@/lib/resume-files";
 import { mergeAcceptedBullets } from "@/lib/tailor";
 import type { SuggestedBullet, TailoredResume, TailoredResumeResponse } from "@/lib/types";
-
-const TAILORED_DIR = path.join(process.cwd(), "uploads", "tailored");
 
 const FORMATS = {
   docx: { mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", render: renderDocx },
@@ -85,25 +81,19 @@ export async function POST(request: NextRequest) {
   });
   const tailored: TailoredResume = toTailoredResume(tailoredRow);
 
-  const userDir = path.join(TAILORED_DIR, user.id);
-  const written: string[] = [];
   try {
-    await mkdir(userDir, { recursive: true });
     const fileRows = [];
     for (const format of formats as Format[]) {
       const bytes = await FORMATS[format].render(tailored);
-      const storedFileName = `${randomUUID()}.${format}`;
-      const filePath = path.join(userDir, storedFileName);
-      await writeFile(filePath, bytes);
-      written.push(filePath);
       fileRows.push({
         userId: user.id,
         tailoredResumeId: tailored.id,
         format,
         fileName: resumeFileName(resume.contact.fullName, format),
-        storedFileName,
+        storedFileName: `${randomUUID()}.${format}`,
         mimeType: FORMATS[format].mimeType,
         fileSize: bytes.length,
+        data: new Uint8Array(bytes),
       });
     }
     const files = await prisma.$transaction(fileRows.map((data) => prisma.generatedFile.create({ data })));
@@ -113,7 +103,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("tailored resume generation failed", error);
-    await Promise.all(written.map((p) => rm(p, { force: true })));
     await prisma.tailoredResume.delete({ where: { id: tailored.id } }).catch(() => undefined);
     return apiError(500, "GENERATION_FAILED", "We couldn't create your resume files. Please try again.");
   }

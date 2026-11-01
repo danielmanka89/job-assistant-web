@@ -73,7 +73,7 @@ export function toUser(row: UserRow): User {
 }
 
 /** Maps a database resume to the Resume type. */
-export function toResume(row: ResumeRow): Resume {
+export function toResume(row: Omit<ResumeRow, "data">): Resume {
   return {
     id: row.id,
     userId: row.userId,
@@ -120,7 +120,7 @@ export function toJobPosting(row: JobPostingRow): JobPosting {
 }
 
 /** Maps a database generated file to the GeneratedFile type; downloads go through GET /api/files/:id. */
-export function toGeneratedFile(row: GeneratedFileRow, sourceResumeId: string): GeneratedFile {
+export function toGeneratedFile(row: Omit<GeneratedFileRow, "data">, sourceResumeId: string): GeneratedFile {
   return {
     id: row.id,
     resumeId: sourceResumeId,

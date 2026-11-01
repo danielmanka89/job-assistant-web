@@ -30,9 +30,10 @@ model Resume {
   userId         String
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   sourceFileName String? // original upload name, e.g. "Jane_Doe_CV.pdf"
-  storedFileName String // file name inside /uploads
+  storedFileName String // unique file name; older rows keep the file in /uploads
   mimeType       String // application/pdf or DOCX
   fileSize       Int // bytes
+  data           Bytes? // file contents (serverless hosts have no persistent disk)
   contact        Json // ResumeContact
   summary        String?
   workExperience Json // WorkExperience[]
@@ -92,9 +93,10 @@ model GeneratedFile {
   tailoredResume   TailoredResume @relation(fields: [tailoredResumeId], references: [id], onDelete: Cascade)
   format           String // "docx" | "pdf"
   fileName         String // download name, e.g. "Jane_Doe_Resume.pdf"
-  storedFileName   String // file name inside /uploads/tailored/<userId>
+  storedFileName   String // unique file name; older rows keep the file in /uploads/tailored/<userId>
   mimeType         String
   fileSize         Int // bytes
+  data             Bytes? // file contents (serverless hosts have no persistent disk)
   createdAt        DateTime       @default(now())
 
   @@index([userId])

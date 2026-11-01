@@ -15,14 +15,19 @@ export async function GET(request: NextRequest, { params }: Context) {
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to download this file");
 
   const { id } = await params;
-  const file = await prisma.generatedFile.findFirst({ where: { id, userId: user.id } });
+  const file = await prisma.generatedFile.findFirst({ where: { id, userId: user.id }, omit: { data: false } });
   if (!file) return apiError(404, "FILE_NOT_FOUND", "File not found");
 
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(path.join(TAILORED_DIR, user.id, path.basename(file.storedFileName)));
-  } catch {
-    return apiError(404, "FILE_NOT_FOUND", "File not found");
+  // Files generated before they were stored in the database are still on local disk.
+  let bytes: Uint8Array;
+  if (file.data) {
+    bytes = file.data;
+  } else {
+    try {
+      bytes = await readFile(path.join(TAILORED_DIR, user.id, path.basename(file.storedFileName)));
+    } catch {
+      return apiError(404, "FILE_NOT_FOUND", "File not found");
+    }
   }
 
   const asciiName = file.fileName.replace(/[^\x20-\x7e]|"/g, "_");

@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
 import { parseResumeText, type ParsedResume } from "@/lib/ai";
@@ -10,7 +9,6 @@ import { extractResumeText } from "@/lib/resume-text";
 import type { Resume, ResumeContact } from "@/lib/types";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MAX_TEXT_CHARS = 100_000; // well beyond any real resume; rejected rather than truncated
 
 const FILE_TYPES = {
@@ -94,21 +92,15 @@ export async function POST(request: NextRequest) {
     email: parsed.contact.email ?? user.email,
   };
 
-  const storedFileName = `${randomUUID()}.${fileType}`;
-  const userDir = path.join(UPLOAD_DIR, user.id);
-  const filePath = path.join(userDir, storedFileName);
-
   try {
-    await mkdir(userDir, { recursive: true });
-    await writeFile(filePath, bytes);
-
     const resume = await prisma.resume.create({
       data: {
         userId: user.id,
         sourceFileName: path.basename(file.name),
-        storedFileName,
+        storedFileName: `${randomUUID()}.${fileType}`,
         mimeType: FILE_TYPES[fileType].mimeType,
         fileSize: bytes.length,
+        data: new Uint8Array(bytes),
         contact: { ...contact },
         summary: parsed.summary ?? null,
         workExperience: parsed.workExperience as object[],
@@ -118,7 +110,6 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json<Resume>(toResume(resume), { status: 201 });
   } catch (error) {
-    await rm(filePath, { force: true });
     console.error("upload failed", error);
     return apiError(500, "INTERNAL_ERROR", "Something went wrong. Please try again.");
   }
