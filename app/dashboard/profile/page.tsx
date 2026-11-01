@@ -6,7 +6,10 @@ export const metadata: Metadata = { title: "My Profile" };
 
 // On large screens the page fills the window and the two columns scroll on their own, so Market
 // Reach stays in view while reading the profile (and the other way round). Phones scroll as one page.
-const column = "lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1 lg:pb-6 lg:outline-none lg:focus-visible:ring-4 lg:focus-visible:ring-brand-500/30";
+// The columns can be focused at every size (tabIndex can't be responsive), so the focus ring shows at
+// every size too; otherwise phone keyboard users would land on an invisible focus stop.
+const column =
+  "rounded-3xl outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:px-1 lg:pb-6";
 
 export default function ProfilePage() {
   return (
