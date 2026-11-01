@@ -345,6 +345,7 @@ async function tailorResume(request: TailoredResumeRequest): Promise<ApiResult<T
     })),
     education: base.education,
     skills: base.skills,
+    finalMatchPercent: null, // scored from the file text below
     createdAt: now,
   };
 
@@ -363,7 +364,7 @@ async function tailorResume(request: TailoredResumeRequest): Promise<ApiResult<T
   const jobKeywords = KNOWN_KEYWORDS.filter((k) => mentions(request.jobDescription.toLowerCase(), k));
   const finalMatchPercent = scoreText(jobKeywords, text).matchPercent;
 
-  return { ok: true, data: { tailoredResume, files, finalMatchPercent } };
+  return { ok: true, data: { tailoredResume: { ...tailoredResume, finalMatchPercent }, files, finalMatchPercent } };
 }
 
 function daysAgo(days: number): string {

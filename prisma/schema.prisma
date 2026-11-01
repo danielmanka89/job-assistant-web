@@ -79,6 +79,7 @@ model TailoredResume {
   workExperience    Json // WorkExperience[]
   education         Json // Education[]
   skills            Json // string[]
+  finalMatchPercent Int? // score of the generated file; null for rows created before it was stored
   createdAt         DateTime        @default(now())
   files             GeneratedFile[]
 
