@@ -156,6 +156,7 @@ export interface TailoredResume {
   workExperience: WorkExperience[]; // accepted bullets replace their originalText
   education: Education[];
   skills: string[];
+  finalMatchPercent: number | null; // same score as TailoredResumeResponse.finalMatchPercent; null on older rows
   createdAt: string; // ISO 8601
 }
 
@@ -166,6 +167,27 @@ export interface TailoredResumeResponse {
   // The analysis's keywords found in the text read back from the generated file (PDF when requested),
   // the same way an uploaded resume is read. matched / (matched + missing), rounded; 0 when no keywords.
   finalMatchPercent: number;
+}
+
+/** A tailored resume with its downloadable files, as listed by GET /api/tailored-resumes. */
+export interface TailoredResumeWithFiles extends TailoredResume {
+  files: GeneratedFile[];
+}
+
+/** GET /api/tailored-resumes response: the user's tailored resumes, newest first. */
+export interface TailoredResumeListResponse {
+  tailoredResumes: TailoredResumeWithFiles[];
+}
+
+/** GET /api/dashboard-stats response. */
+export interface DashboardStats {
+  tailoredResumeCount: number;
+  averageMatchPercent: number | null; // mean finalMatchPercent, rounded; null when no resume has a score
+  jobs: {
+    total: number;
+    native: number; // posted on this site
+    external: number; // pulled from a provider (including "mock" demo jobs)
+  };
 }
 
 /** A generated resume file ready for download. */

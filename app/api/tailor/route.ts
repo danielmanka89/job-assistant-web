@@ -111,9 +111,15 @@ export async function POST(request: NextRequest) {
     ];
     const finalMatchPercent = scoreText(keywords, finalText).matchPercent;
 
+    // Saved on the row so the dashboard can show it later; a failure here is cleaned up below.
+    const savedRow = await prisma.tailoredResume.update({ where: { id: tailored.id }, data: { finalMatchPercent } });
     const files = await prisma.$transaction(fileRows.map((data) => prisma.generatedFile.create({ data })));
     return NextResponse.json<TailoredResumeResponse>(
-      { tailoredResume: tailored, files: files.map((f) => toGeneratedFile(f, resume.id)), finalMatchPercent },
+      {
+        tailoredResume: toTailoredResume(savedRow),
+        files: files.map((f) => toGeneratedFile(f, resume.id)),
+        finalMatchPercent,
+      },
       { status: 201 },
     );
   } catch (error) {
