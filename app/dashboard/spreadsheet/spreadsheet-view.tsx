@@ -161,7 +161,9 @@ export function SpreadsheetView() {
         role="tabpanel"
         id={`sheet-panel-${sheet.key}`}
         aria-labelledby={`sheet-tab-${sheet.key}`}
-        className="overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
+        // Opaque in dark mode (other cards are 60%) so the frozen Job column, which must be opaque
+        // to hide cells scrolling under it, is the same color as the rest of the table.
+        className="overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
       >
         {rows.length === 0 ? (
           <div className="px-6 py-14 text-center">
@@ -253,9 +255,9 @@ function SheetTable({
     <div className="max-h-[70vh] overflow-auto">
       <table className="min-w-full border-separate border-spacing-0 text-sm">
         <caption className="sr-only">{sheet.title}</caption>
-        <thead className="sticky top-0 z-20 bg-neutral-50 dark:bg-neutral-900">
+        <thead className="sticky top-0 z-20 bg-neutral-50 dark:bg-neutral-800">
           <tr>
-            <th scope="col" className={`${th} sticky left-0 z-10 min-w-36 bg-neutral-50 sm:min-w-56 dark:bg-neutral-900`}>
+            <th scope="col" className={`${th} sticky left-0 z-10 min-w-36 bg-neutral-50 sm:min-w-56 dark:bg-neutral-800`}>
               Job
             </th>
             {sheet.columns.map((c) => (
@@ -275,7 +277,7 @@ function SheetTable({
               <tr key={row.id} className="group">
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 max-w-40 min-w-36 border-b sm:max-w-64 sm:min-w-56 border-neutral-100 bg-white px-3 py-2 text-left align-top font-normal group-hover:bg-neutral-50 dark:border-neutral-800/70 dark:bg-neutral-950 dark:group-hover:bg-neutral-900"
+                  className="sticky left-0 z-10 max-w-40 min-w-36 border-b sm:max-w-64 sm:min-w-56 border-neutral-100 bg-white px-3 py-2 text-left align-top font-normal group-hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:group-hover:bg-neutral-800"
                 >
                   <span className="block truncate font-semibold text-neutral-900 dark:text-white" title={title}>
                     {title}
@@ -283,7 +285,7 @@ function SheetTable({
                   {company && <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{company}</span>}
                 </th>
                 {sheet.columns.map((c) => (
-                  <td key={c.key} className="border-b border-neutral-100 px-1.5 py-1.5 align-top group-hover:bg-neutral-50/60 dark:border-neutral-800/70 dark:group-hover:bg-neutral-900/50">
+                  <td key={c.key} className="border-b border-neutral-100 px-1.5 py-1.5 align-top group-hover:bg-neutral-50 dark:border-neutral-800 dark:group-hover:bg-neutral-800">
                     <Cell
                       column={c}
                       value={row[sheet.key][c.key] ?? ""}
@@ -292,7 +294,7 @@ function SheetTable({
                     />
                   </td>
                 ))}
-                <td className="border-b border-neutral-100 px-2 py-1.5 align-top dark:border-neutral-800/70">
+                <td className="border-b border-neutral-100 px-2 py-1.5 align-top group-hover:bg-neutral-50 dark:border-neutral-800 dark:group-hover:bg-neutral-800">
                   <button
                     type="button"
                     onClick={() => onDelete(row)}
@@ -355,6 +357,15 @@ function Cell({ column, value, label, onSave }: { column: Column; value: string;
     );
   }
 
+  // Escape puts the saved value back, then leaves the cell without saving.
+  const cancelOnEscape = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.key !== "Escape") return;
+    const field = e.currentTarget;
+    setDraft(value);
+    // Blur after the original value is back in the field, so nothing is saved.
+    requestAnimationFrame(() => field.blur());
+  };
+
   const shared = {
     "aria-label": label,
     value: draft ?? value,
@@ -367,7 +378,15 @@ function Cell({ column, value, label, onSave }: { column: Column; value: string;
   };
 
   if (column.type === "long") {
-    return <textarea {...shared} rows={2} onChange={(e) => setDraft(e.target.value)} className={`${CELL} resize-y leading-snug`} />;
+    return (
+      <textarea
+        {...shared}
+        rows={2}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={cancelOnEscape}
+        className={`${CELL} resize-y leading-snug`}
+      />
+    );
   }
   return (
     <input
@@ -376,12 +395,7 @@ function Cell({ column, value, label, onSave }: { column: Column; value: string;
       onChange={(e) => setDraft(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          const input = e.currentTarget;
-          setDraft(value);
-          // Blur after the original value is back in the input, so nothing is saved.
-          requestAnimationFrame(() => input.blur());
-        }
+        cancelOnEscape(e);
       }}
     />
   );
