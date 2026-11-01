@@ -101,6 +101,7 @@ export function toTailoredResume(row: TailoredResumeRow): TailoredResume {
     workExperience: row.workExperience as unknown as WorkExperience[],
     education: row.education as unknown as Education[],
     skills: row.skills as unknown as string[],
+    finalMatchPercent: row.finalMatchPercent,
     createdAt: row.createdAt.toISOString(),
   };
 }
