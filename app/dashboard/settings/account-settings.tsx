@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiError, UpdateAccountRequest, User } from "@/lib/types";
 import { getAccount, logout, updateAccount } from "@/lib/client/api";
@@ -78,7 +78,7 @@ export function AccountSettings() {
   return (
     <div className="space-y-6">
       <ProfileForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
-      <PasswordForm onUnauthorized={onUnauthorized} />
+      <PasswordForm email={state.user.email} onUnauthorized={onUnauthorized} />
     </div>
   );
 }
@@ -102,6 +102,9 @@ function ProfileForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusFirstError = useFocusFirstError(formRef);
+  const feedbackRef = useRevealFeedback(success || formError);
 
   const name = values.name.trim();
   const email = values.email.trim().toLowerCase();
@@ -125,7 +128,7 @@ function ProfileForm({
       currentPassword: emailChanged && !values.currentPassword ? "Enter your current password to change your email." : undefined,
     };
     setErrors(clientErrors);
-    if (hasErrors(clientErrors)) return;
+    if (hasErrors(clientErrors)) return focusFirstError();
 
     const request: UpdateAccountRequest = {
       ...(nameChanged ? { name } : {}),
@@ -139,6 +142,7 @@ function ProfileForm({
       const split = splitApiError<ProfileValues>(result.error, PROFILE_FIELDS);
       setErrors(split.fieldErrors);
       setFormError(split.formError);
+      if (hasErrors(split.fieldErrors)) focusFirstError();
       return;
     }
     const saved = result.data.user;
@@ -159,10 +163,12 @@ function ProfileForm({
         </svg>
       }
     >
-      <form onSubmit={onSubmit} noValidate>
+      <form ref={formRef} onSubmit={onSubmit} noValidate>
         <fieldset disabled={pending} className="m-0 min-w-0 space-y-5 border-0 p-0">
-          {success && <SuccessAlert>{success}</SuccessAlert>}
-          {formError && <ErrorAlert>{formError}</ErrorAlert>}
+          <div ref={feedbackRef} className="scroll-mt-24 space-y-3 empty:hidden">
+            {success && <SuccessAlert>{success}</SuccessAlert>}
+            {formError && <ErrorAlert>{formError}</ErrorAlert>}
+          </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <TextField
               label="Name"
@@ -212,12 +218,15 @@ type PasswordValues = { currentPassword: string; newPassword: string; confirmPas
 const PASSWORD_FIELDS = ["currentPassword", "newPassword"] as const;
 const EMPTY_PASSWORDS: PasswordValues = { currentPassword: "", newPassword: "", confirmPassword: "" };
 
-function PasswordForm({ onUnauthorized }: { onUnauthorized: () => void }) {
+function PasswordForm({ email, onUnauthorized }: { email: string; onUnauthorized: () => void }) {
   const [values, setValues] = useState<PasswordValues>(EMPTY_PASSWORDS);
   const [errors, setErrors] = useState<FieldErrors<PasswordValues>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [pending, setPending] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusFirstError = useFocusFirstError(formRef);
+  const feedbackRef = useRevealFeedback(success || formError);
 
   function update(field: keyof PasswordValues, value: string) {
     setValues((v) => ({ ...v, [field]: value }));
@@ -237,7 +246,7 @@ function PasswordForm({ onUnauthorized }: { onUnauthorized: () => void }) {
         values.confirmPassword === values.newPassword ? undefined : "This doesn't match your new password.",
     };
     setErrors(clientErrors);
-    if (hasErrors(clientErrors)) return;
+    if (hasErrors(clientErrors)) return focusFirstError();
 
     setPending(true);
     const result = await updateAccount({ currentPassword: values.currentPassword, newPassword: values.newPassword });
@@ -247,6 +256,7 @@ function PasswordForm({ onUnauthorized }: { onUnauthorized: () => void }) {
       const split = splitApiError<PasswordValues>(result.error, PASSWORD_FIELDS);
       setErrors(split.fieldErrors);
       setFormError(split.formError);
+      if (hasErrors(split.fieldErrors)) focusFirstError();
       return;
     }
     setValues(EMPTY_PASSWORDS);
@@ -265,10 +275,14 @@ function PasswordForm({ onUnauthorized }: { onUnauthorized: () => void }) {
         </svg>
       }
     >
-      <form onSubmit={onSubmit} noValidate>
+      <form ref={formRef} onSubmit={onSubmit} noValidate>
+        {/* Lets password managers tie the new password to this account. */}
+        <input type="text" name="username" autoComplete="username" value={email} readOnly hidden />
         <fieldset disabled={pending} className="m-0 min-w-0 space-y-5 border-0 p-0">
-          {success && <SuccessAlert>Password updated. Your other devices have been signed out.</SuccessAlert>}
-          {formError && <ErrorAlert>{formError}</ErrorAlert>}
+          <div ref={feedbackRef} className="scroll-mt-24 space-y-3 empty:hidden">
+            {success && <SuccessAlert>Password updated. Your other devices have been signed out.</SuccessAlert>}
+            {formError && <ErrorAlert>{formError}</ErrorAlert>}
+          </div>
           <TextField
             label="Current password"
             type="password"
@@ -310,6 +324,32 @@ function PasswordForm({ onUnauthorized }: { onUnauthorized: () => void }) {
 }
 
 /* ---------- Shared ---------- */
+
+/**
+ * Returns a function that focuses the form's first invalid field after the next render,
+ * once the errors are shown and the fieldset is enabled again.
+ */
+function useFocusFirstError(form: React.RefObject<HTMLFormElement | null>) {
+  const [request, setRequest] = useState(0);
+  useEffect(() => {
+    if (request) form.current?.querySelector<HTMLInputElement>('[aria-invalid="true"]')?.focus();
+  }, [request, form]);
+  return () => setRequest((n) => n + 1);
+}
+
+/**
+ * Scrolls the success/error banner into view when it appears. The forms are tall on
+ * phones, so the banner would otherwise show up above the screen after tapping Save.
+ */
+function useRevealFeedback(message: unknown) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!message) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ref.current?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+  }, [message]);
+  return ref;
+}
 
 function SettingsCard({
   id,
