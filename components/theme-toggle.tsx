@@ -44,15 +44,16 @@ function setMono(mono: boolean) {
 /** Round button pinned to the top-right corner that switches between the red and the black & white theme. */
 export function ThemeToggle() {
   const mono = useSyncExternalStore(subscribe, isMono, () => false);
-  const label = mono ? "Switch to red theme" : "Switch to black & white theme";
+  // aria-pressed carries the state, so the accessible name stays the same either way.
+  const hint = mono ? "Switch to red theme" : "Switch to black & white theme";
 
   return (
     <button
       type="button"
       onClick={() => setMono(!mono)}
       aria-pressed={mono}
-      aria-label={label}
-      title={label}
+      aria-label="Black & white theme"
+      title={hint}
       className="fixed top-3 right-3 z-[60] grid size-10 place-items-center rounded-full border border-neutral-200 bg-white/90 text-neutral-800 shadow-md backdrop-blur transition outline-none hover:border-neutral-300 hover:bg-white focus-visible:ring-4 focus-visible:ring-brand-500/30 dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-neutral-100 dark:hover:border-neutral-500 dark:hover:bg-neutral-900"
     >
       {/* Half-filled circle: the usual "contrast" icon. The filled half flips with the theme. */}
