@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ApiError, ProfileValues } from "@/lib/types";
 import { PROFILE_SECTIONS, splitList, type ProfileField } from "@/lib/profile";
 import { getProfile, logout } from "@/lib/client/api";
+import { safeApplyUrl } from "@/lib/client/jobs";
 import { ErrorAlert } from "@/components/ui/alert";
 
 type Load =
@@ -134,8 +135,9 @@ function Value({ field, value }: { field: ProfileField; value: string }) {
   if (field.type === "list") {
     return (
       <ul className="mt-1 flex flex-wrap gap-2">
-        {splitList(value).map((item) => (
-          <li key={item} className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+        {/* Index in the key: a resume can list the same skill twice. */}
+        {splitList(value).map((item, i) => (
+          <li key={`${i}-${item}`} className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
             {item}
           </li>
         ))}
@@ -143,8 +145,11 @@ function Value({ field, value }: { field: ProfileField; value: string }) {
     );
   }
   if (field.type === "url") {
+    // Values come from the parsed resume; only web links become clickable.
+    const href = safeApplyUrl(value);
+    if (!href) return <>{value}</>;
     return (
-      <a href={value} target="_blank" rel="noopener noreferrer" className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-300">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-300">
         {value.replace(/^https?:\/\//, "")}
         <span className="sr-only"> (opens in a new tab)</span>
       </a>
