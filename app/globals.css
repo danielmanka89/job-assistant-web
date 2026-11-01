@@ -39,19 +39,40 @@
   --color-brand-950: #40080b;
 }
 
+/*
+ * Themes, picked with <ThemeToggle> and stored as data-theme on <html>:
+ *   (none) follows the device's light/dark setting, "light" and "dark" force one,
+ *   "mono" is black & white (always on a light background).
+ * Tailwind's dark: variant follows the same rule instead of the media query alone.
+ */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #0c0c0c;
+  --foreground: #f4f4f4;
+  /* Native controls (checkboxes, scrollbars) match the dark theme instead of staying white. */
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --background: #0c0c0c;
     --foreground: #f4f4f4;
-    /* Native controls (checkboxes, scrollbars) match the dark theme instead of staying white. */
     color-scheme: dark;
   }
 }
 
 /*
- * Black & white theme, switched by <ThemeToggle> (data-theme="mono" on <html>).
- * It swaps the brand accent for grays, so every bg-/text-brand-* follows. Success and error
- * colors stay, since they carry meaning.
+ * Black & white: swaps the brand accent for grays, so every bg-/text-brand-* follows. Success and
+ * error colors stay, since they carry meaning.
  */
 :root[data-theme="mono"] {
   --color-brand-50: #f5f5f5;
@@ -67,23 +88,7 @@
   --color-brand-950: #000000;
 }
 
-/* On dark backgrounds black buttons would vanish, so the accent becomes a mid gray with light text tints.
-   .theme-on-dark is for dark panels that show in light mode too (the auth brand panel). */
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="mono"] {
-    --color-brand-50: #fafafa;
-    --color-brand-100: #f5f5f5;
-    --color-brand-200: #e5e5e5;
-    --color-brand-300: #e5e5e5;
-    --color-brand-400: #d4d4d4;
-    --color-brand-500: #737373;
-    --color-brand-600: #525252;
-    --color-brand-700: #404040;
-    --color-brand-800: #262626;
-    --color-brand-900: #171717;
-    --color-brand-950: #0a0a0a;
-  }
-}
+/* On dark panels (auth brand panel, landing pill) black accents would vanish, so they use light grays. */
 :root[data-theme="mono"] .theme-on-dark {
   --color-brand-200: #e5e5e5;
   --color-brand-300: #e5e5e5;
