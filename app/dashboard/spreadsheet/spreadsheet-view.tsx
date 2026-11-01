@@ -268,6 +268,10 @@ function SheetTable({
       if (e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
       if (e.target instanceof Element && e.target.closest("[data-job-column]")) return;
       if (el.scrollWidth <= el.clientWidth) return; // nothing to scroll sideways
+      // At the left or right edge, let the wheel scroll the page as usual instead of doing nothing.
+      const atStart = el.scrollLeft <= 0;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+      if ((e.deltaY < 0 && atStart) || (e.deltaY > 0 && atEnd)) return;
       const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? el.clientWidth : 1;
       e.preventDefault();
       el.scrollLeft += e.deltaY * unit;
