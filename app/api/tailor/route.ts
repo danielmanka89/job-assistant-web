@@ -4,6 +4,8 @@ import { apiError, readJsonObject, toGeneratedFile, toResume, toTailoredResume }
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { renderDocx, renderPdf, resumeFileName } from "@/lib/resume-files";
+import { extractResumeText } from "@/lib/resume-text";
+import { scoreText } from "@/lib/skills";
 import { mergeAcceptedBullets } from "@/lib/tailor";
 import type { SuggestedBullet, TailoredResume, TailoredResumeResponse } from "@/lib/types";
 
@@ -83,8 +85,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const fileRows = [];
+    const rendered = new Map<Format, Buffer>();
     for (const format of formats as Format[]) {
       const bytes = await FORMATS[format].render(tailored);
+      rendered.set(format, bytes);
       fileRows.push({
         userId: user.id,
         tailoredResumeId: tailored.id,
@@ -96,9 +100,20 @@ export async function POST(request: NextRequest) {
         data: new Uint8Array(bytes),
       });
     }
+
+    // Score the file the user will download, read back the same way an upload is, so the number
+    // matches what re-uploading it would see. Keywords are the analysis's full list for this job.
+    const scoredFormat: Format = rendered.has("pdf") ? "pdf" : "docx";
+    const finalText = await extractResumeText(rendered.get(scoredFormat)!, scoredFormat);
+    const keywords = [
+      ...(analysis.matchedKeywords as unknown as string[]),
+      ...(analysis.missingKeywords as unknown as string[]),
+    ];
+    const finalMatchPercent = scoreText(keywords, finalText).matchPercent;
+
     const files = await prisma.$transaction(fileRows.map((data) => prisma.generatedFile.create({ data })));
     return NextResponse.json<TailoredResumeResponse>(
-      { tailoredResume: tailored, files: files.map((f) => toGeneratedFile(f, resume.id)) },
+      { tailoredResume: tailored, files: files.map((f) => toGeneratedFile(f, resume.id)), finalMatchPercent },
       { status: 201 },
     );
   } catch (error) {

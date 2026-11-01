@@ -27,7 +27,7 @@ import type {
   User,
   UserRole,
 } from "@/lib/types";
-import { matchPercent, mergeSkills } from "@/lib/skills";
+import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
 import type { ApiResult } from "./api";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
@@ -358,7 +358,10 @@ async function tailorResume(request: TailoredResumeRequest): Promise<ApiResult<T
     createdAt: now,
   }));
 
-  return { ok: true, data: { tailoredResume, files } };
+  const jobKeywords = KNOWN_KEYWORDS.filter((k) => mentions(request.jobDescription.toLowerCase(), k));
+  const finalMatchPercent = scoreText(jobKeywords, text).matchPercent;
+
+  return { ok: true, data: { tailoredResume, files, finalMatchPercent } };
 }
 
 function daysAgo(days: number): string {
