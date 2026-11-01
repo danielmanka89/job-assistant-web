@@ -3,6 +3,7 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import { apiError, readJsonObject, toResume, toSubmission } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getProfileValues } from "@/lib/profile-store";
 import { prefillSubmission } from "@/lib/spreadsheet";
 import type { CreateSubmissionResponse, SubmissionListResponse } from "@/lib/types";
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/submissions — records an application. With { jobId } the row is prefilled from the job,
- * the user's latest resume and their latest gap analysis of that job; applying to the same job
+ * the user's saved profile, their latest resume and their latest gap analysis of that job; applying to the same job
  * again returns the existing row (200, created: false). Without a jobId the row starts blank (201).
  */
 export async function POST(request: NextRequest) {
@@ -47,13 +48,14 @@ export async function POST(request: NextRequest) {
   if (jobId) {
     const job = await prisma.jobPosting.findUnique({ where: { id: jobId } });
     if (!job) return apiError(404, "JOB_NOT_FOUND", "That job is no longer listed");
-    const [resume, analysis] = await Promise.all([
+    const [resume, analysis, profile] = await Promise.all([
       prisma.resume.findFirst({ where: { userId: user.id }, orderBy: { updatedAt: "desc" } }),
       prisma.gapAnalysis.findFirst({
         where: { userId: user.id, jobDescription: job.description },
         orderBy: { createdAt: "desc" },
         select: { matchedKeywords: true, missingKeywords: true },
       }),
+      getProfileValues(user.id),
     ]);
     cells = prefillSubmission(
       job,
@@ -61,6 +63,7 @@ export async function POST(request: NextRequest) {
       analysis
         ? { matchedKeywords: analysis.matchedKeywords as string[], missingKeywords: analysis.missingKeywords as string[] }
         : null,
+      profile,
     );
   }
 

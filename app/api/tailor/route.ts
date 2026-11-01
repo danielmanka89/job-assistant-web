@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, readJsonObject, toGeneratedFile, toResume, toTailoredResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { withProfile } from "@/lib/profile";
+import { getProfileValues } from "@/lib/profile-store";
 import { renderDocx, renderPdf, resumeFileName } from "@/lib/resume-files";
 import { extractResumeText } from "@/lib/resume-text";
 import { scoreText } from "@/lib/skills";
@@ -18,7 +20,8 @@ type Format = keyof typeof FORMATS;
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
 
 /**
- * POST /api/tailor — merges the accepted suggestions from a gap analysis into the resume,
+ * POST /api/tailor — merges the accepted suggestions from a gap analysis into the resume (with the
+ * user's saved profile applied: its contact details and skills),
  * stores the TailoredResume, and renders the requested .docx / .pdf files.
  * The job description comes from the stored analysis; a jobDescription in the body is ignored.
  */
@@ -62,7 +65,8 @@ export async function POST(request: NextRequest) {
   }
   const accepted = suggestions.filter((s) => acceptedBulletIds.includes(s.id));
 
-  const resume = toResume(resumeRow);
+  // The saved profile's contact details and skills go into the tailored resume.
+  const resume = withProfile(toResume(resumeRow), await getProfileValues(user.id));
   const merged = mergeAcceptedBullets(resume, accepted, analysis.matchedKeywords as unknown as string[]);
   if (merged.stale.length) {
     return apiError(409, "RESUME_CHANGED", "Your resume was edited after this analysis. Run the analysis again.");

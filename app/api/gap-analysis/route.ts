@@ -3,6 +3,8 @@ import { analyzeGap } from "@/lib/ai";
 import { aiErrorResponse, apiError, jobDescriptionError, readJsonObject, toResume } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { withProfile } from "@/lib/profile";
+import { getProfileValues } from "@/lib/profile-store";
 import { matchPercent } from "@/lib/skills";
 import type { GapAnalysisResponse } from "@/lib/types";
 
@@ -32,7 +34,8 @@ export async function POST(request: NextRequest) {
 
   let result;
   try {
-    result = await analyzeGap(toResume(row), jobDescription);
+    // The profile's skills count as the candidate's, so they match job keywords too.
+    result = await analyzeGap(withProfile(toResume(row), await getProfileValues(user.id)), jobDescription);
   } catch (error) {
     console.error("gap analysis failed", error);
     return aiErrorResponse(error, {

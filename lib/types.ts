@@ -288,3 +288,21 @@ export interface CreateSubmissionResponse {
  * Returns the updated Submission.
  */
 export type UpdateSubmissionRequest = Partial<Record<SheetKey, SheetValues>>;
+
+/** The job seeker's saved profile: field key -> text. Field keys are listed in lib/profile.ts. */
+export type ProfileValues = Record<string, string>;
+
+/**
+ * Returned by GET and PUT /api/profile. updatedAt is null until the profile is first saved;
+ * suggestions (from the account and latest resume) are for filling an empty profile.
+ */
+export interface ProfileResponse {
+  values: ProfileValues;
+  updatedAt: string | null;
+  suggestions: ProfileValues;
+}
+
+/** PUT /api/profile: the whole profile. Fields left out or blank are cleared. */
+export interface UpdateProfileRequest {
+  values: ProfileValues;
+}
