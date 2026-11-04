@@ -13,7 +13,8 @@ export function Avatar({ name, photoUrl, className = "size-12 text-lg" }: { name
     >
       {photoUrl ? (
         // unoptimized: the photo is already a small square served by our own API.
-        <Image src={photoUrl} alt="" fill unoptimized sizes="96px" className="object-cover" />
+        // object-[50%_20%]: a whole, tall photo shows the face (near the top), not the middle.
+        <Image src={photoUrl} alt="" fill unoptimized sizes="96px" className="object-cover object-[50%_20%]" />
       ) : (
         initials(name)
       )}

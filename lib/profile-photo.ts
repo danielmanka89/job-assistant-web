@@ -1,6 +1,6 @@
 // Profile photos: what can be uploaded and how it's linked.
 
-export const MAX_PHOTO_BYTES = 1_500_000; // the browser crops and compresses to ~100 KB first
+export const MAX_PHOTO_BYTES = 1_500_000; // the browser scales and compresses to ~50–300 KB first
 
 /** The image type from the file's first bytes (not its name or the browser's claim), or null. */
 export function photoType(bytes: Uint8Array): "image/jpeg" | "image/png" | "image/webp" | null {

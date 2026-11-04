@@ -53,6 +53,10 @@ export default async function PublicPortfolioPage({ params }: Props) {
   if (!portfolio) notFound();
   const p = portfolio;
   const headline = [p.workExperience[0]?.jobTitle, p.location].filter(Boolean).join(" · ");
+  // A whole (rectangular) photo is wider than the circle: nudge the cards less so they don't cover it.
+  const whole = isWholePhoto(p);
+  const nudgeLeft = whole ? "translate-x-3" : "translate-x-10"; // full class names, so Tailwind sees them
+  const nudgeRight = whole ? "-translate-x-3" : "-translate-x-10";
 
   const left = [
     <SummaryCard key="summary" p={p} />,
@@ -87,15 +91,15 @@ export default async function PublicPortfolioPage({ params }: Props) {
       <div className="mx-auto hidden min-h-0 w-full max-w-7xl flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-8 px-8 py-6 lg:grid [@media(max-height:820px)]:py-3">
         <div className="flex h-full min-h-0 flex-col justify-center gap-4 [@media(max-height:820px)]:gap-3">
           {left.map((card, i) => (
-            <div key={i} className={`min-h-0 ${i === 1 ? "" : "translate-x-10"}`}>
+            <div key={i} className={`min-h-0 ${i === 1 ? "" : nudgeLeft}`}>
               {card}
             </div>
           ))}
         </div>
-        <Portrait name={p.name} photoUrl={p.profilePictureUrl} />
+        <Portrait name={p.name} photoUrl={p.profilePictureUrl} photoSize={p.profilePictureSize} />
         <div className="flex h-full min-h-0 flex-col justify-center gap-4 [@media(max-height:820px)]:gap-3">
           {right.map((card, i) => (
-            <div key={i} className={`min-h-0 ${i === 1 ? "" : "-translate-x-10"}`}>
+            <div key={i} className={`min-h-0 ${i === 1 ? "" : nudgeRight}`}>
               {card}
             </div>
           ))}
@@ -105,7 +109,7 @@ export default async function PublicPortfolioPage({ params }: Props) {
       {/* Phones and tablets: the circle, then the cards in a row that swipes sideways. */}
       <div className="flex min-h-0 flex-1 flex-col lg:hidden">
         <div className="grid shrink-0 place-items-center py-7">
-          <Portrait name={p.name} photoUrl={p.profilePictureUrl} small />
+          <Portrait name={p.name} photoUrl={p.profilePictureUrl} photoSize={p.profilePictureSize} small />
         </div>
         {/* role + tabIndex: a named region keyboard users can focus and scroll with the arrow keys
             (most cards have nothing focusable inside, and Safari doesn't focus plain scrollers). */}
@@ -134,7 +138,48 @@ export default async function PublicPortfolioPage({ params }: Props) {
   );
 }
 
-function Portrait({ name, photoUrl, small = false }: { name: string; photoUrl: string | null; small?: boolean }) {
+/** True when the photo was saved whole (not cropped to a square for the circle). */
+function isWholePhoto(p: Pick<PublicPortfolio, "profilePictureUrl" | "profilePictureSize">) {
+  const size = p.profilePictureSize;
+  return Boolean(p.profilePictureUrl && size && Math.abs(size.width / size.height - 1) > 0.08);
+}
+
+function Portrait({
+  name,
+  photoUrl,
+  photoSize,
+  small = false,
+}: {
+  name: string;
+  photoUrl: string | null;
+  photoSize: PublicPortfolio["profilePictureSize"];
+  small?: boolean;
+}) {
+  // A whole photo (not cropped to a square) stands at its own shape in front of the ring.
+  if (photoUrl && photoSize && isWholePhoto({ profilePictureUrl: photoUrl, profilePictureSize: photoSize })) {
+    return (
+      <div className="relative grid shrink-0 place-items-center">
+        {/* The ring behind the photo, and the slow orbit around it. */}
+        <div
+          className={`absolute rounded-full border-[6px] border-brand-600 bg-brand-50/40 shadow-2xl shadow-brand-600/20 dark:bg-brand-950/20 ${small ? "size-[min(26vh,12rem)]" : "size-[min(48vh,26rem)]"}`}
+          aria-hidden="true"
+        />
+        <div
+          className={`absolute animate-[spin_80s_linear_infinite] rounded-full border border-dashed border-brand-600/30 motion-reduce:animate-none dark:border-brand-500/30 ${small ? "size-[min(30vh,14rem)]" : "size-[min(54vh,30rem)]"}`}
+          aria-hidden="true"
+        />
+        <Image
+          src={photoUrl}
+          alt={`${name}'s portrait`}
+          width={photoSize.width}
+          height={photoSize.height}
+          unoptimized // already sized by the browser that uploaded it
+          priority
+          className={`relative h-auto w-auto rounded-2xl object-contain shadow-2xl shadow-black/25 ring-1 ring-black/5 ${small ? "max-h-[30vh] max-w-[70vw]" : "max-h-[min(64vh,36rem)] max-w-[min(34vw,28rem)] [@media(max-height:820px)]:max-h-[58vh]"}`}
+        />
+      </div>
+    );
+  }
   return (
     <div className={`relative grid shrink-0 place-items-center ${small ? "size-[min(30vh,14rem)]" : "size-[min(46vh,24rem)]"}`}>
       {/* An orbit ring around the portrait. */}

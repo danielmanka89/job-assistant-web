@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { useRouter } from "next/navigation";
 import { CLOCK_TEMPLATES, type ApiError, type ThemeColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
 import { getAccount, logout, removeProfilePhoto, updateAccount, uploadProfilePhoto } from "@/lib/client/api";
-import { loadPhoto } from "@/lib/client/photo-crop";
+import { loadPhoto, type PreparedPhoto } from "@/lib/client/photo-crop";
 import { PhotoCropDialog } from "./photo-crop-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { storeUser } from "@/lib/client/current-user";
@@ -246,10 +246,10 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
     setCropping(null);
   }
 
-  async function upload(photo: Blob) {
+  async function upload(photo: PreparedPhoto) {
     setCropError(null);
     setBusy("uploading");
-    const result = await uploadProfilePhoto(photo);
+    const result = await uploadProfilePhoto(photo.blob, { width: photo.width, height: photo.height });
     setBusy(null);
     if (!result.ok) {
       if (isUnauthorized(result.error)) return onUnauthorized();
@@ -309,7 +309,7 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
               </Button>
             )}
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">Any photo. You can crop it, or keep the whole picture.</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Any photo. Keep the whole picture (shown full size on your portfolio) or crop it to a circle.</p>
         </div>
       </div>
       <p role="status" className={`mt-4 min-h-5 text-sm ${status?.kind === "error" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}>

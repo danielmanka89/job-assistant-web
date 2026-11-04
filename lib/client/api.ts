@@ -128,10 +128,14 @@ export async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
 }
 
 /** Sets the profile photo (PUT /api/profile/photo, multipart) and returns the updated user. */
-export async function uploadProfilePhoto(photo: Blob): Promise<ApiResult<AccountResponse>> {
+export async function uploadProfilePhoto(photo: Blob, size?: { width: number; height: number }): Promise<ApiResult<AccountResponse>> {
   if (USE_MOCK_API) return mockApi.uploadProfilePhoto(photo);
   const form = new FormData();
   form.append("file", photo, "photo");
+  if (size) {
+    form.append("width", String(size.width));
+    form.append("height", String(size.height));
+  }
   let res: Response;
   try {
     res = await fetch("/api/profile/photo", { method: "PUT", body: form, credentials: "same-origin" });

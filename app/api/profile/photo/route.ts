@@ -5,7 +5,16 @@ import { prisma } from "@/lib/db";
 import { MAX_PHOTO_BYTES, photoType, photoUrl } from "@/lib/profile-photo";
 import type { AccountResponse } from "@/lib/types";
 
-/** PUT /api/profile/photo — sets the profile photo (multipart, field "file": JPEG, PNG or WebP). */
+// The photo's pixel size, sent by the browser that prepared it; only used to lay the portfolio out.
+function dimension(value: FormDataEntryValue | null | undefined): number | null {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 && n <= 8000 ? n : null;
+}
+
+/**
+ * PUT /api/profile/photo — sets the profile photo (multipart: "file" is JPEG, PNG or WebP; "width"
+ * and "height" are its pixel size).
+ */
 export async function PUT(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to change your photo");
@@ -19,12 +28,15 @@ export async function PUT(request: NextRequest) {
   const mimeType = photoType(bytes);
   if (!mimeType) return apiError(415, "UNSUPPORTED_TYPE", "Use a JPEG, PNG or WebP photo");
 
+  const width = dimension(form?.get("width"));
+  const height = dimension(form?.get("height"));
+  const size = width && height ? { width, height } : { width: null, height: null };
   const savedAt = new Date();
   const [, updated] = await prisma.$transaction([
     prisma.profilePhoto.upsert({
       where: { userId: user.id },
-      create: { userId: user.id, data: bytes, mimeType },
-      update: { data: bytes, mimeType },
+      create: { userId: user.id, data: bytes, mimeType, ...size },
+      update: { data: bytes, mimeType, ...size },
     }),
     prisma.user.update({ where: { id: user.id }, data: { profilePictureUrl: photoUrl(user.id, savedAt) } }),
   ]);
