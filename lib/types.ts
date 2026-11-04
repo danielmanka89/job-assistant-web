@@ -353,6 +353,7 @@ export interface PublicPortfolio {
   resumeFileName: string | null; // the original upload, if there is one to download
   themeColor: ThemeColor; // the portfolio is shown in its owner's theme color
   profilePictureUrl: string | null; // shown in the portrait circle; null shows initials
+  profilePictureSize: { width: number; height: number } | null; // a tall or wide photo is shown at its own shape
 }
 
 /** Returned by POST and DELETE /api/profile/public: whether the portfolio is shared, and its link. */

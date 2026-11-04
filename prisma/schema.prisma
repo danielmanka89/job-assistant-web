@@ -36,12 +36,15 @@ model User {
   profilePhoto    ProfilePhoto?
 }
 
-// A user's profile photo, cropped to a square in the browser before upload (at most 1.5 MB).
+// A user's profile photo, prepared in the browser before upload (at most 1.5 MB): either the whole
+// picture at its own shape, or cropped to a square for the circle.
 model ProfilePhoto {
   userId    String   @id
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   data      Bytes
   mimeType  String // image/jpeg, image/png or image/webp
+  width     Int? // pixels; null for photos saved before sizes were kept (they're squares)
+  height    Int?
   updatedAt DateTime @updatedAt
 }
 

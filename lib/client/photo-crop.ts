@@ -12,6 +12,13 @@ export interface Crop {
 
 export const MAX_ZOOM_OVER_FILL = 3; // up to 3× closer than "fill"
 export const OUTPUT_SIZE = 768; // sharp in the portfolio's large circle on high-density screens
+const WHOLE_MAX_SIDE = 1400; // a whole photo keeps its shape; its long side is scaled to at most this
+
+export interface PreparedPhoto {
+  blob: Blob;
+  width: number;
+  height: number;
+}
 
 /**
  * Opens an image file for cropping, or throws a friendly error if it isn't one we can read. Any
@@ -59,13 +66,32 @@ export function drawCrop(canvas: HTMLCanvasElement, photo: ImageBitmap, crop: Cr
   ctx.drawImage(photo, (size - w) / 2 + crop.x * size, (size - h) / 2 + crop.y * size, w, h);
 }
 
-/** The cropped photo as a file to upload: WebP, or JPEG where the browser can't make WebP. */
-export async function exportCrop(photo: ImageBitmap, crop: Crop): Promise<Blob> {
+// WebP, or JPEG where the browser can't make WebP.
+async function encode(canvas: HTMLCanvasElement): Promise<PreparedPhoto> {
+  const toBlob = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.88));
+  const webp = await toBlob("image/webp");
+  const blob = webp && webp.type === "image/webp" ? webp : await toBlob("image/jpeg");
+  if (!blob) throw new Error("Your browser couldn't prepare the photo. Please try another browser.");
+  return { blob, width: canvas.width, height: canvas.height };
+}
+
+/** The photo cropped to a square for the circle, ready to upload. */
+export function exportCrop(photo: ImageBitmap, crop: Crop): Promise<PreparedPhoto> {
   const canvas = document.createElement("canvas");
   drawCrop(canvas, photo, crop, OUTPUT_SIZE);
-  const encode = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.88));
-  const webp = await encode("image/webp");
-  const blob = webp && webp.type === "image/webp" ? webp : await encode("image/jpeg");
-  if (!blob) throw new Error("Your browser couldn't prepare the photo. Please try another browser.");
-  return blob;
+  return encode(canvas);
+}
+
+/** The whole photo at its own shape (nothing cut off), scaled down if it's very large. */
+export function exportWhole(photo: ImageBitmap): Promise<PreparedPhoto> {
+  const scale = Math.min(1, WHOLE_MAX_SIDE / Math.max(photo.width, photo.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(photo.width * scale);
+  canvas.height = Math.round(photo.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(photo, 0, 0, canvas.width, canvas.height);
+  }
+  return encode(canvas);
 }

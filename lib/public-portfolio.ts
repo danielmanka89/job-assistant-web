@@ -12,7 +12,7 @@ export const portfolioPath = (userId: string) => `/profile/${userId}`;
  */
 export async function getPublicPortfolio(userId: string): Promise<PublicPortfolio | null> {
   if (!userId || userId.length > 64) return null;
-  const profile = await prisma.candidateProfile.findUnique({ where: { userId }, include: { user: { select: { name: true, themeColor: true, profilePictureUrl: true } } } });
+  const profile = await prisma.candidateProfile.findUnique({ where: { userId }, include: { user: { select: { name: true, themeColor: true, profilePictureUrl: true, profilePhoto: { select: { width: true, height: true } } } } } });
   if (!profile?.publishedAt) return null;
 
   const latest = await prisma.resume.findFirst({
@@ -37,6 +37,10 @@ export async function getPublicPortfolio(userId: string): Promise<PublicPortfoli
     education: (resume?.education ?? []).map(({ institution, degree, fieldOfStudy, startDate, endDate }) => ({ institution, degree, fieldOfStudy, startDate, endDate })),
     resumeFileName: latest?.sourceFileName ?? (latest ? "Resume" : null),
     profilePictureUrl: profile.user.profilePictureUrl,
+    profilePictureSize:
+      profile.user.profilePhoto?.width && profile.user.profilePhoto.height
+        ? { width: profile.user.profilePhoto.width, height: profile.user.profilePhoto.height }
+        : null,
     themeColor: THEME_COLORS.includes(profile.user.themeColor as ThemeColor) ? (profile.user.themeColor as ThemeColor) : "RED",
   };
 }
