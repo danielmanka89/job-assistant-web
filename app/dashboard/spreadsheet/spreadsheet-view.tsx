@@ -168,7 +168,9 @@ export function SpreadsheetView() {
         aria-labelledby={`sheet-tab-${sheet.key}`}
         // Opaque in dark mode (other cards are 60%) so the frozen Job column, which must be opaque
         // to hide cells scrolling under it, is the same color as the rest of the table.
-        className="overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+        // glass-solid: stays opaque on the glass dashboard, so cells don't show through the sticky
+        // header row and frozen Job column as they scroll underneath.
+        className="glass-solid overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
       >
         {rows.length === 0 ? (
           <div className="px-6 py-14 text-center">
