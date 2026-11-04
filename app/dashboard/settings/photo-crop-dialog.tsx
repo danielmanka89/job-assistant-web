@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 import { Button } from "@/components/ui/button";
 import { MAX_ZOOM_OVER_FILL, clampCrop, drawCrop, exportCrop, exportWhole, fillZoom, type Crop, type PreparedPhoto } from "@/lib/client/photo-crop";
 
-const PREVIEW = 288; // px, the circle shown in the dialog
+const PREVIEW = 288; // px, the largest the circle is shown (smaller on narrow phones); also the drawing size
 const WHOLE_PREVIEW_MAX = { width: 288, height: 320 };
 
 type Mode = "whole" | "circle";
@@ -31,7 +31,8 @@ export function PhotoCropDialog({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wholeRef = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<Mode>("whole");
-  const drag = useRef<{ id: number; x: number; y: number; crop: Crop } | null>(null);
+  // size: the circle's on-screen width when the drag started, so moves track the finger on small phones too.
+  const drag = useRef<{ id: number; x: number; y: number; size: number; crop: Crop } | null>(null);
   // The circle crop starts filled (a whole photo has its own mode now).
   const [crop, setCrop] = useState<Crop>(() => ({ zoom: fillZoom(photo), x: 0, y: 0 }));
   const [exporting, setExporting] = useState(false);
@@ -62,12 +63,13 @@ export function PhotoCropDialog({
 
   function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, crop };
+    const size = e.currentTarget.getBoundingClientRect().width || PREVIEW;
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, size, crop };
   }
   function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
-    update({ ...d.crop, x: d.crop.x + (e.clientX - d.x) / PREVIEW, y: d.crop.y + (e.clientY - d.y) / PREVIEW });
+    update({ ...d.crop, x: d.crop.x + (e.clientX - d.x) / d.size, y: d.crop.y + (e.clientY - d.y) / d.size });
   }
   function onKeyDown(e: KeyboardEvent<HTMLCanvasElement>) {
     const step = 0.02;
@@ -145,12 +147,14 @@ export function PhotoCropDialog({
             ref={wholeRef}
             role="img"
             aria-label="Preview of the whole photo"
-            style={{ width: wholeSize.width, height: wholeSize.height }}
+            // Up to its preview size, but never wider than the dialog (same as the circle on small phones).
+            style={{ width: "100%", maxWidth: wholeSize.width, aspectRatio: `${photo.width} / ${photo.height}` }}
             className="rounded-2xl shadow-lg ring-4 ring-brand-600/80"
           />
         ) : (
           <>
-            <div className="relative" style={{ width: PREVIEW, height: PREVIEW }}>
+            {/* Up to 288px, but never wider than the dialog: on phones under ~380px a fixed 288px circle was cut off. */}
+            <div className="relative aspect-square w-full" style={{ maxWidth: PREVIEW }}>
               <canvas
                 ref={canvasRef}
                 tabIndex={0}
@@ -175,6 +179,8 @@ export function PhotoCropDialog({
               <span className="sr-only">Zoom</span>
               <input
                 type="range"
+                // Read as "Zoom 150%" instead of the raw 0–1000 slider position.
+                aria-valuetext={`${Math.round(crop.zoom * 100)}%`}
                 min={0}
                 max={1000}
                 // A log scale, so zooming feels even from "whole photo" to close-up.
