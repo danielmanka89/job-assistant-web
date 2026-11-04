@@ -55,7 +55,8 @@ const STYLES: Record<ClockTemplate, Record<ClockColor, ClockStyle>> = {
     };
     return {
       BLUE: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-sky-600 via-blue-700 to-indigo-950 p-1.5 shadow-lg shadow-blue-700/25" },
-      GREEN: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-teal-500 via-emerald-600 to-green-800 p-1.5 shadow-lg shadow-emerald-600/25" },
+      // Darker than teal-500, where the small white text was about 2.5:1 contrast.
+      GREEN: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-teal-700 via-emerald-700 to-green-900 p-1.5 shadow-lg shadow-emerald-700/25" },
       RED: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-orange-600 via-rose-600 to-brand-700 p-1.5 shadow-lg shadow-rose-600/20" },
     };
   })(),

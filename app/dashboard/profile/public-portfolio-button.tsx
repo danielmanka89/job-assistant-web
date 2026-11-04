@@ -170,7 +170,9 @@ function ApproveDialog({ working, error, onApprove, onCancel }: { working: boole
           <Button type="button" variant="secondary" onClick={onCancel} disabled={working}>
             Cancel
           </Button>
-          <Button type="button" onClick={onApprove} loading={working} autoFocus>
+          {/* No autoFocus: the dialog starts on Cancel (first in the DOM), so an accidental Enter
+              doesn't publish the candidate's details. */}
+          <Button type="button" onClick={onApprove} loading={working}>
             {working ? "Sharing…" : "Approve"}
           </Button>
         </div>

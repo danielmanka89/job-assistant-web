@@ -102,7 +102,14 @@ export default async function PublicPortfolioPage({ params }: Props) {
         <div className="grid shrink-0 place-items-center py-7">
           <Portrait name={p.name} small />
         </div>
-        <div className="flex min-h-0 flex-1 snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden px-6 pb-4 scrollbar-none" aria-label="Portfolio details">
+        {/* role + tabIndex: a named region keyboard users can focus and scroll with the arrow keys
+            (most cards have nothing focusable inside, and Safari doesn't focus plain scrollers). */}
+        <div
+          role="region"
+          tabIndex={0}
+          aria-label="Portfolio details"
+          className="flex min-h-0 flex-1 snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden px-6 pb-4 scrollbar-none outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:ring-inset"
+        >
           {[...left, ...right].map((card, i) => (
             <div key={i} className="h-full max-h-80 w-[82vw] max-w-sm shrink-0 snap-center">
               {card}
