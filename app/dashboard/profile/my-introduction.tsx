@@ -36,19 +36,20 @@ function createRecognition(): Recognition | null {
  * Where the reader is in the script, from what they just said: the last few spoken words are lined
  * up against the next stretch of the script, and the best match moves the position forward. A lone
  * word only nudges it (within 3 words); nearby matches need 2 words in a row; jumping further ahead
- * (a skipped sentence) needs 4, so a common word said in passing can't throw the script forward.
+ * needs 4 (a skipped sentence) or 5 (a skipped paragraph, up to ~400 words), so a common word or
+ * phrase said in passing can't throw the script forward.
  */
 export function followSpeech(words: string[], pos: number, spoken: string[]): number {
   const tail = spoken.slice(-6);
   if (!tail.length) return pos;
   let best = { score: 0, end: -1 };
   const from = Math.max(0, pos - 3);
-  const to = Math.min(words.length - 1, pos + 90);
+  const to = Math.min(words.length - 1, pos + 400);
   for (let j = from; j <= to; j++) {
     let score = 0;
     for (let k = 0; k < tail.length && j - k >= 0; k++) if (words[j - k] === tail[tail.length - 1 - k]) score += 1;
     const ahead = j - pos;
-    const needed = ahead > 20 ? 4 : tail.length >= 3 ? 2 : ahead <= 3 ? tail.length : Infinity;
+    const needed = ahead > 90 ? 5 : ahead > 20 ? 4 : tail.length >= 3 ? 2 : ahead <= 3 ? tail.length : Infinity;
     // Prefer the strongest match; among equals, the nearest one.
     if (score >= needed && score > best.score) best = { score, end: j };
   }
