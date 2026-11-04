@@ -19,7 +19,9 @@ export function OwnerReturn() {
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const target = e.target as Element | null;
-      if (target?.closest("a, button, input, select, textarea, label, [role=button], [data-no-return]")) return;
+      // Cards (section) and the phone card row (role=region) aren't "empty": tapping one to read it, or
+      // while swiping through them, shouldn't leave the page.
+      if (target?.closest("a, button, input, select, textarea, label, section, [role=button], [role=region], [data-no-return]")) return;
       if (window.getSelection()?.toString()) return;
       router.push(PROFILE);
     };
