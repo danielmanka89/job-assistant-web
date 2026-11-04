@@ -618,8 +618,12 @@ const MOCK_QUOTES = [
 
 async function getRandomQuote(): Promise<ApiResult<RandomQuoteResponse>> {
   await delay(150);
-  const { index, nextChangeAt } = quoteSlot(Date.now(), MOCK_QUOTES.length);
-  return { ok: true, data: { quote: { id: index + 1, ...MOCK_QUOTES[index] }, nextChangeAt: new Date(nextChangeAt).toISOString() } };
+  const now = Date.now();
+  const { index, nextChangeAt } = quoteSlot(now, MOCK_QUOTES.length);
+  return {
+    ok: true,
+    data: { quote: { id: index + 1, ...MOCK_QUOTES[index] }, serverTime: new Date(now).toISOString(), nextChangeAt: new Date(nextChangeAt).toISOString() },
+  };
 }
 
 async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {

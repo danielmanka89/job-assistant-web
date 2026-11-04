@@ -69,7 +69,8 @@ export interface Quote {
 /** Returned by GET /api/quotes/random. */
 export interface RandomQuoteResponse {
   quote: Quote;
-  nextChangeAt: string; // ISO 8601; the banner asks again every 15 seconds
+  serverTime: string; // ISO 8601; the banner times its changes by the server's clock, not the device's
+  nextChangeAt: string; // ISO 8601; when every user's banner moves to the next quote
 }
 
 /** Returned by GET and PATCH /api/account: the logged-in user as stored. */

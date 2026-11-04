@@ -8,67 +8,79 @@ import { QUOTE_INTERVAL_MS } from "@/lib/quote-rotation";
 const FADE_MS = 300;
 
 /**
- * Slim frosted-glass bar floating at the bottom of every dashboard page with a motivational quote that changes every
- * 15 seconds (the text cross-fades). It can be paused, and it stops asking while the tab is hidden.
+ * Slim frosted-glass bar floating at the bottom of every dashboard page with a motivational quote. Every
+ * user sees the same quote at the same time; it changes on each 15-second mark of the server's clock
+ * (the text cross-fades). It can be paused, and it stops asking while the tab is hidden.
  */
 export function QuoteBanner() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [visible, setVisible] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [cycle, setCycle] = useState(0); // restarts the progress line on each change
+  // The progress line is keyed to the quote and starts part-way through when a page opens mid-quote.
+  const [progress, setProgress] = useState({ key: 0, elapsedMs: 0 });
   const pausedRef = useRef(paused);
   const shownId = useRef<number | null>(null);
-
-  useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
+  const resync = useRef<() => void>(() => {});
 
   useEffect(() => {
     let live = true;
-    let interval: number | undefined;
+    let next: number | undefined;
     let fade: number | undefined;
 
+    // Everyone gets the same quote at the same moment: the server picks it from its own clock, and the
+    // next request is timed by the server's countdown (nextChangeAt - serverTime), not this device's
+    // clock, which may be off by seconds.
     async function load() {
+      window.clearTimeout(next);
       const result = await getRandomQuote();
-      if (!live || !result.ok) return; // keep showing the last quote if a request fails
-      const next = result.data.quote;
-      if (next.id === shownId.current) return;
+      if (!live) return;
+      if (!result.ok) {
+        next = window.setTimeout(tick, 5000); // keep showing the last quote and try again shortly
+        return;
+      }
+      const { quote: latest, serverTime, nextChangeAt } = result.data;
+      const untilNext = Math.max(0, Date.parse(nextChangeAt) - Date.parse(serverTime));
+      next = window.setTimeout(tick, untilNext + 250);
+      if (latest.id === shownId.current) return;
+
       const first = shownId.current === null;
-      shownId.current = next.id;
+      shownId.current = latest.id;
+      const elapsedMs = QUOTE_INTERVAL_MS - untilNext;
       if (first) {
-        setQuote(next);
+        setQuote(latest);
         setVisible(true);
-        setCycle((c) => c + 1);
+        setProgress({ key: latest.id, elapsedMs });
         return;
       }
       setVisible(false); // fade out, swap, fade in
       fade = window.setTimeout(() => {
         if (!live) return;
-        setQuote(next);
+        setQuote(latest);
         setVisible(true);
-        setCycle((c) => c + 1);
+        setProgress({ key: latest.id, elapsedMs: elapsedMs + FADE_MS });
       }, FADE_MS);
     }
 
-    const tick = () => {
+    // Paused or in a background tab: stop asking; resuming or coming back catches up at once.
+    function tick() {
       if (!pausedRef.current && !document.hidden) void load();
-    };
-
-    // Quotes change on the 15-second marks of the clock, so the first tick waits for the next mark;
-    // from then on a plain interval keeps step with it.
-    const start = window.setTimeout(() => {
-      tick();
-      interval = window.setInterval(tick, QUOTE_INTERVAL_MS);
-    }, QUOTE_INTERVAL_MS - (Date.now() % QUOTE_INTERVAL_MS) + 250);
+    }
+    resync.current = tick;
+    document.addEventListener("visibilitychange", tick);
     void load();
 
     return () => {
       live = false;
-      window.clearTimeout(start);
+      window.clearTimeout(next);
       window.clearTimeout(fade);
-      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", tick);
     };
   }, []);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    if (!paused) resync.current(); // back in step with everyone else straight away
+  }, [paused]);
 
   return (
     <footer
@@ -81,7 +93,8 @@ export function QuoteBanner() {
       <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-white/50 dark:bg-white/10" aria-hidden="true">
         {quote && !paused && (
           <span
-            key={cycle}
+            key={progress.key}
+            style={{ animationDelay: `-${progress.elapsedMs}ms` }}
             className="block h-full origin-left animate-quote-progress bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 shadow-[0_0_6px_rgba(207,35,41,0.6)] motion-reduce:hidden"
           />
         )}

@@ -138,6 +138,7 @@ export async function getRandomQuote(): Promise<ApiResult<RandomQuoteResponse>> 
     ok: true,
     data: {
       quote: { id: Number(quote.id), text: quote.text, author: typeof quote.author === "string" ? quote.author : null },
+      serverTime: typeof body.serverTime === "string" ? body.serverTime : new Date().toISOString(),
       nextChangeAt: typeof body.nextChangeAt === "string" ? body.nextChangeAt : new Date().toISOString(),
     },
   };
