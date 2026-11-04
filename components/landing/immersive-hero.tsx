@@ -6,22 +6,22 @@ import { speak } from "@/lib/client/speech";
 
 const WELCOME = "Welcome to JobAssistant. Connecting candidates and employers across all timezones. Let's get to work.";
 
-// Abbreviations come from the browser so New York and London show EDT/BST in summer. Tokyo has no
-// daylight saving and most browsers only know it as "GMT+9", so it is fixed.
+// US time zones, west to east. Abbreviations come from the browser, so they switch to PDT/CDT/EDT
+// during daylight saving time.
 const ZONES = [
-  { city: "New York", timeZone: "America/New_York", locale: "en-US", abbr: null },
-  { city: "London", timeZone: "Europe/London", locale: "en-GB", abbr: null },
-  { city: "Tokyo", timeZone: "Asia/Tokyo", locale: "en-US", abbr: "JST" },
+  { label: "Pacific", timeZone: "America/Los_Angeles" },
+  { label: "Central", timeZone: "America/Chicago" },
+  { label: "Eastern", timeZone: "America/New_York" },
 ] as const;
 
 const formats = ZONES.map((zone) => ({
   time: new Intl.DateTimeFormat("en-US", { timeZone: zone.timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }),
   day: new Intl.DateTimeFormat("en-US", { timeZone: zone.timeZone, weekday: "short", month: "short", day: "numeric" }),
-  abbr: new Intl.DateTimeFormat(zone.locale, { timeZone: zone.timeZone, timeZoneName: "short" }),
+  abbr: new Intl.DateTimeFormat("en-US", { timeZone: zone.timeZone, timeZoneName: "short" }),
 }));
 
 function zoneAbbr(i: number, date: Date): string {
-  return ZONES[i].abbr ?? formats[i].abbr.formatToParts(date).find((p) => p.type === "timeZoneName")?.value ?? "";
+  return formats[i].abbr.formatToParts(date).find((p) => p.type === "timeZoneName")?.value ?? "";
 }
 
 // The clock ticks once a second. The server renders placeholders, so the markup matches on hydration.
@@ -38,8 +38,8 @@ function WorldClock() {
   return (
     <ul className="grid grid-cols-3 gap-2 sm:gap-3">
       {ZONES.map((zone, i) => (
-        <li key={zone.city} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-center">
-          <p className="text-[11px] font-semibold tracking-widest text-white/60 uppercase">{zone.city}</p>
+        <li key={zone.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-center">
+          <p className="text-[11px] font-semibold tracking-widest text-white/60 uppercase">{zone.label}</p>
           <time
             dateTime={date?.toISOString()}
             className="mt-1 block font-display text-xl font-medium text-white tabular-nums sm:text-2xl"
@@ -67,7 +67,7 @@ function pauseIfReducedMotion(video: HTMLVideoElement | null) {
 /**
  * Full-screen landing hero: an anime study scene at sunset (looping /anime-bg.mp4 once it's added,
  * with /anime-bg.jpg as the poster until then), a frosted-glass panel with the site name, a live
- * three-city clock, and a spoken welcome.
+ * Pacific / Central / Eastern clock, and a spoken welcome.
  */
 export function ImmersiveHero() {
   const [entered, setEntered] = useState(false);
