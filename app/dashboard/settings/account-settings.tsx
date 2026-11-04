@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import type { ApiError, UpdateAccountRequest, User } from "@/lib/types";
+import { CLOCK_TEMPLATES, type ApiError, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
 import { getAccount, logout, updateAccount } from "@/lib/client/api";
 import { storeUser } from "@/lib/client/current-user";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
+import { CLOCK_TEMPLATE_LABEL, UsClocks } from "@/components/dashboard/us-clocks";
 
 type Load = { status: "loading" } | { status: "ready"; user: User } | { status: "error"; message: string };
 
@@ -79,6 +80,7 @@ export function AccountSettings() {
     <div className="space-y-6">
       <ProfileForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PasswordForm email={state.user.email} onUnauthorized={onUnauthorized} />
+      <ClockTemplateForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
     </div>
   );
 }
@@ -208,6 +210,108 @@ function ProfileForm({
           </div>
         </fieldset>
       </form>
+    </SettingsCard>
+  );
+}
+
+/* ---------- Clock template ---------- */
+
+const CLOCK_TEMPLATE_HINT: Record<ClockTemplate, string> = {
+  MINIMALIST: "Clean and quiet, matches the page",
+  NEON: "Glowing digits on a dark panel",
+  GLASS: "Frosted panels over a sunset gradient",
+};
+
+/** Picks the look of the sidebar clocks; each choice saves straight away. */
+function ClockTemplateForm({
+  user,
+  onSaved,
+  onUnauthorized,
+}: {
+  user: User;
+  onSaved: (user: User) => void;
+  onUnauthorized: () => void;
+}) {
+  const saved = user.clockTemplate ?? "MINIMALIST";
+  const [choice, setChoice] = useState<ClockTemplate>(saved);
+  const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
+
+  async function choose(template: ClockTemplate) {
+    if (template === choice) return;
+    const previous = choice;
+    setChoice(template);
+    setStatus({ kind: "saving", message: "Saving…" });
+    const result = await updateAccount({ clockTemplate: template });
+    if (!result.ok) {
+      if (isUnauthorized(result.error)) return onUnauthorized();
+      setChoice(previous);
+      setStatus({ kind: "error", message: result.error.message || "Couldn't save your clock style. Please try again." });
+      return;
+    }
+    onSaved(result.data.user); // the sidebar clocks switch right away
+    setStatus({ kind: "saved", message: `${CLOCK_TEMPLATE_LABEL[template]} clocks saved.` });
+  }
+
+  return (
+    <SettingsCard
+      id="clock-title"
+      title="Dashboard clocks"
+      description="Pacific, Central and Eastern time at the top of your menu. Pick a style."
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      }
+    >
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend className="sr-only">Clock style</legend>
+        <div className="space-y-3">
+          {CLOCK_TEMPLATES.map((template) => {
+            const selected = choice === template;
+            return (
+              <label
+                key={template}
+                className={`relative flex cursor-pointer flex-col gap-3 rounded-2xl border-2 p-3 transition sm:flex-row sm:items-center sm:gap-5 has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/30 ${
+                  selected
+                    ? "border-brand-600 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10"
+                    : "border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="clockTemplate"
+                  value={template}
+                  checked={selected}
+                  onChange={() => choose(template)}
+                  className="sr-only"
+                />
+                {/* A live preview at the sidebar's real width (w-64), so it looks exactly as it will there. */}
+                <UsClocks template={template} className="pointer-events-none w-full max-w-64 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-neutral-900 dark:text-white">{CLOCK_TEMPLATE_LABEL[template]}</span>
+                    {selected && (
+                      <span className="grid size-5 place-items-center rounded-full bg-brand-600 text-white" aria-hidden="true">
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5">
+                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-0.5 block text-sm text-neutral-500 dark:text-neutral-400">{CLOCK_TEMPLATE_HINT[template]}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+      <p
+        role="status"
+        className={`mt-4 min-h-5 text-sm ${status?.kind === "error" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}
+      >
+        {status?.message}
+      </p>
     </SettingsCard>
   );
 }

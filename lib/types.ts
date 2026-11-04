@@ -17,8 +17,13 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  clockTemplate: ClockTemplate;
   createdAt: string; // ISO 8601
 }
+
+/** How the live clocks at the top of the dashboard sidebar look; chosen in Settings. */
+export type ClockTemplate = "MINIMALIST" | "NEON" | "GLASS";
+export const CLOCK_TEMPLATES: readonly ClockTemplate[] = ["MINIMALIST", "NEON", "GLASS"];
 
 /** Job seekers tailor resumes; employers can also post jobs and see their own postings. */
 export type UserRole = "SEEKER" | "EMPLOYER";
@@ -51,6 +56,7 @@ export interface UpdateAccountRequest {
   email?: string;
   newPassword?: string; // plain text over HTTPS only; hashed with bcrypt before storage
   currentPassword?: string; // required when email or newPassword is sent
+  clockTemplate?: ClockTemplate;
 }
 
 /** Returned by GET and PATCH /api/account: the logged-in user as stored. */

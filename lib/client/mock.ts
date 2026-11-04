@@ -81,6 +81,7 @@ function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User 
     email,
     name,
     role,
+    clockTemplate: "MINIMALIST",
     createdAt: new Date().toISOString(),
   };
 }
@@ -145,6 +146,7 @@ async function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<A
         ...user,
         ...(request.name !== undefined ? { name: request.name.trim() } : {}),
         ...(request.email !== undefined ? { email: request.email.trim().toLowerCase() } : {}),
+        ...(request.clockTemplate !== undefined ? { clockTemplate: request.clockTemplate } : {}),
       },
     },
   };

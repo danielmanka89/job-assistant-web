@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Logo } from "@/components/brand";
-import { ImmersiveHero } from "@/components/landing/immersive-hero";
+import { LandingCarousel } from "@/components/landing/landing-carousel";
+import { WelcomeSlide } from "@/components/landing/welcome-slide";
 
 const STEPS = [
   {
@@ -96,125 +96,94 @@ function AnalysisPreview() {
   );
 }
 
+/** Slide 2: the three steps, in the site's red and white. */
+function HowItWorksSlide() {
+  return (
+    <div className="relative isolate flex size-full items-center overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-[#0c0c0c] dark:text-white">
+      <div
+        className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.14),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(207,35,41,0.08),transparent)] dark:bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.32),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(143,25,30,0.3),transparent)]"
+        aria-hidden="true"
+      />
+      {/* Side padding leaves room for the slider arrows (shown from tablet width up). */}
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-16 sm:px-24 lg:grid-cols-[1.15fr_1fr]">
+        <div>
+          <span className="theme-on-dark inline-block rounded-md bg-neutral-900 px-3 py-1.5 font-display text-xs font-medium tracking-widest text-brand-500 uppercase sm:text-sm dark:bg-white/5">
+            How it works
+          </span>
+          <h2 className="mt-4 text-4xl leading-[0.95] font-bold sm:text-6xl">
+            <span className="block text-brand-600 dark:text-brand-500">Match the job.</span>
+            <span className="block">Keep it true.</span>
+          </h2>
+          <ol className="mt-8 space-y-5 sm:mt-10 sm:space-y-6">
+            {STEPS.map((step, i) => (
+              <li key={step.title} className="flex gap-4 border-l-2 border-brand-600 pl-4 sm:gap-5 sm:pl-5">
+                <span className="font-display text-3xl leading-none font-bold text-brand-600/90 sm:text-4xl dark:text-brand-500">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3 className="text-lg font-semibold uppercase sm:text-xl">{step.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-neutral-600 sm:text-base dark:text-neutral-400">{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="hidden lg:block">
+          <AnalysisPreview />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Slide 3: sign in (or create an account). */
+function SignInSlide() {
+  return (
+    <div className="theme-on-dark relative isolate flex size-full items-center justify-center overflow-hidden bg-brand-600 px-6 py-16 text-center text-white sm:px-24">
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(45rem_30rem_at_50%_0%,rgba(255,255,255,0.18),transparent),radial-gradient(40rem_30rem_at_50%_110%,rgba(0,0,0,0.35),transparent)]"
+        aria-hidden="true"
+      />
+      <div className="max-w-xl">
+        <p className="font-display text-sm font-medium tracking-widest text-white/75 uppercase">JobAssistant Global</p>
+        <h2 className="mt-4 text-4xl leading-[0.95] font-bold sm:text-6xl">Ready when you are.</h2>
+        <p className="mt-5 text-base leading-relaxed text-white/85 sm:text-lg">
+          Sign in to pick up where you left off: your profile, tailored resumes and every application in one place.
+        </p>
+        <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href="/login"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-9 py-4 font-display text-lg font-medium tracking-wider text-brand-600 uppercase shadow-xl shadow-black/20 transition hover:bg-white/90 focus-visible:ring-4 focus-visible:ring-white/50 focus-visible:outline-none sm:w-auto"
+          >
+            Sign In
+            <ArrowIcon className="size-5" />
+          </Link>
+          <Link
+            href="/register"
+            className="inline-flex w-full items-center justify-center rounded-full border border-white/50 px-8 py-4 font-display text-lg font-medium tracking-wider text-white uppercase transition hover:bg-white/10 focus-visible:ring-4 focus-visible:ring-white/50 focus-visible:outline-none sm:w-auto"
+          >
+            Create an account
+          </Link>
+        </div>
+        <Link href="/dashboard/jobs" className="mt-6 inline-block text-sm font-medium text-white/80 underline-offset-4 hover:text-white hover:underline">
+          Or browse the job board
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** The landing page: one full screen that never scrolls, with three slides side by side. */
 export default function Home() {
   return (
-    <>
-      <ImmersiveHero />
-      <div id="home" className="relative min-h-dvh overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-[#0c0c0c] dark:text-white">
-        {/* Red glow behind the hero, stronger in dark mode. */}
-        <div
-          className="mono-grayscale pointer-events-none absolute inset-0 bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.14),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(207,35,41,0.08),transparent)] dark:bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.32),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(143,25,30,0.3),transparent)]"
-          aria-hidden="true"
-        />
-
-        <header className="relative border-b border-neutral-200/80 dark:border-white/10">
-          <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 pr-16 pl-4 sm:pr-20 sm:pl-6 xl:pr-6">
-            <Logo />
-            <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
-              <a
-                href="#how-it-works"
-                className="rounded-full px-4 py-1.5 font-display text-[15px] font-medium uppercase tracking-wider text-neutral-600 transition hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
-              >
-                How it works
-              </a>
-              <Link
-                href="/dashboard/jobs"
-                className="rounded-full px-4 py-1.5 font-display text-[15px] font-medium uppercase tracking-wider text-neutral-600 transition hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
-              >
-                Job board
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-full px-4 py-1.5 font-display text-[15px] font-medium uppercase tracking-wider text-neutral-600 transition hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
-              >
-                Sign in
-              </Link>
-            </nav>
-            <Link
-              href="/register"
-              className="group inline-flex items-center gap-1 rounded-full bg-brand-600 py-1 pl-5 pr-1 font-display text-[15px] font-medium uppercase tracking-wider text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 dark:hover:bg-brand-500"
-            >
-              Get started
-              <span className="ml-2 grid size-9 place-items-center rounded-full bg-white/15 transition group-hover:bg-white/25">
-                <ArrowIcon className="size-4" />
-              </span>
-            </Link>
-          </div>
-        </header>
-
-        <main className="relative">
-          <section className="mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-14 sm:px-6 sm:pt-20 lg:grid-cols-[1.15fr_1fr] lg:pb-28">
-            <div>
-              <span className="theme-on-dark inline-block rounded-md bg-neutral-900 px-3 py-1.5 font-display text-sm font-medium uppercase tracking-widest text-brand-500 dark:bg-white/5">
-                Resume tailoring, nothing made up
-              </span>
-              <h1 className="mt-6 text-5xl font-bold leading-[0.95] sm:text-7xl lg:whitespace-nowrap lg:text-[5rem]">
-                <span className="block text-brand-600 dark:text-brand-500">Match the job.</span>
-                <span className="block">Keep it true.</span>
-              </h1>
-              <p className="mt-7 max-w-xl text-lg leading-relaxed text-neutral-600 dark:text-neutral-300">
-                Paste a job description, see which keywords you&apos;re missing, and pick the reworded bullets you like. Every
-                change comes from your own experience. Then download it as .docx or .pdf.
-              </p>
-              <div className="mt-10 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/register"
-                  className="inline-flex items-center rounded-full bg-brand-600 px-7 py-3.5 font-display text-base font-medium uppercase tracking-wider text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 dark:hover:bg-brand-500"
-                >
-                  Tailor my resume
-                </Link>
-                <Link
-                  href="/register"
-                  aria-label="Get started"
-                  className="grid size-[52px] place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 transition hover:rotate-45 hover:bg-brand-700 dark:hover:bg-brand-500"
-                >
-                  <ArrowIcon />
-                </Link>
-                <Link
-                  href="/login"
-                  className="ml-1 inline-flex items-center rounded-full border border-neutral-300 px-7 py-3.5 font-display text-base font-medium uppercase tracking-wider text-neutral-800 transition hover:border-neutral-400 hover:bg-white dark:border-white/20 dark:text-white dark:hover:border-white/40 dark:hover:bg-white/5"
-                >
-                  Sign in
-                </Link>
-              </div>
-            </div>
-
-            <AnalysisPreview />
-          </section>
-
-          <section
-            id="how-it-works"
-            className="border-t border-neutral-200/80 bg-white/60 py-20 dark:border-white/10 dark:bg-white/[0.02]"
-          >
-            <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              <p className="font-display text-sm font-medium uppercase tracking-widest text-brand-600 dark:text-brand-500">
-                How it works
-              </p>
-              <h2 className="mt-3 max-w-2xl text-4xl font-bold leading-tight sm:text-5xl">Three steps to a sharper resume</h2>
-              <ol className="mt-12 grid gap-10 md:grid-cols-3">
-                {STEPS.map((step, i) => (
-                  <li key={step.title} className="border-t-2 border-brand-600 pt-6">
-                    <span className="font-display text-6xl font-bold leading-none text-brand-600/90 dark:text-brand-500">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <h3 className="mt-4 text-2xl font-semibold uppercase">{step.title}</h3>
-                    <p className="mt-2 leading-relaxed text-neutral-600 dark:text-neutral-400">{step.body}</p>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </section>
-        </main>
-
-        <footer className="relative border-t border-neutral-200/80 py-8 dark:border-white/10">
-          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-sm text-neutral-500 sm:flex-row sm:px-6 dark:text-neutral-400">
-            <span>Your experience, your words, matched to the role.</span>
-            <Link href="/dashboard/jobs" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-500 dark:hover:text-brand-400">
-              Browse the job board
-            </Link>
-          </div>
-        </footer>
-      </div>
-    </>
+    <main className="h-dvh w-screen overflow-hidden bg-neutral-950">
+      <LandingCarousel
+        slides={[
+          { label: "Welcome", content: <WelcomeSlide /> },
+          { label: "How it works", content: <HowItWorksSlide /> },
+          { label: "Sign in", content: <SignInSlide /> },
+        ]}
+      />
+    </main>
   );
 }

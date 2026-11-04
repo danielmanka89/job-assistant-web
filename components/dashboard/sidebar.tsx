@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/brand";
+import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { logout } from "@/lib/client/api";
 import { useCurrentUser } from "@/lib/client/current-user";
 import type { User } from "@/lib/types";
@@ -196,14 +197,15 @@ function SidebarContent({ pathname }: { pathname: string }) {
   async function signOut() {
     setSigningOut(true);
     await logout();
-    router.replace("/login");
+    router.replace("/"); // back to the landing page
   }
 
   const itemClass = "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] font-medium transition";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6">
-      <UserCard user={user} />
+      <SidebarClocks />
+      <UserCard user={user} className="mt-4" />
 
       <nav aria-label="Main" className="mt-6">
         <p className="px-3.5 pb-2 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
@@ -248,14 +250,14 @@ function SidebarContent({ pathname }: { pathname: string }) {
   );
 }
 
-function UserCard({ user }: { user: User | null | undefined }) {
+function UserCard({ user, className = "" }: { user: User | null | undefined; className?: string }) {
   // undefined while rendering on the server: keep the space so the layout doesn't jump.
   if (user === undefined) {
-    return <div className="h-[76px] animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-900" aria-hidden="true" />;
+    return <div className={`h-[76px] animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-900 ${className}`} aria-hidden="true" />;
   }
   const name = user?.name || "Your account";
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/60">
+    <div className={`flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 font-display text-lg font-semibold text-white shadow-md shadow-brand-600/25">
         {user ? initials(user.name) : "?"}
       </span>
