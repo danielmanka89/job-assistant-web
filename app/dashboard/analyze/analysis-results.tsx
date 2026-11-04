@@ -142,8 +142,9 @@ function skillsToReach(matched: number, missing: number, target: number): number
   return null;
 }
 
+// bottom-15/16: just above the quote banner fixed to the bottom of the window (3rem).
 const STICKY_BAR =
-  "sticky bottom-3 z-10 rounded-2xl px-4 py-3 text-white shadow-2xl ring-1 ring-white/10 sm:bottom-4 sm:rounded-3xl sm:px-8 sm:py-5";
+  "sticky bottom-15 z-10 rounded-2xl px-4 py-3 text-white shadow-2xl ring-1 ring-white/10 sm:bottom-16 sm:rounded-3xl sm:px-8 sm:py-5";
 
 function Spinner() {
   return (

@@ -3,15 +3,17 @@
 :root {
   --background: #f6f6f6;
   --foreground: #111111;
-  /* Height of the quote banner at the bottom of the dashboard on large screens; pages that fill
-     the window (My Profile) subtract it so the banner stays in view. */
-  --quote-banner-h: 4.5rem;
+  /* The quote banner is fixed to the bottom of every dashboard page. --quote-banner-h is its height
+     (bars, toasts and sticky panels sit above it); --quote-banner-space is the padding kept under
+     page content so the banner never covers the last row. */
+  --quote-banner-h: 3rem;
+  --quote-banner-space: 4rem;
 }
 
-/* Pages with a save bar fixed to the bottom of the window: lift the quote banner above it so the
-   bar doesn't cover it at the end of the page. */
-body:has([data-fixed-bottom-bar]) [data-quote-banner] {
-  margin-bottom: 4.75rem;
+/* Pages with their own bar fixed to the bottom of the window (the resume editor's save bar) stack it
+   just above the quote banner. */
+body:has([data-quote-banner]) [data-fixed-bottom-bar] {
+  bottom: var(--quote-banner-h);
 }
 
 @theme inline {
