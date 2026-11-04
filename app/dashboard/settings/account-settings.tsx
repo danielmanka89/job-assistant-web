@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { useRouter } from "next/navigation";
 import { CLOCK_TEMPLATES, type ApiError, type ThemeColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
 import { getAccount, logout, removeProfilePhoto, updateAccount, uploadProfilePhoto } from "@/lib/client/api";
-import { squarePhoto } from "@/lib/client/square-photo";
+import { loadPhoto } from "@/lib/client/photo-crop";
+import { PhotoCropDialog } from "./photo-crop-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { storeUser } from "@/lib/client/current-user";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
@@ -220,32 +221,44 @@ function ProfileForm({
 
 /* ---------- Profile photo ---------- */
 
-/** Uploads (cropped to a square in the browser first) or removes the profile photo. */
+/** Picks a photo, lets the candidate crop it (see PhotoCropDialog), then uploads it; or removes it. */
 function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
   const [busy, setBusy] = useState<"uploading" | "removing" | null>(null);
   const [status, setStatus] = useState<{ kind: "saved" | "error"; message: string } | null>(null);
+  const [cropping, setCropping] = useState<ImageBitmap | null>(null);
+  const [cropError, setCropError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function upload(file: File | undefined) {
+  async function pick(file: File | undefined) {
+    if (inputRef.current) inputRef.current.value = ""; // choosing the same file again still opens it
     if (!file) return;
     setStatus(null);
-    setBusy("uploading");
     try {
-      const photo = await squarePhoto(file);
-      const result = await uploadProfilePhoto(photo);
-      if (!result.ok) {
-        if (isUnauthorized(result.error)) return onUnauthorized();
-        setStatus({ kind: "error", message: result.error.message });
-        return;
-      }
-      onSaved(result.data.user); // the sidebar avatar updates at once
-      setStatus({ kind: "saved", message: "Photo saved. It shows on your public portfolio too." });
+      setCropError(null);
+      setCropping(await loadPhoto(file));
     } catch (error) {
-      setStatus({ kind: "error", message: error instanceof Error ? error.message : "Couldn't use that photo." });
-    } finally {
-      setBusy(null);
-      if (inputRef.current) inputRef.current.value = ""; // choosing the same file again still uploads
+      setStatus({ kind: "error", message: error instanceof Error ? error.message : "Couldn't open that photo." });
     }
+  }
+
+  function closeCrop() {
+    cropping?.close();
+    setCropping(null);
+  }
+
+  async function upload(photo: Blob) {
+    setCropError(null);
+    setBusy("uploading");
+    const result = await uploadProfilePhoto(photo);
+    setBusy(null);
+    if (!result.ok) {
+      if (isUnauthorized(result.error)) return onUnauthorized();
+      setCropError(result.error.message); // stay in the dialog so the crop isn't lost
+      return;
+    }
+    closeCrop();
+    onSaved(result.data.user); // the sidebar avatar updates at once
+    setStatus({ kind: "saved", message: "Photo saved. It shows on your public portfolio too." });
   }
 
   async function remove() {
@@ -282,9 +295,9 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
               ref={inputRef}
               id="profile-photo-input"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               className="sr-only"
-              onChange={(e) => upload(e.target.files?.[0])}
+              onChange={(e) => pick(e.target.files?.[0])}
               disabled={busy !== null}
             />
             <Button type="button" onClick={() => inputRef.current?.click()} loading={busy === "uploading"} disabled={busy !== null}>
@@ -296,12 +309,13 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
               </Button>
             )}
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">JPEG, PNG or WebP. We crop it to a square.</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Any photo. You can crop it, or keep the whole picture.</p>
         </div>
       </div>
       <p role="status" className={`mt-4 min-h-5 text-sm ${status?.kind === "error" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}>
         {status?.message}
       </p>
+      {cropping && <PhotoCropDialog photo={cropping} saving={busy === "uploading"} error={cropError} onSave={upload} onCancel={closeCrop} />}
     </SettingsCard>
   );
 }
