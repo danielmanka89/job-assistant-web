@@ -28,28 +28,28 @@ export function AuthShell({
   footer: ReactNode;
 }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
+    // Neon look: always dark here (data-theme="dark" turns on every dark: style inside), with glowing
+    // outlines and text in the theme color (see .neon-auth in globals.css).
+    <div data-theme="dark" className="neon-auth relative isolate grid min-h-dvh overflow-hidden bg-[#05060d] text-white lg:grid-cols-[1.05fr_1fr]">
+      {/* Glows and a neon grid floor across the whole page. */}
+      <div
+        className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(55rem_38rem_at_8%_-8%,rgb(var(--brand-glow)/0.45),transparent),radial-gradient(45rem_32rem_at_105%_105%,rgb(var(--brand-glow)/0.35),transparent),radial-gradient(30rem_20rem_at_70%_30%,rgb(168_85_247/0.18),transparent)]"
+        aria-hidden="true"
+      />
+      <div className="neon-grid pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[55%]" aria-hidden="true" />
+
       {/* Brand panel */}
-      <aside className="theme-on-dark relative hidden overflow-hidden bg-neutral-950 lg:block">
-        <div className="mono-grayscale absolute inset-0 bg-[radial-gradient(60rem_40rem_at_10%_-10%,rgb(var(--brand-glow)/0.45),transparent),radial-gradient(40rem_30rem_at_110%_110%,rgb(var(--brand-glow-deep)/0.55),transparent)]" />
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-            backgroundSize: "44px 44px",
-          }}
-        />
+      <aside className="theme-on-dark relative hidden overflow-hidden lg:block">
         <div className="relative flex h-full flex-col justify-between p-12 xl:p-16">
           <Logo light />
           <div className="max-w-md">
             <h2 className="text-5xl font-semibold leading-[1.05] text-white xl:text-6xl">
-              Tailor your resume to <span className="text-brand-500">every job</span> in minutes.
+              Tailor your resume to <span className="neon-text animate-neon-flicker text-brand-400 motion-reduce:animate-none">every job</span> in minutes.
             </h2>
             <ul className="mt-10 space-y-6">
               {highlights.map((h) => (
                 <li key={h.title} className="flex gap-4">
-                  <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/20">
+                  <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-full bg-brand-500/15 shadow-[0_0_12px_rgb(var(--brand-glow)/0.6)] ring-1 ring-brand-400/70">
                     <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5 text-brand-200" aria-hidden="true">
                       <path
                         fillRule="evenodd"
@@ -71,11 +71,11 @@ export function AuthShell({
       </aside>
 
       {/* Form panel */}
-      <main className="flex flex-col justify-center bg-neutral-50 px-4 py-10 sm:px-8 dark:bg-neutral-950">
+      <main className="flex flex-col justify-center px-4 py-10 sm:px-8">
         <div className="mx-auto w-full max-w-md">
-          <Logo className="mb-10 lg:hidden" />
-          <div className="rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-xl shadow-neutral-200/50 sm:p-9 dark:border-neutral-800 dark:bg-neutral-900/60 dark:shadow-none">
-            <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{title}</h1>
+          <Logo light className="mb-10 lg:hidden" />
+          <div className="neon-card rounded-3xl p-6 sm:p-9">
+            <h1 className="neon-text text-2xl font-semibold tracking-tight text-white">{title}</h1>
             <p className="mt-1.5 text-[15px] text-neutral-500 dark:text-neutral-400">{subtitle}</p>
             <div className="mt-8">{children}</div>
           </div>
