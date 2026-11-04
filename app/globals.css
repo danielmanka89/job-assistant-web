@@ -506,3 +506,9 @@ body {
 :root[data-theme="mono"] .neon-auth .neon-card {
   filter: grayscale(1);
 }
+/* The B&W theme swaps the brand-* colors but not the glow triple, so text and link glows outside the
+   card stayed red. Here they glow white-gray instead. */
+:root[data-theme="mono"] .neon-auth {
+  --brand-glow: 212 212 212;
+  --brand-glow-deep: 163 163 163;
+}
