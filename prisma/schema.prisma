@@ -37,6 +37,19 @@ model User {
   learningPaths   LearningPath[]
   profilePhoto    ProfilePhoto?
   avatarPhoto     AvatarPhoto?
+  introduction    Introduction?
+}
+
+// The candidate's AI-written interview introduction (My Profile > My Introduction), kept so it opens
+// instantly next time. Rewritten on request, or when it was made from an older resume.
+model Introduction {
+  userId     String   @id
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId   String // the resume it was written from
+  paragraphs Json // string[]
+  wordCount  Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // The menu photo: a square cropped in the browser for the small circle in the sidebar. Only its owner

@@ -27,6 +27,7 @@ import type {
   GapAnalysisResponse,
   LoginRequest,
   ProfileResponse,
+  IntroductionResponse,
   PortfolioStatusResponse,
   ProfileValues,
   RandomQuoteResponse,
@@ -720,6 +721,32 @@ async function confirmResumeSync(_file: File, compared: ResumeCompareResponse): 
   return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt, resume, publishedAt: mockPublishedAt }, changes } };
 }
 
+// A stand-in for the AI: an introduction stitched together from the sample resume.
+let mockIntroduction: IntroductionResponse["introduction"] = null;
+
+async function getIntroduction(): Promise<ApiResult<IntroductionResponse>> {
+  await delay(200);
+  return { ok: true, data: { hasResume: !isNewUser(), introduction: mockIntroduction } };
+}
+
+async function writeIntroduction(): Promise<ApiResult<IntroductionResponse>> {
+  await delay(1800);
+  const r = mockLatestResume ?? sampleResume();
+  const name = r.contact.fullName;
+  const paragraphs = [
+    `Hi, thanks so much for having me today. My name is ${name}, and I'm really glad we get to talk. I'll walk you through my background, the work I've done, and what I'm hoping to do next, and please stop me any time you want me to go deeper on something.`,
+    ...r.workExperience.map(
+      (w) =>
+        `At ${w.company}, I worked as a ${w.jobTitle}. My day-to-day there was a mix of hands-on building and working closely with the people around me. ${w.bullets.map((b) => b.text).join(" ")} Looking back, that role taught me a lot about owning work from start to finish and keeping things simple for the people who use what I build.`,
+    ),
+    ...r.education.map((e) => `On the education side, I studied ${[e.degree, e.fieldOfStudy].filter(Boolean).join(" in ")} at ${e.institution}. It gave me the fundamentals I still lean on every day.`),
+    `In terms of skills, I work most with ${r.skills.slice(0, 6).join(", ")}, and I'm always picking up whatever a project needs. What I enjoy most is turning a fuzzy problem into something clear and useful, and doing it with a team that talks openly.`,
+    `So that's me in a nutshell. I'm looking for a role where I can keep growing, take real ownership and work with good people, and from what I've learned about this team, it sounds like a great fit. Thanks again for your time, and I'm happy to answer any questions.`,
+  ];
+  mockIntroduction = { paragraphs, wordCount: paragraphs.join(" ").split(/\s+/).length, createdAt: new Date().toISOString(), upToDate: true };
+  return { ok: true, data: { hasResume: true, introduction: mockIntroduction } };
+}
+
 // The mock can't serve /profile/<id> (that page reads the database), so this only tracks the state.
 async function setPortfolioPublic(isPublic: boolean): Promise<ApiResult<PortfolioStatusResponse>> {
   await delay(400);
@@ -847,6 +874,8 @@ async function exportSubmissions(): Promise<ApiResult<Blob>> {
 }
 
 export const mockApi = {
+  getIntroduction,
+  writeIntroduction,
   uploadAvatarPhoto,
   removeAvatarPhoto,
   uploadProfilePhoto,
