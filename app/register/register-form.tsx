@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { RegisterRequest, UserRole } from "@/lib/types";
 import { register } from "@/lib/client/api";
 import { storeUser } from "@/lib/client/current-user";
+import { speakLoginGreeting } from "@/lib/client/voice-greeting";
 import { RolePicker } from "./role-picker";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { TextField } from "@/components/ui/text-field";
@@ -52,6 +53,7 @@ export function RegisterForm() {
       return;
     }
     storeUser(result.data.user);
+    speakLoginGreeting(result.data.user);
     router.replace(result.data.user.role === "EMPLOYER" ? "/dashboard/employer" : "/dashboard");
   }
 
