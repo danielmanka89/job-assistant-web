@@ -11,9 +11,73 @@
 }
 
 /* Pages with their own bar fixed to the bottom of the window (the resume editor's save bar) stack it
-   just above the quote banner. */
+   just above the floating quote banner. */
 body:has([data-quote-banner]) [data-fixed-bottom-bar] {
-  bottom: var(--quote-banner-h);
+  bottom: calc(var(--quote-banner-h) + 1rem);
+}
+
+/*
+ * Glass dashboard: frosted panels over a sunset gradient. Every page's cards, the sidebar and inputs
+ * use the same white / neutral classes, so they are frosted here in one place instead of in each
+ * component. These rules sit outside Tailwind's layers, so they win over the utilities they replace.
+ * The variables switch with the theme, so an element's light and dark classes both land on the
+ * right glass.
+ */
+.glass-shell {
+  --glass-panel: rgb(255 255 255 / 0.58);
+  --glass-soft: rgb(255 255 255 / 0.38);
+  --glass-field: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-shadow: 0 8px 32px rgb(124 45 18 / 0.08);
+}
+:root[data-theme="dark"] .glass-shell {
+  --glass-panel: rgb(24 16 28 / 0.55);
+  --glass-soft: rgb(255 255 255 / 0.05);
+  --glass-field: rgb(18 12 22 / 0.6);
+  --glass-border: rgb(255 255 255 / 0.1);
+  --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .glass-shell {
+    --glass-panel: rgb(24 16 28 / 0.55);
+    --glass-soft: rgb(255 255 255 / 0.05);
+    --glass-field: rgb(18 12 22 / 0.6);
+    --glass-border: rgb(255 255 255 / 0.1);
+    --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
+  }
+}
+
+/* Panels: cards, the sidebar, the phone top bar. */
+.glass-shell
+  :is(
+    .bg-white,
+    .bg-white\/85,
+    .bg-white\/90,
+    .bg-white\/95,
+    .dark\:bg-neutral-900,
+    .dark\:bg-neutral-900\/60,
+    .dark\:bg-neutral-950,
+    .dark\:bg-neutral-950\/85,
+    .dark\:bg-neutral-950\/90,
+    .dark\:bg-neutral-950\/95
+  ):not(input, textarea, select) {
+  background-color: var(--glass-panel);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+/* Panels inside panels (the user card, summary boxes): a lighter frost, no second blur. */
+.glass-shell :is(.bg-neutral-50, .dark\:bg-neutral-900\/40, .dark\:bg-neutral-900\/50, .dark\:bg-neutral-950\/40) {
+  background-color: var(--glass-soft);
+}
+/* Form fields stay a little more solid so typed text is easy to read. */
+.glass-shell :is(input, textarea, select):is(.bg-white, .dark\:bg-neutral-900, .dark\:bg-neutral-950) {
+  background-color: var(--glass-field);
+}
+.glass-shell :is(.border-neutral-200, .border-neutral-200\/80, .dark\:border-neutral-800) {
+  border-color: var(--glass-border);
+}
+.glass-shell :is(.rounded-3xl, .rounded-2xl).shadow-sm {
+  box-shadow: var(--glass-shadow);
 }
 
 @theme inline {
