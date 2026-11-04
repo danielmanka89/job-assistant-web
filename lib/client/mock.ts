@@ -27,6 +27,7 @@ import type {
   GapAnalysisResponse,
   LoginRequest,
   ProfileResponse,
+  PortfolioStatusResponse,
   ProfileValues,
   RandomQuoteResponse,
   RegisterRequest,
@@ -652,6 +653,7 @@ async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
 let mockProfile: ProfileValues = {};
 let mockProfileSavedAt: string | null = null;
 let mockLatestResume: Resume | null = null;
+let mockPublishedAt: string | null = null;
 
 async function getProfile(): Promise<ApiResult<ProfileResponse>> {
   await delay(400);
@@ -660,7 +662,7 @@ async function getProfile(): Promise<ApiResult<ProfileResponse>> {
     mockProfileSavedAt = new Date().toISOString();
   }
   const resume = mockProfileSavedAt ? (mockLatestResume ?? sampleResume()) : null;
-  return { ok: true, data: { values: { ...mockProfile }, updatedAt: mockProfileSavedAt, resume } };
+  return { ok: true, data: { values: { ...mockProfile }, updatedAt: mockProfileSavedAt, resume, publishedAt: mockPublishedAt } };
 }
 
 async function compareResume(file: File, onProgress?: (percent: number) => void): Promise<ApiResult<ResumeCompareResponse>> {
@@ -681,7 +683,14 @@ async function confirmResumeSync(_file: File, compared: ResumeCompareResponse): 
   const now = new Date().toISOString();
   const resume: Resume = { ...compared.draft, id: `resume_${Date.now()}`, userId: "user_mock_1", createdAt: now, updatedAt: now };
   mockLatestResume = resume;
-  return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt, resume }, changes } };
+  return { ok: true, data: { resume, profile: { values: { ...values }, updatedAt: mockProfileSavedAt, resume, publishedAt: mockPublishedAt }, changes } };
+}
+
+// The mock can't serve /profile/<id> (that page reads the database), so this only tracks the state.
+async function setPortfolioPublic(isPublic: boolean): Promise<ApiResult<PortfolioStatusResponse>> {
+  await delay(400);
+  mockPublishedAt = isPublic ? new Date().toISOString() : null;
+  return { ok: true, data: { userId: "user_mock_1", path: "/profile/user_mock_1", publishedAt: mockPublishedAt } };
 }
 
 // Learning paths, kept in memory for this page load.
@@ -804,6 +813,7 @@ async function exportSubmissions(): Promise<ApiResult<Blob>> {
 }
 
 export const mockApi = {
+  setPortfolioPublic,
   getRandomQuote,
   register,
   login,

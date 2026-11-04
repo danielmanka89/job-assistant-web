@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AddToResumeButton } from "./add-to-resume-button";
+import { PublicPortfolioButton } from "./public-portfolio-button";
 import { MarketReachPanel } from "./market-reach-panel";
 import { ProfileView } from "./profile-view";
 
@@ -25,7 +26,11 @@ export default function ProfilePage() {
             To change it, add missing details to your resume or upload an updated one.
           </p>
         </div>
-        <AddToResumeButton />
+        {/* Stacked, so both fit beside the title at every width. */}
+        <div className="flex shrink-0 flex-col gap-3 sm:items-end">
+          <PublicPortfolioButton />
+          <AddToResumeButton />
+        </div>
       </div>
       <div className="grid items-start gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-stretch lg:gap-8">
         {/* tabIndex: keyboard users can focus a column and scroll it with the arrow keys. */}

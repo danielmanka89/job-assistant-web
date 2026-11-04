@@ -153,9 +153,11 @@ model Submission {
 model CandidateProfile {
   userId    String   @id
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  values    Json // ProfileValues
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  values      Json // ProfileValues
+  // Set when the candidate approves sharing their public portfolio (/profile/<userId>); null = private.
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // A skill the user chose to learn from the Learning page, with their roadmap progress.

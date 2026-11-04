@@ -13,6 +13,7 @@ import type {
   LearningInsights,
   LearningPath,
   LoginRequest,
+  PortfolioStatusResponse,
   ProfileResponse,
   RandomQuoteResponse,
   RegisterRequest,
@@ -66,7 +67,7 @@ function postJson<TReq, TRes>(url: string, payload: TReq): Promise<ApiResult<TRe
 }
 
 async function sendJson<TReq, TRes>(
-  method: "POST" | "PUT" | "PATCH",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   url: string,
   payload: TReq,
 ): Promise<ApiResult<TRes>> {
@@ -171,7 +172,18 @@ function toProfileResponse(body: unknown): ProfileResponse {
       ? Object.fromEntries(Object.entries(b.values).filter((e): e is [string, string] => typeof e[1] === "string"))
       : {};
   const resume = b.resume && typeof b.resume === "object" && (b.resume as Resume).contact ? (b.resume as Resume) : null;
-  return { values, updatedAt: typeof b.updatedAt === "string" ? b.updatedAt : null, resume };
+  return {
+    values,
+    updatedAt: typeof b.updatedAt === "string" ? b.updatedAt : null,
+    resume,
+    publishedAt: typeof b.publishedAt === "string" ? b.publishedAt : null,
+  };
+}
+
+/** Approves sharing (POST) or makes the public portfolio private again (DELETE /api/profile/public). */
+export function setPortfolioPublic(isPublic: boolean): Promise<ApiResult<PortfolioStatusResponse>> {
+  if (USE_MOCK_API) return mockApi.setPortfolioPublic(isPublic);
+  return sendJson<Record<string, never>, PortfolioStatusResponse>(isPublic ? "POST" : "DELETE", "/api/profile/public", {});
 }
 
 /** The job seeker's profile (read-only, from their resume), from GET /api/profile. */

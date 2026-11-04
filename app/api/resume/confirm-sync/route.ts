@@ -78,7 +78,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json<ResumeSyncResponse>(
       {
         resume: toResume(result.resume),
-        profile: { values: result.values, updatedAt: result.profile.updatedAt.toISOString(), resume: toResume(result.resume) },
+        profile: {
+          values: result.values,
+          updatedAt: result.profile.updatedAt.toISOString(),
+          resume: toResume(result.resume),
+          publishedAt: result.profile.publishedAt?.toISOString() ?? null,
+        },
         changes: result.changes,
       },
       { status: 201 },

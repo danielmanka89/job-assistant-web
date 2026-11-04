@@ -329,6 +329,34 @@ export interface ProfileResponse {
   values: ProfileValues;
   updatedAt: string | null;
   resume: Resume | null; // the latest resume, shown in full on the Profile page
+  publishedAt: string | null; // when the public portfolio was shared; null while it's private
+}
+
+/**
+ * The candidate's public portfolio, from GET /api/profile/public/[userId] (no login needed). Only
+ * candidates who approved sharing have one. Work authorization and pay rate are left out on purpose.
+ */
+export interface PublicPortfolio {
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedinUrl: string;
+  websiteUrl: string;
+  summary: string;
+  skills: string[];
+  certifications: string[];
+  workExperience: Pick<WorkExperience, "jobTitle" | "company" | "location" | "startDate" | "endDate">[];
+  education: Pick<Education, "institution" | "degree" | "fieldOfStudy" | "startDate" | "endDate">[];
+  resumeFileName: string | null; // the original upload, if there is one to download
+}
+
+/** Returned by POST and DELETE /api/profile/public: whether the portfolio is shared, and its link. */
+export interface PortfolioStatusResponse {
+  userId: string;
+  path: string; // "/profile/<userId>"
+  publishedAt: string | null;
 }
 
 /** A resume read from an uploaded file but not saved yet (POST /api/resume/compare). */
