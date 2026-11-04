@@ -54,10 +54,11 @@ const STYLES: Record<ClockTemplate, Record<ThemeColor, ClockStyle>> = {
       time: "font-display text-[15px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]",
     };
     return {
-      BLUE: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-sky-600 via-blue-700 to-indigo-950 p-1.5 shadow-lg shadow-blue-700/25" },
+      // Vivid stops that keep the small white text at about 4.5:1 or better.
+      BLUE: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-[#2f6bff] via-blue-600 to-indigo-600 p-1.5 shadow-lg shadow-blue-500/35" },
       // Darker than teal-500, where the small white text was about 2.5:1 contrast.
-      GREEN: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-teal-700 via-emerald-700 to-green-900 p-1.5 shadow-lg shadow-emerald-700/25" },
-      RED: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-orange-600 via-rose-600 to-brand-700 p-1.5 shadow-lg shadow-rose-600/20" },
+      GREEN: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-teal-700 via-emerald-700 to-green-800 p-1.5 shadow-lg shadow-emerald-500/35" },
+      RED: { ...glass, box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-rose-600 via-[#dc2626] to-red-700 p-1.5 shadow-lg shadow-red-500/35" },
     };
   })(),
 };
