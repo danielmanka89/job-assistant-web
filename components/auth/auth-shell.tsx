@@ -30,7 +30,9 @@ export function AuthShell({
   return (
     // Neon look: always dark here (data-theme="dark" turns on every dark: style inside), with glowing
     // outlines and text in the theme color (see .neon-auth in globals.css).
-    <div data-theme="dark" className="neon-auth relative isolate grid min-h-dvh overflow-hidden bg-[#05060d] text-white lg:grid-cols-[1.05fr_1fr]">
+    // theme-on-dark: in the B&W theme the accent becomes light grays here, so the sign-in button and
+    // links stay visible on the dark page instead of turning near-black.
+    <div data-theme="dark" className="neon-auth theme-on-dark relative isolate grid min-h-dvh overflow-hidden bg-[#05060d] text-white lg:grid-cols-[1.05fr_1fr]">
       {/* Glows and a neon grid floor across the whole page. */}
       <div
         className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(55rem_38rem_at_8%_-8%,rgb(var(--brand-glow)/0.45),transparent),radial-gradient(45rem_32rem_at_105%_105%,rgb(var(--brand-glow)/0.35),transparent),radial-gradient(30rem_20rem_at_70%_30%,rgb(168_85_247/0.18),transparent)]"
