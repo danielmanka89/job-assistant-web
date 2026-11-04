@@ -1,6 +1,7 @@
 "use client";
 
 import type { User } from "@/lib/types";
+import { speak } from "@/lib/client/speech";
 
 export type DayPart = "morning" | "noon" | "afternoon" | "evening" | "night";
 
@@ -32,27 +33,8 @@ export function greetingText(name: string, date: Date): string {
   }
 }
 
-/**
- * Says the welcome out loud with the browser's built-in speech. Call it straight from the sign-in
- * submit handler: browsers only allow speech after a user action. Employers aren't greeted, and
- * browsers without speech stay silent.
- */
+/** Says the welcome out loud. Call it straight from the sign-in submit handler. Employers aren't greeted. */
 export function speakLoginGreeting(user: User): void {
   if (user.role !== "SEEKER") return;
-  try {
-    const speech = window.speechSynthesis;
-    if (!speech) return;
-    const utterance = new SpeechSynthesisUtterance(greetingText(user.name, new Date()));
-    utterance.lang = "en-US";
-    utterance.rate = 1;
-    // Voices can load late; when they're ready, prefer a natural-sounding English one.
-    const voice = speech
-      .getVoices()
-      .find((v) => v.lang.startsWith("en") && /natural|google|samantha|aria|jenny/i.test(v.name));
-    if (voice) utterance.voice = voice;
-    speech.cancel();
-    speech.speak(utterance);
-  } catch {
-    // Speech unavailable or blocked: sign-in carries on silently.
-  }
+  speak(greetingText(user.name, new Date()));
 }
