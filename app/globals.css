@@ -24,11 +24,12 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
  * right glass.
  */
 .glass-shell {
-  --glass-panel: rgb(255 255 255 / 0.58);
-  --glass-soft: rgb(255 255 255 / 0.38);
-  --glass-field: rgb(255 255 255 / 0.72);
-  --glass-border: rgb(255 255 255 / 0.7);
-  --glass-shadow: 0 8px 32px rgb(124 45 18 / 0.08);
+  --glass-panel: rgb(255 255 255 / 0.8);
+  --glass-soft: rgb(255 255 255 / 0.6);
+  --glass-field: rgb(255 255 255 / 0.92);
+  /* A soft tint of the theme color: white borders would vanish on the now-white panels. */
+  --glass-border: rgb(var(--brand-glow) / 0.16);
+  --glass-shadow: 0 10px 30px rgb(var(--brand-glow) / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
 }
 :root[data-theme="dark"] .glass-shell {
   --glass-panel: rgb(24 16 28 / 0.55);
@@ -153,16 +154,16 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
 /* Brand accent: a deep red. 600 is the main button color; 400/500 read best on dark backgrounds. */
 @theme {
   --color-brand-50: #fef2f2;
-  --color-brand-100: #fde4e4;
-  --color-brand-200: #fbcdcd;
-  --color-brand-300: #f6a6a6;
-  --color-brand-400: #ee6f6f;
-  --color-brand-500: #e23b3e;
-  --color-brand-600: #cf2329;
-  --color-brand-700: #ad1a20;
-  --color-brand-800: #8f191e;
-  --color-brand-900: #771a1e;
-  --color-brand-950: #40080b;
+  --color-brand-100: #fee2e2;
+  --color-brand-200: #fecaca;
+  --color-brand-300: #fca5a5;
+  --color-brand-400: #f87171;
+  --color-brand-500: #ef4444;
+  --color-brand-600: #dc2626;
+  --color-brand-700: #b91c1c;
+  --color-brand-800: #991b1b;
+  --color-brand-900: #7f1d1d;
+  --color-brand-950: #450a0a;
 }
 
 /*
@@ -173,81 +174,81 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
  * come before the black & white theme below, which wins over all three.
  */
 :root {
-  --brand-glow: 207 35 41;
-  --brand-glow-deep: 143 25 30;
-  --sun-1: #ffe1c2;
-  --sun-2: #ffc2d1;
-  --sun-3: #e9d5ff;
-  --sun-4: #fff1e6;
-  --sun-5: #ffd9c7;
-  --sun-6: #fbcfe8;
-  --sun-7: #e9e3ff;
+  --brand-glow: 220 38 38;
+  --brand-glow-deep: 185 28 28;
+  --sun-1: rgb(248 113 113 / 0.26);
+  --sun-2: rgb(251 191 36 / 0.2);
+  --sun-3: rgb(244 114 182 / 0.2);
+  --sun-4: #fffafa;
+  --sun-5: #ffffff;
+  --sun-6: #fff7fb;
+  --sun-7: #fffaf2;
 }
 [data-accent="red"] {
   --color-brand-50: #fef2f2;
-  --color-brand-100: #fde4e4;
-  --color-brand-200: #fbcdcd;
-  --color-brand-300: #f6a6a6;
-  --color-brand-400: #ee6f6f;
-  --color-brand-500: #e23b3e;
-  --color-brand-600: #cf2329;
-  --color-brand-700: #ad1a20;
-  --color-brand-800: #8f191e;
-  --color-brand-900: #771a1e;
-  --color-brand-950: #40080b;
-  --brand-glow: 207 35 41;
-  --brand-glow-deep: 143 25 30;
-  --sun-1: #ffe1c2;
-  --sun-2: #ffc2d1;
-  --sun-3: #e9d5ff;
-  --sun-4: #fff1e6;
-  --sun-5: #ffd9c7;
-  --sun-6: #fbcfe8;
-  --sun-7: #e9e3ff;
+  --color-brand-100: #fee2e2;
+  --color-brand-200: #fecaca;
+  --color-brand-300: #fca5a5;
+  --color-brand-400: #f87171;
+  --color-brand-500: #ef4444;
+  --color-brand-600: #dc2626;
+  --color-brand-700: #b91c1c;
+  --color-brand-800: #991b1b;
+  --color-brand-900: #7f1d1d;
+  --color-brand-950: #450a0a;
+  --brand-glow: 220 38 38;
+  --brand-glow-deep: 185 28 28;
+  --sun-1: rgb(248 113 113 / 0.26);
+  --sun-2: rgb(251 191 36 / 0.2);
+  --sun-3: rgb(244 114 182 / 0.2);
+  --sun-4: #fffafa;
+  --sun-5: #ffffff;
+  --sun-6: #fff7fb;
+  --sun-7: #fffaf2;
 }
 [data-accent="blue"] {
-  --color-brand-50: #eef4ff;
-  --color-brand-100: #dbe6ff;
-  --color-brand-200: #bfd2ff;
-  --color-brand-300: #93b4fd;
-  --color-brand-400: #5f8df7;
-  --color-brand-500: #3567e8;
-  --color-brand-600: #1d4ed8;
-  --color-brand-700: #1a3fae;
-  --color-brand-800: #1c3589;
-  --color-brand-900: #1b2f6b;
-  --color-brand-950: #111b40;
-  --brand-glow: 29 78 216;
-  --brand-glow-deep: 27 47 107;
-  --sun-1: #dbeafe;
-  --sun-2: #c7d2fe;
-  --sun-3: #e0f2fe;
-  --sun-4: #f0f7ff;
-  --sun-5: #dbeafe;
-  --sun-6: #e0e7ff;
-  --sun-7: #ede9fe;
+  --color-brand-50: #f2f6ff;
+  --color-brand-100: #e5ecff;
+  --color-brand-200: #cfdcff;
+  --color-brand-300: #a9c5ff;
+  --color-brand-400: #7aa5ff;
+  --color-brand-500: #4f86ff;
+  --color-brand-600: #2f6bff;
+  --color-brand-700: #1f54e0;
+  --color-brand-800: #1d44b0;
+  --color-brand-900: #1c3a8a;
+  --color-brand-950: #121f4d;
+  --brand-glow: 47 107 255;
+  --brand-glow-deep: 31 84 224;
+  --sun-1: rgb(96 165 250 / 0.3);
+  --sun-2: rgb(34 211 238 / 0.22);
+  --sun-3: rgb(167 139 250 / 0.24);
+  --sun-4: #f8fbff;
+  --sun-5: #ffffff;
+  --sun-6: #f7f8ff;
+  --sun-7: #f4fbff;
 }
 [data-accent="green"] {
-  --color-brand-50: #ecfdf3;
-  --color-brand-100: #d1fadf;
-  --color-brand-200: #a6f4c5;
-  --color-brand-300: #6ce9a6;
-  --color-brand-400: #32d583;
-  --color-brand-500: #12b76a;
-  --color-brand-600: #079455;
-  --color-brand-700: #067647;
-  --color-brand-800: #085d3a;
-  --color-brand-900: #074d31;
-  --color-brand-950: #032b1b;
-  --brand-glow: 7 148 85;
-  --brand-glow-deep: 8 93 58;
-  --sun-1: #dcfce7;
-  --sun-2: #ccfbf1;
-  --sun-3: #fef9c3;
-  --sun-4: #f0fdf4;
-  --sun-5: #dcfce7;
-  --sun-6: #ccfbf1;
-  --sun-7: #ecfeff;
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #04875a;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
+  --brand-glow: 16 185 129;
+  --brand-glow-deep: 4 120 87;
+  --sun-1: rgb(52 211 153 / 0.28);
+  --sun-2: rgb(163 230 53 / 0.2);
+  --sun-3: rgb(45 212 191 / 0.22);
+  --sun-4: #f6fffa;
+  --sun-5: #ffffff;
+  --sun-6: #f5fffb;
+  --sun-7: #fbfff2;
 }
 :root[data-theme="dark"] {
   --sun-1: rgb(234 88 12 / 0.35);

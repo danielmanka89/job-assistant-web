@@ -324,9 +324,9 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
 
 // Fixed colors, not brand-*: brand follows the current theme, and each swatch must show its own.
 const THEME_COLOR_SWATCH: Record<ThemeColor, { swatch: string; hint: string }> = {
-  RED: { swatch: "bg-gradient-to-br from-[#ee6f6f] via-[#cf2329] to-[#771a1e]", hint: "The JobAssistant classic" },
-  BLUE: { swatch: "bg-gradient-to-br from-[#5f8df7] via-[#1d4ed8] to-[#111b40]", hint: "Deep navy, calm and sharp" },
-  GREEN: { swatch: "bg-gradient-to-br from-[#32d583] via-[#079455] to-[#032b1b]", hint: "Fresh emerald" },
+  RED: { swatch: "bg-gradient-to-br from-[#f87171] via-[#ef4444] to-[#dc2626]", hint: "The JobAssistant classic" },
+  BLUE: { swatch: "bg-gradient-to-br from-[#7aa5ff] via-[#4f86ff] to-[#2f6bff]", hint: "Bright azure, calm and sharp" },
+  GREEN: { swatch: "bg-gradient-to-br from-[#34d399] via-[#10b981] to-[#04875a]", hint: "Fresh emerald" },
 };
 const THEME_COLOR_ORDER: readonly ThemeColor[] = ["RED", "BLUE", "GREEN"];
 
