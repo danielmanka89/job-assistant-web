@@ -95,6 +95,11 @@ export function LandingCarousel({ slides }: { slides: Slide[] }) {
         </svg>
       </button>
 
+      {/* Tells screen readers which slide is showing after the arrows, dots or keys move it. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {`Slide ${index + 1} of ${slides.length}: ${slides[index]?.label ?? ""}`}
+      </p>
+
       <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center sm:bottom-6">
         <div className="flex items-center gap-1 rounded-full border border-white/20 bg-black/30 px-2 py-1.5 backdrop-blur-md">
           {slides.map((slide, i) => (

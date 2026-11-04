@@ -21,9 +21,11 @@ const STYLES: Record<ClockTemplate, { box: string; cell: string; abbr: string; t
     time: "font-mono text-[14px] font-semibold text-cyan-300 [text-shadow:0_0_6px_rgba(103,232,249,0.9),0_0_16px_rgba(34,211,238,0.6)]",
   },
   GLASS: {
-    box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-orange-400/70 via-rose-500/60 to-brand-600/70 p-1.5 shadow-lg shadow-rose-500/20",
-    cell: "rounded-xl border border-white/40 bg-white/25 px-1 py-2 backdrop-blur-md",
-    abbr: "text-[10px] font-semibold tracking-widest text-white/85",
+    // Opaque, darker stops with slightly darkened cells: white text on the old 70% gradient came out
+    // pastel over the white sidebar and was hard to read.
+    box: "mono-grayscale gap-1 rounded-2xl bg-gradient-to-br from-orange-600 via-rose-600 to-brand-700 p-1.5 shadow-lg shadow-rose-600/20",
+    cell: "rounded-xl border border-white/30 bg-black/10 px-1 py-2 backdrop-blur-md",
+    abbr: "text-[10px] font-semibold tracking-widest text-white",
     time: "font-display text-[15px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]",
   },
 };
