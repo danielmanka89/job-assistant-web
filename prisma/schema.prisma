@@ -184,3 +184,11 @@ model Session {
 
   @@index([userId])
 }
+
+// Motivational quotes for the banner at the bottom of the dashboard. Seeded with 250 by the
+// 20261104120000_quotes migration; GET /api/quotes/random picks one.
+model Quote {
+  id     Int     @id @default(autoincrement())
+  text   String  @unique
+  author String?
+}
