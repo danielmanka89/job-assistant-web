@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { CLOCK_COLORS, CLOCK_TEMPLATES, type ApiError, type ClockColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
+import { CLOCK_TEMPLATES, type ApiError, type ThemeColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
 import { getAccount, logout, updateAccount } from "@/lib/client/api";
 import { storeUser } from "@/lib/client/current-user";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
-import { CLOCK_COLOR_LABEL, CLOCK_TEMPLATE_LABEL, UsClocks } from "@/components/dashboard/us-clocks";
+import { THEME_COLOR_LABEL, CLOCK_TEMPLATE_LABEL, UsClocks } from "@/components/dashboard/us-clocks";
 
 type Load = { status: "loading" } | { status: "ready"; user: User } | { status: "error"; message: string };
 
@@ -78,6 +78,7 @@ export function AccountSettings() {
 
   return (
     <div className="space-y-6">
+      <ThemeColorForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <ProfileForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PasswordForm email={state.user.email} onUnauthorized={onUnauthorized} />
       <ClockTemplateForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
@@ -214,6 +215,83 @@ function ProfileForm({
   );
 }
 
+/* ---------- Theme color ---------- */
+
+// Fixed colors, not brand-*: brand follows the current theme, and each swatch must show its own.
+const THEME_COLOR_SWATCH: Record<ThemeColor, { swatch: string; hint: string }> = {
+  RED: { swatch: "bg-gradient-to-br from-[#ee6f6f] via-[#cf2329] to-[#771a1e]", hint: "The JobAssistant classic" },
+  BLUE: { swatch: "bg-gradient-to-br from-[#5f8df7] via-[#1d4ed8] to-[#111b40]", hint: "Deep navy, calm and sharp" },
+  GREEN: { swatch: "bg-gradient-to-br from-[#32d583] via-[#079455] to-[#032b1b]", hint: "Fresh emerald" },
+};
+const THEME_COLOR_ORDER: readonly ThemeColor[] = ["RED", "BLUE", "GREEN"];
+
+/** The candidate's color for the whole app: buttons, links, the menu, the glass background and the clocks. */
+function ThemeColorForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
+  const [color, setColor] = useState<ThemeColor>(user.themeColor ?? "RED");
+  const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
+
+  async function choose(next: ThemeColor) {
+    if (next === color) return;
+    const previous = color;
+    setColor(next);
+    setStatus({ kind: "saving", message: "Saving…" });
+    const result = await updateAccount({ themeColor: next });
+    if (!result.ok) {
+      if (isUnauthorized(result.error)) return onUnauthorized();
+      setColor(previous);
+      setStatus({ kind: "error", message: result.error.message || "Couldn't save your theme color. Please try again." });
+      return;
+    }
+    onSaved(result.data.user); // stored user changes, so the whole app recolors at once
+    setStatus({ kind: "saved", message: `${THEME_COLOR_LABEL[next]} theme saved.` });
+  }
+
+  return (
+    <SettingsCard
+      id="theme-color-title"
+      title="Theme color"
+      description="The color of the whole app for you: buttons, links, the menu, the background and your clocks. Your public portfolio uses it too."
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+          <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 0 0 5-5c0-4-4-7-9-7Z" strokeLinejoin="round" />
+          <circle cx="7.5" cy="11" r="1.2" fill="currentColor" stroke="none" />
+          <circle cx="10.5" cy="7.2" r="1.2" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+        </svg>
+      }
+    >
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend className="sr-only">Theme color</legend>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {THEME_COLOR_ORDER.map((option) => {
+            const selected = color === option;
+            return (
+              <label
+                key={option}
+                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/30 ${
+                  selected
+                    ? "border-brand-600 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10"
+                    : "border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700"
+                }`}
+              >
+                <input type="radio" name="themeColor" value={option} checked={selected} onChange={() => choose(option)} className="sr-only" />
+                <span className={`size-10 shrink-0 rounded-full shadow-md ring-2 ring-white/80 ${THEME_COLOR_SWATCH[option].swatch}`} aria-hidden="true" />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-neutral-900 dark:text-white">{THEME_COLOR_LABEL[option]}</span>
+                  <span className="block text-sm text-neutral-500 dark:text-neutral-400">{THEME_COLOR_SWATCH[option].hint}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+      <p role="status" className={`mt-4 min-h-5 text-sm ${status?.kind === "error" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}>
+        {status?.message}
+      </p>
+    </SettingsCard>
+  );
+}
+
 /* ---------- Clock template ---------- */
 
 const CLOCK_TEMPLATE_HINT: Record<ClockTemplate, string> = {
@@ -222,14 +300,8 @@ const CLOCK_TEMPLATE_HINT: Record<ClockTemplate, string> = {
   GLASS: "Frosted panels over a sunset gradient",
 };
 
-// Swatch for each color choice: the same hues as the Glass gradient.
-const CLOCK_COLOR_SWATCH: Record<ClockColor, string> = {
-  BLUE: "bg-gradient-to-br from-sky-500 via-blue-700 to-indigo-950",
-  GREEN: "bg-gradient-to-br from-teal-400 via-emerald-600 to-green-800",
-  RED: "bg-gradient-to-br from-orange-500 via-rose-600 to-brand-700",
-};
 
-/** Picks the look and color of the sidebar clocks; each choice saves straight away. */
+/** Picks the look of the sidebar clocks (in the theme color); each choice saves straight away. */
 function ClockTemplateForm({
   user,
   onSaved,
@@ -240,42 +312,30 @@ function ClockTemplateForm({
   onUnauthorized: () => void;
 }) {
   const [choice, setChoice] = useState<ClockTemplate>(user.clockTemplate ?? "MINIMALIST");
-  const [color, setColor] = useState<ClockColor>(user.clockColor ?? "RED");
   const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
+  const color = user.themeColor ?? "RED"; // clocks follow the theme color
 
-  // Shows the new choice at once, saves it, and puts the old one back if saving fails.
-  async function save(change: { clockTemplate: ClockTemplate } | { clockColor: ClockColor }, savedMessage: string, undo: () => void) {
-    setStatus({ kind: "saving", message: "Saving…" });
-    const result = await updateAccount(change);
-    if (!result.ok) {
-      if (isUnauthorized(result.error)) return onUnauthorized();
-      undo();
-      setStatus({ kind: "error", message: result.error.message || "Couldn't save your clocks. Please try again." });
-      return;
-    }
-    onSaved(result.data.user); // the sidebar clocks switch right away
-    setStatus({ kind: "saved", message: savedMessage });
-  }
-
-  function choose(template: ClockTemplate) {
+  async function choose(template: ClockTemplate) {
     if (template === choice) return;
     const previous = choice;
     setChoice(template);
-    void save({ clockTemplate: template }, `${CLOCK_TEMPLATE_LABEL[template]} clocks saved.`, () => setChoice(previous));
-  }
-
-  function chooseColor(next: ClockColor) {
-    if (next === color) return;
-    const previous = color;
-    setColor(next);
-    void save({ clockColor: next }, `${CLOCK_COLOR_LABEL[next]} clocks saved.`, () => setColor(previous));
+    setStatus({ kind: "saving", message: "Saving…" });
+    const result = await updateAccount({ clockTemplate: template });
+    if (!result.ok) {
+      if (isUnauthorized(result.error)) return onUnauthorized();
+      setChoice(previous);
+      setStatus({ kind: "error", message: result.error.message || "Couldn't save your clock style. Please try again." });
+      return;
+    }
+    onSaved(result.data.user); // the sidebar clocks switch right away
+    setStatus({ kind: "saved", message: `${CLOCK_TEMPLATE_LABEL[template]} clocks saved.` });
   }
 
   return (
     <SettingsCard
       id="clock-title"
       title="Dashboard clocks"
-      description="Pacific, Central and Eastern time at the top of your menu. Pick a color and a style."
+      description="Pacific, Central and Eastern time at the top of your menu, in your theme color. Pick a style."
       icon={
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
           <circle cx="12" cy="12" r="8.5" />
@@ -283,30 +343,8 @@ function ClockTemplateForm({
         </svg>
       }
     >
-      <fieldset className="m-0 mb-5 min-w-0 border-0 p-0">
-        <legend className="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Color</legend>
-        <div className="flex flex-wrap gap-3">
-          {CLOCK_COLORS.map((option) => {
-            const selected = color === option;
-            return (
-              <label
-                key={option}
-                className={`flex cursor-pointer items-center gap-2.5 rounded-full border-2 py-1.5 pr-4 pl-1.5 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/30 ${
-                  selected
-                    ? "border-brand-600 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10"
-                    : "border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700"
-                }`}
-              >
-                <input type="radio" name="clockColor" value={option} checked={selected} onChange={() => chooseColor(option)} className="sr-only" />
-                <span className={`mono-grayscale size-7 rounded-full ring-2 ring-white/70 ${CLOCK_COLOR_SWATCH[option]}`} aria-hidden="true" />
-                <span className="text-sm font-semibold text-neutral-900 dark:text-white">{CLOCK_COLOR_LABEL[option]}</span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend className="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Style</legend>
+        <legend className="sr-only">Clock style</legend>
         <div className="space-y-3">
           {CLOCK_TEMPLATES.map((template) => {
             const selected = choice === template;

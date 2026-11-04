@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { SESSION_COOKIE, deleteOtherSessions } from "@/lib/session";
-import { CLOCK_COLORS, CLOCK_TEMPLATES, type AccountResponse, type ClockColor, type ClockTemplate } from "@/lib/types";
+import { THEME_COLORS, CLOCK_TEMPLATES, type AccountResponse, type ThemeColor, type ClockTemplate } from "@/lib/types";
 
 /** GET /api/account — the logged-in user, fresh from the database. */
 export async function GET(request: NextRequest) {
@@ -48,11 +48,11 @@ export async function PATCH(request: NextRequest) {
       data.clockTemplate = body.clockTemplate as ClockTemplate;
     }
   }
-  if (body.clockColor !== undefined) {
-    if (!CLOCK_COLORS.includes(body.clockColor as ClockColor)) {
-      fieldErrors.clockColor = "Choose Blue, Green or Red";
-    } else if (body.clockColor !== user.clockColor) {
-      data.clockColor = body.clockColor as ClockColor;
+  if (body.themeColor !== undefined) {
+    if (!THEME_COLORS.includes(body.themeColor as ThemeColor)) {
+      fieldErrors.themeColor = "Choose Blue, Green or Red";
+    } else if (body.themeColor !== user.themeColor) {
+      data.themeColor = body.themeColor as ThemeColor;
     }
   }
   const newPassword = body.newPassword === undefined ? undefined : typeof body.newPassword === "string" ? body.newPassword : "";

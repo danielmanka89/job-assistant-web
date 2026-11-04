@@ -1,19 +1,18 @@
 "use client";
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { THEME_STORAGE_KEY, THEMES } from "@/lib/theme-init";
 
-// The choice lives in this browser only. THEME_INIT_SCRIPT applies it before the first paint
-// so the page doesn't flash the wrong theme on load. With no choice saved, the site follows
-// the device's light/dark setting (see globals.css).
-const KEY = "job-assistant.theme";
+// The choice lives in this browser only. THEME_INIT_SCRIPT (lib/theme-init.ts) applies it before
+// the first paint so the page doesn't flash the wrong theme on load. With no choice saved, the site
+// follows the device's light/dark setting (see globals.css).
+const KEY = THEME_STORAGE_KEY;
 const CHANGE_EVENT = "job-assistant:theme-change";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
-type Theme = "light" | "dark" | "mono";
-const THEMES: readonly Theme[] = ["light", "dark", "mono"];
+type Theme = (typeof THEMES)[number];
 const isTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme);
 
-export const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem(${JSON.stringify(KEY)});if(${JSON.stringify(THEMES)}.indexOf(t)>=0)document.documentElement.dataset.theme=t}catch(e){}`;
 
 function subscribe(onChange: () => void): () => void {
   const media = window.matchMedia(DARK_QUERY);

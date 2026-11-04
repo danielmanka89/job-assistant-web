@@ -101,7 +101,7 @@ function HowItWorksSlide() {
   return (
     <div className="relative isolate flex size-full items-center overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-[#0c0c0c] dark:text-white">
       <div
-        className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.14),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(207,35,41,0.08),transparent)] dark:bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgba(207,35,41,0.32),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgba(143,25,30,0.3),transparent)]"
+        className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgb(var(--brand-glow)/0.14),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgb(var(--brand-glow)/0.08),transparent)] dark:bg-[radial-gradient(55rem_40rem_at_15%_-5%,rgb(var(--brand-glow)/0.32),transparent),radial-gradient(40rem_30rem_at_95%_30%,rgb(var(--brand-glow-deep)/0.3),transparent)]"
         aria-hidden="true"
       />
       {/* Side padding leaves room for the slider arrows (shown from tablet width up). */}

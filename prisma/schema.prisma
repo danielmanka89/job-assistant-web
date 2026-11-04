@@ -16,7 +16,9 @@ model User {
   passwordHash    String // bcrypt hash; never returned by the API
   role            String            @default("SEEKER") // "SEEKER" | "EMPLOYER"
   clockTemplate   String            @default("MINIMALIST") // dashboard clock style: "MINIMALIST" | "NEON" | "GLASS"
-  clockColor      String            @default("RED") // dashboard clock color: "BLUE" | "GREEN" | "RED"
+  // The candidate's color theme for the whole app (buttons, links, clocks…): "BLUE" | "GREEN" | "RED".
+  // Stored in the column first added for clock colors.
+  themeColor      String            @default("RED") @map("clockColor")
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   resumes         Resume[]

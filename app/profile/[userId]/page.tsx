@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getPublicPortfolio } from "@/lib/public-portfolio";
+import { accentFor } from "@/lib/theme-color";
 import type { PublicPortfolio } from "@/lib/types";
 
 // Always read fresh: making the portfolio private must take effect at once.
@@ -64,10 +65,13 @@ export default async function PublicPortfolioPage({ params }: Props) {
   ];
 
   return (
-    <main className="relative isolate flex h-dvh w-screen flex-col overflow-hidden bg-white text-neutral-900 dark:bg-[#0c0c0c] dark:text-white">
+    // data-accent: the owner's theme color, whatever color the viewer's own account uses.
+    <main
+      data-accent={accentFor(p.themeColor)}
+      className="relative isolate flex h-dvh w-screen flex-col overflow-hidden bg-white text-neutral-900 dark:bg-[#0c0c0c] dark:text-white">
       {/* Soft red light behind the glass, and faint rings around the portrait. */}
       <div
-        className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(45rem_35rem_at_50%_55%,rgba(207,35,41,0.12),transparent_70%),radial-gradient(40rem_30rem_at_0%_0%,rgba(207,35,41,0.08),transparent_70%),radial-gradient(40rem_30rem_at_100%_100%,rgba(207,35,41,0.08),transparent_70%)] dark:bg-[radial-gradient(45rem_35rem_at_50%_55%,rgba(207,35,41,0.28),transparent_70%),radial-gradient(40rem_30rem_at_0%_0%,rgba(143,25,30,0.25),transparent_70%),radial-gradient(40rem_30rem_at_100%_100%,rgba(143,25,30,0.25),transparent_70%)]"
+        className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(45rem_35rem_at_50%_55%,rgb(var(--brand-glow)/0.12),transparent_70%),radial-gradient(40rem_30rem_at_0%_0%,rgb(var(--brand-glow)/0.08),transparent_70%),radial-gradient(40rem_30rem_at_100%_100%,rgb(var(--brand-glow)/0.08),transparent_70%)] dark:bg-[radial-gradient(45rem_35rem_at_50%_55%,rgb(var(--brand-glow)/0.28),transparent_70%),radial-gradient(40rem_30rem_at_0%_0%,rgb(var(--brand-glow-deep)/0.25),transparent_70%),radial-gradient(40rem_30rem_at_100%_100%,rgb(var(--brand-glow-deep)/0.25),transparent_70%)]"
         aria-hidden="true"
       />
 
@@ -149,7 +153,7 @@ function Portrait({ name, small = false }: { name: string; small?: boolean }) {
 
 function GlassCard({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <section className="flex h-full max-h-[calc((100dvh-15rem)/3)] min-h-0 flex-col overflow-hidden rounded-3xl border border-white/80 bg-white/65 p-5 shadow-[0_10px_40px_rgba(207,35,41,0.10)] backdrop-blur-xl max-lg:max-h-none lg:[@media(max-height:820px)]:max-h-[calc((100dvh-11rem)/3)] lg:[@media(max-height:820px)]:p-4 dark:border-white/10 dark:bg-white/[0.06] dark:shadow-black/40">
+    <section className="flex h-full max-h-[calc((100dvh-15rem)/3)] min-h-0 flex-col overflow-hidden rounded-3xl border border-white/80 bg-white/65 p-5 shadow-[0_10px_40px_rgb(var(--brand-glow)/0.10)] backdrop-blur-xl max-lg:max-h-none lg:[@media(max-height:820px)]:max-h-[calc((100dvh-11rem)/3)] lg:[@media(max-height:820px)]:p-4 dark:border-white/10 dark:bg-white/[0.06] dark:shadow-black/40">
       <h2 className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-brand-600 uppercase dark:text-brand-400">
         <span className="grid size-7 place-items-center rounded-full bg-brand-600 text-white" aria-hidden="true">
           {icon}

@@ -31,7 +31,7 @@ export function AuthShell({
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       {/* Brand panel */}
       <aside className="theme-on-dark relative hidden overflow-hidden bg-neutral-950 lg:block">
-        <div className="mono-grayscale absolute inset-0 bg-[radial-gradient(60rem_40rem_at_10%_-10%,rgba(207,35,41,0.45),transparent),radial-gradient(40rem_30rem_at_110%_110%,rgba(143,25,30,0.55),transparent)]" />
+        <div className="mono-grayscale absolute inset-0 bg-[radial-gradient(60rem_40rem_at_10%_-10%,rgb(var(--brand-glow)/0.45),transparent),radial-gradient(40rem_30rem_at_110%_110%,rgb(var(--brand-glow-deep)/0.55),transparent)]" />
         <div
           className="absolute inset-0 opacity-[0.07]"
           style={{
