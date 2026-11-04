@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getPublicPortfolio } from "@/lib/public-portfolio";
+import { SESSION_COOKIE, findSessionUserId } from "@/lib/session";
 import { accentFor } from "@/lib/theme-color";
 import type { PublicPortfolio } from "@/lib/types";
+import { OwnerReturn } from "./owner-return";
 
 // Always read fresh: making the portfolio private must take effect at once.
 export const dynamic = "force-dynamic";
@@ -52,6 +55,9 @@ export default async function PublicPortfolioPage({ params }: Props) {
   const portfolio = await getPublicPortfolio((await params).userId);
   if (!portfolio) notFound();
   const p = portfolio;
+  // The owner looking at their own portfolio gets a way back to My Profile; recruiters don't.
+  const viewerId = await findSessionUserId((await cookies()).get(SESSION_COOKIE)?.value);
+  const isOwner = viewerId === p.userId;
   const headline = [p.workExperience[0]?.jobTitle, p.location].filter(Boolean).join(" · ");
   // A whole (rectangular) photo is wider than the circle: nudge the cards less so they don't cover it.
   const whole = isWholePhoto(p);
@@ -73,12 +79,14 @@ export default async function PublicPortfolioPage({ params }: Props) {
     // data-accent: the owner's theme color, whatever color the viewer's own account uses.
     <main
       data-accent={accentFor(p.themeColor)}
-      className="relative isolate flex h-dvh w-screen flex-col overflow-hidden bg-white text-neutral-900 dark:bg-[#0c0c0c] dark:text-white">
+      className={`relative isolate flex h-dvh w-screen flex-col overflow-hidden ${isOwner ? "cursor-pointer" : ""} bg-white text-neutral-900 dark:bg-[#0c0c0c] dark:text-white`}>
       {/* Soft red light behind the glass, and faint rings around the portrait. */}
       <div
         className="mono-grayscale pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(45rem_35rem_at_50%_55%,rgb(var(--brand-glow)/0.12),transparent_70%),radial-gradient(40rem_30rem_at_0%_0%,rgb(var(--brand-glow)/0.08),transparent_70%),radial-gradient(40rem_30rem_at_100%_100%,rgb(var(--brand-glow)/0.08),transparent_70%)] dark:bg-[radial-gradient(45rem_35rem_at_50%_55%,rgb(var(--brand-glow)/0.28),transparent_70%),radial-gradient(40rem_30rem_at_0%_0%,rgb(var(--brand-glow-deep)/0.25),transparent_70%),radial-gradient(40rem_30rem_at_100%_100%,rgb(var(--brand-glow-deep)/0.25),transparent_70%)]"
         aria-hidden="true"
       />
+
+      {isOwner && <OwnerReturn />}
 
       <header className="shrink-0 px-14 pt-8 text-center sm:px-6 sm:pt-10 lg:[@media(max-height:820px)]:pt-5">
         <h1 className="font-display text-3xl leading-tight font-bold tracking-tight uppercase sm:text-5xl lg:text-6xl lg:[@media(max-height:820px)]:text-5xl">
