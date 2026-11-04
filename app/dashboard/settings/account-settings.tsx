@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { CLOCK_TEMPLATES, type ApiError, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
+import { CLOCK_COLORS, CLOCK_TEMPLATES, type ApiError, type ClockColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
 import { getAccount, logout, updateAccount } from "@/lib/client/api";
 import { storeUser } from "@/lib/client/current-user";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
-import { CLOCK_TEMPLATE_LABEL, UsClocks } from "@/components/dashboard/us-clocks";
+import { CLOCK_COLOR_LABEL, CLOCK_TEMPLATE_LABEL, UsClocks } from "@/components/dashboard/us-clocks";
 
 type Load = { status: "loading" } | { status: "ready"; user: User } | { status: "error"; message: string };
 
@@ -222,7 +222,14 @@ const CLOCK_TEMPLATE_HINT: Record<ClockTemplate, string> = {
   GLASS: "Frosted panels over a sunset gradient",
 };
 
-/** Picks the look of the sidebar clocks; each choice saves straight away. */
+// Swatch for each color choice: the same hues as the Glass gradient.
+const CLOCK_COLOR_SWATCH: Record<ClockColor, string> = {
+  BLUE: "bg-gradient-to-br from-sky-500 via-blue-700 to-indigo-950",
+  GREEN: "bg-gradient-to-br from-teal-400 via-emerald-600 to-green-800",
+  RED: "bg-gradient-to-br from-orange-500 via-rose-600 to-brand-700",
+};
+
+/** Picks the look and color of the sidebar clocks; each choice saves straight away. */
 function ClockTemplateForm({
   user,
   onSaved,
@@ -232,31 +239,43 @@ function ClockTemplateForm({
   onSaved: (user: User) => void;
   onUnauthorized: () => void;
 }) {
-  const saved = user.clockTemplate ?? "MINIMALIST";
-  const [choice, setChoice] = useState<ClockTemplate>(saved);
+  const [choice, setChoice] = useState<ClockTemplate>(user.clockTemplate ?? "MINIMALIST");
+  const [color, setColor] = useState<ClockColor>(user.clockColor ?? "RED");
   const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
 
-  async function choose(template: ClockTemplate) {
-    if (template === choice) return;
-    const previous = choice;
-    setChoice(template);
+  // Shows the new choice at once, saves it, and puts the old one back if saving fails.
+  async function save(change: { clockTemplate: ClockTemplate } | { clockColor: ClockColor }, savedMessage: string, undo: () => void) {
     setStatus({ kind: "saving", message: "Saving…" });
-    const result = await updateAccount({ clockTemplate: template });
+    const result = await updateAccount(change);
     if (!result.ok) {
       if (isUnauthorized(result.error)) return onUnauthorized();
-      setChoice(previous);
-      setStatus({ kind: "error", message: result.error.message || "Couldn't save your clock style. Please try again." });
+      undo();
+      setStatus({ kind: "error", message: result.error.message || "Couldn't save your clocks. Please try again." });
       return;
     }
     onSaved(result.data.user); // the sidebar clocks switch right away
-    setStatus({ kind: "saved", message: `${CLOCK_TEMPLATE_LABEL[template]} clocks saved.` });
+    setStatus({ kind: "saved", message: savedMessage });
+  }
+
+  function choose(template: ClockTemplate) {
+    if (template === choice) return;
+    const previous = choice;
+    setChoice(template);
+    void save({ clockTemplate: template }, `${CLOCK_TEMPLATE_LABEL[template]} clocks saved.`, () => setChoice(previous));
+  }
+
+  function chooseColor(next: ClockColor) {
+    if (next === color) return;
+    const previous = color;
+    setColor(next);
+    void save({ clockColor: next }, `${CLOCK_COLOR_LABEL[next]} clocks saved.`, () => setColor(previous));
   }
 
   return (
     <SettingsCard
       id="clock-title"
       title="Dashboard clocks"
-      description="Pacific, Central and Eastern time at the top of your menu. Pick a style."
+      description="Pacific, Central and Eastern time at the top of your menu. Pick a color and a style."
       icon={
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
           <circle cx="12" cy="12" r="8.5" />
@@ -264,8 +283,30 @@ function ClockTemplateForm({
         </svg>
       }
     >
+      <fieldset className="m-0 mb-5 min-w-0 border-0 p-0">
+        <legend className="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Color</legend>
+        <div className="flex flex-wrap gap-3">
+          {CLOCK_COLORS.map((option) => {
+            const selected = color === option;
+            return (
+              <label
+                key={option}
+                className={`flex cursor-pointer items-center gap-2.5 rounded-full border-2 py-1.5 pr-4 pl-1.5 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/30 ${
+                  selected
+                    ? "border-brand-600 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10"
+                    : "border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700"
+                }`}
+              >
+                <input type="radio" name="clockColor" value={option} checked={selected} onChange={() => chooseColor(option)} className="sr-only" />
+                <span className={`mono-grayscale size-7 rounded-full ring-2 ring-white/70 ${CLOCK_COLOR_SWATCH[option]}`} aria-hidden="true" />
+                <span className="text-sm font-semibold text-neutral-900 dark:text-white">{CLOCK_COLOR_LABEL[option]}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend className="sr-only">Clock style</legend>
+        <legend className="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Style</legend>
         <div className="space-y-3">
           {CLOCK_TEMPLATES.map((template) => {
             const selected = choice === template;
@@ -287,7 +328,7 @@ function ClockTemplateForm({
                   className="sr-only"
                 />
                 {/* A live preview at the sidebar's real width (w-64), so it looks exactly as it will there. */}
-                <UsClocks template={template} className="pointer-events-none w-full max-w-64 shrink-0" />
+                <UsClocks template={template} color={color} className="pointer-events-none w-full max-w-64 shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-neutral-900 dark:text-white">{CLOCK_TEMPLATE_LABEL[template]}</span>
