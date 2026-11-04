@@ -95,13 +95,13 @@ export function QuoteBanner() {
           <span
             key={progress.key}
             style={{ animationDelay: `-${progress.elapsedMs}ms` }}
-            className="block h-full origin-left animate-quote-progress bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 shadow-[0_0_6px_rgba(207,35,41,0.6)] motion-reduce:hidden"
+            className="block h-full origin-left animate-quote-progress bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 shadow-[0_0_6px_rgb(var(--brand-glow)/0.6)] motion-reduce:hidden"
           />
         )}
       </div>
 
       <div className="mx-auto flex h-full max-w-6xl items-center gap-2.5 px-4 sm:px-6">
-        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-500 to-brand-600 text-white shadow-sm shadow-brand-600/30" aria-hidden="true">
+        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-sm shadow-brand-600/30" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
             <path d="M9.6 6C6.5 7.4 4.5 10.2 4.5 13.6V18h5.3v-5.3H7.2c.1-2 1.3-3.6 3.3-4.6L9.6 6Zm9 0c-3.1 1.4-5.1 4.2-5.1 7.6V18h5.3v-5.3h-2.6c.1-2 1.3-3.6 3.3-4.6L18.6 6Z" />
           </svg>

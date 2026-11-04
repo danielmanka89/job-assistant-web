@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { profileFromResume, splitList } from "@/lib/profile";
 import { toResume } from "@/lib/api";
-import type { ProfileValues, PublicPortfolio } from "@/lib/types";
+import { THEME_COLORS, type ProfileValues, type PublicPortfolio, type ThemeColor } from "@/lib/types";
 
 export const portfolioPath = (userId: string) => `/profile/${userId}`;
 
@@ -12,7 +12,7 @@ export const portfolioPath = (userId: string) => `/profile/${userId}`;
  */
 export async function getPublicPortfolio(userId: string): Promise<PublicPortfolio | null> {
   if (!userId || userId.length > 64) return null;
-  const profile = await prisma.candidateProfile.findUnique({ where: { userId }, include: { user: { select: { name: true } } } });
+  const profile = await prisma.candidateProfile.findUnique({ where: { userId }, include: { user: { select: { name: true, themeColor: true } } } });
   if (!profile?.publishedAt) return null;
 
   const latest = await prisma.resume.findFirst({
@@ -36,5 +36,6 @@ export async function getPublicPortfolio(userId: string): Promise<PublicPortfoli
     workExperience: (resume?.workExperience ?? []).map(({ jobTitle, company, location, startDate, endDate }) => ({ jobTitle, company, location, startDate, endDate })),
     education: (resume?.education ?? []).map(({ institution, degree, fieldOfStudy, startDate, endDate }) => ({ institution, degree, fieldOfStudy, startDate, endDate })),
     resumeFileName: latest?.sourceFileName ?? (latest ? "Resume" : null),
+    themeColor: THEME_COLORS.includes(profile.user.themeColor as ThemeColor) ? (profile.user.themeColor as ThemeColor) : "RED",
   };
 }

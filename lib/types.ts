@@ -18,7 +18,7 @@ export interface User {
   name: string;
   role: UserRole;
   clockTemplate: ClockTemplate;
-  clockColor: ClockColor;
+  themeColor: ThemeColor;
   createdAt: string; // ISO 8601
 }
 
@@ -26,9 +26,9 @@ export interface User {
 export type ClockTemplate = "MINIMALIST" | "NEON" | "GLASS";
 export const CLOCK_TEMPLATES: readonly ClockTemplate[] = ["MINIMALIST", "NEON", "GLASS"];
 
-/** The color of those clocks (Neon glow, Glass gradient, Minimalist labels); also chosen in Settings. */
-export type ClockColor = "BLUE" | "GREEN" | "RED";
-export const CLOCK_COLORS: readonly ClockColor[] = ["BLUE", "GREEN", "RED"];
+/** The candidate's color theme for the whole app, clocks included; chosen in Settings. Red is the default. */
+export type ThemeColor = "BLUE" | "GREEN" | "RED";
+export const THEME_COLORS: readonly ThemeColor[] = ["BLUE", "GREEN", "RED"];
 
 /** Job seekers tailor resumes; employers can also post jobs and see their own postings. */
 export type UserRole = "SEEKER" | "EMPLOYER";
@@ -62,7 +62,7 @@ export interface UpdateAccountRequest {
   newPassword?: string; // plain text over HTTPS only; hashed with bcrypt before storage
   currentPassword?: string; // required when email or newPassword is sent
   clockTemplate?: ClockTemplate;
-  clockColor?: ClockColor;
+  themeColor?: ThemeColor;
 }
 
 /** A motivational quote shown in the banner at the bottom of the dashboard. */
@@ -350,6 +350,7 @@ export interface PublicPortfolio {
   workExperience: Pick<WorkExperience, "jobTitle" | "company" | "location" | "startDate" | "endDate">[];
   education: Pick<Education, "institution" | "degree" | "fieldOfStudy" | "startDate" | "endDate">[];
   resumeFileName: string | null; // the original upload, if there is one to download
+  themeColor: ThemeColor; // the portfolio is shown in its owner's theme color
 }
 
 /** Returned by POST and DELETE /api/profile/public: whether the portfolio is shared, and its link. */

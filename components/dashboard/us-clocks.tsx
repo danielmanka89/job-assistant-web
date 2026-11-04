@@ -1,17 +1,17 @@
 "use client";
 
-import type { ClockColor, ClockTemplate } from "@/lib/types";
+import type { ThemeColor, ClockTemplate } from "@/lib/types";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { useNow, zoneTimes } from "@/lib/client/us-clock";
 
 export const CLOCK_TEMPLATE_LABEL: Record<ClockTemplate, string> = { MINIMALIST: "Minimalist", NEON: "Neon", GLASS: "Glass" };
-export const CLOCK_COLOR_LABEL: Record<ClockColor, string> = { BLUE: "Blue", GREEN: "Green", RED: "Red" };
+export const THEME_COLOR_LABEL: Record<ThemeColor, string> = { BLUE: "Blue", GREEN: "Green", RED: "Red" };
 
 type ClockStyle = { box: string; cell: string; abbr: string; time: string };
 
 // Full class names per color (Tailwind only ships classes it can see written out).
 // mono-grayscale: the B&W theme drains the neon and glass colors instead of redrawing them.
-const STYLES: Record<ClockTemplate, Record<ClockColor, ClockStyle>> = {
+const STYLES: Record<ClockTemplate, Record<ThemeColor, ClockStyle>> = {
   MINIMALIST: (() => {
     const base = {
       box: "divide-x divide-neutral-200 rounded-2xl border border-neutral-200/80 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60",
@@ -63,7 +63,7 @@ const STYLES: Record<ClockTemplate, Record<ClockColor, ClockStyle>> = {
 };
 
 /** Live Pacific / Central / Eastern clocks in one of the three templates and colors. */
-export function UsClocks({ template, color = "RED", className = "" }: { template: ClockTemplate; color?: ClockColor; className?: string }) {
+export function UsClocks({ template, color = "RED", className = "" }: { template: ClockTemplate; color?: ThemeColor; className?: string }) {
   const now = useNow();
   const style = STYLES[template][color];
   return (
@@ -80,9 +80,10 @@ export function UsClocks({ template, color = "RED", className = "" }: { template
   );
 }
 
-/** The clocks at the top of the dashboard sidebar, in the template and color chosen in Settings. */
+/** The clocks at the top of the dashboard sidebar, in the template and theme color chosen in Settings. */
 export function SidebarClocks() {
   const user = useCurrentUser();
-  // Users stored before templates or colors existed have neither yet.
-  return <UsClocks template={user?.clockTemplate ?? "MINIMALIST"} color={user?.clockColor ?? "RED"} />;
+  // Users stored before templates or theme colors existed have neither (or the older clockColor).
+  const color = user?.themeColor ?? (user as { clockColor?: ThemeColor } | null | undefined)?.clockColor ?? "RED";
+  return <UsClocks template={user?.clockTemplate ?? "MINIMALIST"} color={color} />;
 }

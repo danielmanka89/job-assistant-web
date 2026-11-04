@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Oswald } from "next/font/google";
-import { THEME_INIT_SCRIPT, ThemeToggle } from "@/components/theme-toggle";
+import { ThemeAccent } from "@/components/theme-accent";
+import { ACCENT_INIT_SCRIPT } from "@/lib/theme-color";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-init";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,18 +28,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // suppressHydrationWarning: THEME_INIT_SCRIPT may set data-theme before React hydrates.
+    // suppressHydrationWarning: the init scripts may set data-theme / data-accent before React hydrates.
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT + ACCENT_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full">
         {children}
         <ThemeToggle />
+        <ThemeAccent />
       </body>
     </html>
   );
