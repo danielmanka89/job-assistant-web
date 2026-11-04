@@ -127,9 +127,25 @@ export async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   return result.ok ? { ok: true, data: toDashboardStats(result.data) } : result;
 }
 
-/** Sets the profile photo (PUT /api/profile/photo, multipart) and returns the updated user. */
-export async function uploadProfilePhoto(photo: Blob, size?: { width: number; height: number }): Promise<ApiResult<AccountResponse>> {
+/** Sets the portfolio photo (PUT /api/profile/photo, multipart) and returns the updated user. */
+export function uploadProfilePhoto(photo: Blob, size?: { width: number; height: number }): Promise<ApiResult<AccountResponse>> {
   if (USE_MOCK_API) return mockApi.uploadProfilePhoto(photo);
+  return putPhoto("/api/profile/photo", photo, size);
+}
+
+/** Sets the menu photo (PUT /api/profile/avatar, multipart) and returns the updated user. */
+export function uploadAvatarPhoto(photo: Blob): Promise<ApiResult<AccountResponse>> {
+  if (USE_MOCK_API) return mockApi.uploadAvatarPhoto(photo);
+  return putPhoto("/api/profile/avatar", photo);
+}
+
+/** Removes the menu photo (DELETE /api/profile/avatar); the menu shows the portfolio photo again. */
+export function removeAvatarPhoto(): Promise<ApiResult<AccountResponse>> {
+  if (USE_MOCK_API) return mockApi.removeAvatarPhoto();
+  return sendJson<Record<string, never>, AccountResponse>("DELETE", "/api/profile/avatar", {});
+}
+
+async function putPhoto(url: string, photo: Blob, size?: { width: number; height: number }): Promise<ApiResult<AccountResponse>> {
   const form = new FormData();
   form.append("file", photo, "photo");
   if (size) {
@@ -138,7 +154,7 @@ export async function uploadProfilePhoto(photo: Blob, size?: { width: number; he
   }
   let res: Response;
   try {
-    res = await fetch("/api/profile/photo", { method: "PUT", body: form, credentials: "same-origin" });
+    res = await fetch(url, { method: "PUT", body: form, credentials: "same-origin" });
   } catch {
     return { ok: false, error: NETWORK_ERROR };
   }
@@ -147,7 +163,7 @@ export async function uploadProfilePhoto(photo: Blob, size?: { width: number; he
   return { ok: true, data: body as AccountResponse };
 }
 
-/** Removes the profile photo (DELETE /api/profile/photo); initials show again. */
+/** Removes the portfolio photo (DELETE /api/profile/photo); initials show again. */
 export function removeProfilePhoto(): Promise<ApiResult<AccountResponse>> {
   if (USE_MOCK_API) return mockApi.removeProfilePhoto();
   return sendJson<Record<string, never>, AccountResponse>("DELETE", "/api/profile/photo", {});

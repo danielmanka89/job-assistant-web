@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CLOCK_TEMPLATES, type ApiError, type ThemeColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
-import { getAccount, logout, removeProfilePhoto, updateAccount, uploadProfilePhoto } from "@/lib/client/api";
+import { getAccount, logout, removeAvatarPhoto, removeProfilePhoto, updateAccount, uploadAvatarPhoto, uploadProfilePhoto } from "@/lib/client/api";
 import { loadPhoto, type PreparedPhoto } from "@/lib/client/photo-crop";
 import { PhotoCropDialog } from "./photo-crop-dialog";
 import { Avatar } from "@/components/ui/avatar";
@@ -82,7 +83,8 @@ export function AccountSettings() {
   return (
     <div className="space-y-6">
       <ThemeColorForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
-      <ProfilePhotoForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
+      <PhotoForm kind="menu" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
+      <PhotoForm kind="portfolio" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <ProfileForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PasswordForm email={state.user.email} onUnauthorized={onUnauthorized} />
       <ClockTemplateForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
@@ -219,10 +221,34 @@ function ProfileForm({
   );
 }
 
-/* ---------- Profile photo ---------- */
+/* ---------- Photos ---------- */
 
-/** Picks a photo, lets the candidate crop it (see PhotoCropDialog), then uploads it; or removes it. */
-function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
+type PhotoKind = "menu" | "portfolio";
+
+const PHOTO_COPY: Record<PhotoKind, { title: string; description: string; hint: string; saved: string; removed: string }> = {
+  menu: {
+    title: "Menu photo",
+    description: "The small round photo in your menu. Use a different one from your portfolio and zoom in on your face.",
+    hint: "Crop it to a circle and zoom in. Without one, your menu uses your portfolio photo.",
+    saved: "Menu photo saved.",
+    removed: "Menu photo removed. Your menu uses your portfolio photo again.",
+  },
+  portfolio: {
+    title: "Portfolio photo",
+    description: "The big photo in the middle of your public portfolio. Without one, your initials show.",
+    hint: "Any photo. Keep the whole picture (shown full size on your portfolio) or crop it to a circle.",
+    saved: "Portfolio photo saved. It shows on your public portfolio.",
+    removed: "Portfolio photo removed. Your initials show instead.",
+  },
+};
+
+/**
+ * One photo (menu or portfolio): pick a file, frame it in PhotoCropDialog, upload it; or remove it.
+ * The menu photo is circle-only and small; the portfolio photo can also be kept whole.
+ */
+function PhotoForm({ kind, user, onSaved, onUnauthorized }: { kind: PhotoKind; user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
+  const copy = PHOTO_COPY[kind];
+  const url = kind === "menu" ? user.avatarUrl : user.profilePictureUrl;
   const [busy, setBusy] = useState<"uploading" | "removing" | null>(null);
   const [status, setStatus] = useState<{ kind: "saved" | "error"; message: string } | null>(null);
   const [cropping, setCropping] = useState<ImageBitmap | null>(null);
@@ -249,7 +275,8 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
   async function upload(photo: PreparedPhoto) {
     setCropError(null);
     setBusy("uploading");
-    const result = await uploadProfilePhoto(photo.blob, { width: photo.width, height: photo.height });
+    const result =
+      kind === "menu" ? await uploadAvatarPhoto(photo.blob) : await uploadProfilePhoto(photo.blob, { width: photo.width, height: photo.height });
     setBusy(null);
     if (!result.ok) {
       if (isUnauthorized(result.error)) return onUnauthorized();
@@ -257,14 +284,14 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
       return;
     }
     closeCrop();
-    onSaved(result.data.user); // the sidebar avatar updates at once
-    setStatus({ kind: "saved", message: "Photo saved. It shows on your public portfolio too." });
+    onSaved(result.data.user); // the sidebar updates at once
+    setStatus({ kind: "saved", message: copy.saved });
   }
 
   async function remove() {
     setStatus(null);
     setBusy("removing");
-    const result = await removeProfilePhoto();
+    const result = kind === "menu" ? await removeAvatarPhoto() : await removeProfilePhoto();
     setBusy(null);
     if (!result.ok) {
       if (isUnauthorized(result.error)) return onUnauthorized();
@@ -272,28 +299,41 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
       return;
     }
     onSaved(result.data.user);
-    setStatus({ kind: "saved", message: "Photo removed. Your initials show instead." });
+    setStatus({ kind: "saved", message: copy.removed });
   }
 
   return (
     <SettingsCard
-      id="photo-title"
-      title="Profile photo"
-      description="Shown in your menu and in the circle on your public portfolio. Without one, your initials show."
+      id={`${kind}-photo-title`}
+      title={copy.title}
+      description={copy.description}
       icon={
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
-          <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.3l1.4-2h5.6l1.4 2h1.3A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-9Z" strokeLinejoin="round" />
-          <circle cx="12" cy="13" r="3.5" />
-        </svg>
+        kind === "menu" ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.5" />
+            <circle cx="12" cy="10" r="3" />
+            <path d="M6.5 18a6.5 6.5 0 0 1 11 0" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+            <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.3l1.4-2h5.6l1.4 2h1.3A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-9Z" strokeLinejoin="round" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+        )
       }
     >
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
-        <Avatar name={user.name} photoUrl={user.profilePictureUrl} className="size-24 text-3xl ring-4 ring-white/80 dark:ring-neutral-800" />
+        {kind === "menu" ? (
+          // What the menu shows now: the menu photo, else the portfolio photo, else initials.
+          <Avatar name={user.name} photoUrl={user.avatarUrl ?? user.profilePictureUrl} className="size-24 text-3xl ring-4 ring-white/80 dark:ring-neutral-800" />
+        ) : (
+          <PortfolioThumb name={user.name} url={user.profilePictureUrl} />
+        )}
         <div className="flex flex-col items-center gap-2 sm:items-start">
           <div className="flex flex-wrap justify-center gap-3">
             <input
               ref={inputRef}
-              id="profile-photo-input"
+              id={kind === "menu" ? "avatar-photo-input" : "profile-photo-input"}
               type="file"
               accept="image/*"
               className="sr-only"
@@ -301,22 +341,44 @@ function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSav
               disabled={busy !== null}
             />
             <Button type="button" onClick={() => inputRef.current?.click()} loading={busy === "uploading"} disabled={busy !== null}>
-              {busy === "uploading" ? "Uploading…" : user.profilePictureUrl ? "Change photo" : "Upload photo"}
+              {busy === "uploading" ? "Uploading…" : url ? "Change photo" : "Upload photo"}
             </Button>
-            {user.profilePictureUrl && (
+            {url && (
               <Button type="button" variant="secondary" onClick={remove} loading={busy === "removing"} disabled={busy !== null}>
                 Remove
               </Button>
             )}
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">Any photo. Keep the whole picture (shown full size on your portfolio) or crop it to a circle.</p>
+          <p className="text-center text-sm text-neutral-500 sm:text-left dark:text-neutral-400">
+            {kind === "menu" && !url && user.profilePictureUrl ? "Using your portfolio photo for now. " : ""}
+            {copy.hint}
+          </p>
         </div>
       </div>
       <p role="status" className={`mt-4 min-h-5 text-sm ${status?.kind === "error" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}>
         {status?.message}
       </p>
-      {cropping && <PhotoCropDialog photo={cropping} saving={busy === "uploading"} error={cropError} onSave={upload} onCancel={closeCrop} />}
+      {cropping && (
+        <PhotoCropDialog
+          photo={cropping}
+          saving={busy === "uploading"}
+          error={cropError}
+          onSave={upload}
+          onCancel={closeCrop}
+          {...(kind === "menu" ? { circleOnly: true, title: "Your menu photo", outputSize: 384 } : { title: "Your portfolio photo" })}
+        />
+      )}
     </SettingsCard>
+  );
+}
+
+/** The portfolio photo at its own shape (a whole photo isn't a circle), or initials. */
+function PortfolioThumb({ name, url }: { name: string; url: string | null }) {
+  if (!url) return <Avatar name={name} className="size-24 text-3xl ring-4 ring-white/80 dark:ring-neutral-800" />;
+  return (
+    <span className="relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-2xl bg-neutral-100 ring-4 ring-white/80 dark:bg-neutral-800 dark:ring-neutral-800">
+      <Image src={url} alt="" fill unoptimized sizes="96px" className="object-contain" />
+    </span>
   );
 }
 

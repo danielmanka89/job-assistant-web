@@ -87,6 +87,7 @@ function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User 
     clockTemplate: "MINIMALIST",
     themeColor: "RED",
     profilePictureUrl: null,
+    avatarUrl: null,
     createdAt: new Date().toISOString(),
   };
 }
@@ -610,16 +611,30 @@ async function listTailoredResumes(): Promise<ApiResult<TailoredResumeWithFiles[
   };
 }
 
-// The photo is kept as a data URL on the stored user, for this browser only.
-async function uploadProfilePhoto(photo: Blob): Promise<ApiResult<AccountResponse>> {
-  await delay(500);
-  const url = await new Promise<string>((resolve) => {
+// Photos are kept as data URLs on the stored user, for this browser only.
+const dataUrl = (photo: Blob) =>
+  new Promise<string>((resolve) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(photo);
   });
+
+async function uploadProfilePhoto(photo: Blob): Promise<ApiResult<AccountResponse>> {
+  await delay(500);
   const user = readStoredUser() ?? mockUser("jane@example.com", "Jane Doe");
-  return { ok: true, data: { user: { ...user, profilePictureUrl: url } } };
+  return { ok: true, data: { user: { ...user, profilePictureUrl: await dataUrl(photo) } } };
+}
+
+async function uploadAvatarPhoto(photo: Blob): Promise<ApiResult<AccountResponse>> {
+  await delay(400);
+  const user = readStoredUser() ?? mockUser("jane@example.com", "Jane Doe");
+  return { ok: true, data: { user: { ...user, avatarUrl: await dataUrl(photo) } } };
+}
+
+async function removeAvatarPhoto(): Promise<ApiResult<AccountResponse>> {
+  await delay(300);
+  const user = readStoredUser() ?? mockUser("jane@example.com", "Jane Doe");
+  return { ok: true, data: { user: { ...user, avatarUrl: null } } };
 }
 
 async function removeProfilePhoto(): Promise<ApiResult<AccountResponse>> {
@@ -832,6 +847,8 @@ async function exportSubmissions(): Promise<ApiResult<Blob>> {
 }
 
 export const mockApi = {
+  uploadAvatarPhoto,
+  removeAvatarPhoto,
   uploadProfilePhoto,
   removeProfilePhoto,
   setPortfolioPublic,

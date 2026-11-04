@@ -19,7 +19,8 @@ export interface User {
   role: UserRole;
   clockTemplate: ClockTemplate;
   themeColor: ThemeColor;
-  profilePictureUrl: string | null; // the profile photo, or null to show initials
+  profilePictureUrl: string | null; // the portfolio photo, or null to show initials
+  avatarUrl: string | null; // the menu photo; null falls back to the portfolio photo
   createdAt: string; // ISO 8601
 }
 

@@ -13,3 +13,4 @@ export function photoType(bytes: Uint8Array): "image/jpeg" | "image/png" | "imag
 
 /** The photo's address; the version changes on every upload, so browsers never show an old one. */
 export const photoUrl = (userId: string, savedAt: Date) => `/api/profile/photo/${userId}?v=${savedAt.getTime()}`;
+export const avatarUrl = (userId: string, savedAt: Date) => `/api/profile/avatar/${userId}?v=${savedAt.getTime()}`;
