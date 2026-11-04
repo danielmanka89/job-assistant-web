@@ -84,6 +84,7 @@ export function toUser(row: UserRow): User {
     clockTemplate: CLOCK_TEMPLATES.includes(row.clockTemplate as ClockTemplate) ? (row.clockTemplate as ClockTemplate) : "MINIMALIST",
     themeColor: THEME_COLORS.includes(row.themeColor as ThemeColor) ? (row.themeColor as ThemeColor) : "RED",
     profilePictureUrl: row.profilePictureUrl ?? null,
+    avatarUrl: row.avatarUrl ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }

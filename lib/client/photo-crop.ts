@@ -75,10 +75,10 @@ async function encode(canvas: HTMLCanvasElement): Promise<PreparedPhoto> {
   return { blob, width: canvas.width, height: canvas.height };
 }
 
-/** The photo cropped to a square for the circle, ready to upload. */
-export function exportCrop(photo: ImageBitmap, crop: Crop): Promise<PreparedPhoto> {
+/** The photo cropped to a square for the circle, ready to upload (`size` px square). */
+export function exportCrop(photo: ImageBitmap, crop: Crop, size = OUTPUT_SIZE): Promise<PreparedPhoto> {
   const canvas = document.createElement("canvas");
-  drawCrop(canvas, photo, crop, OUTPUT_SIZE);
+  drawCrop(canvas, photo, crop, size);
   return encode(canvas);
 }
 

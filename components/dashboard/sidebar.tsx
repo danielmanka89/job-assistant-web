@@ -254,7 +254,8 @@ function UserCard({ user, className = "" }: { user: User | null | undefined; cla
   const name = user?.name || "Your account";
   return (
     <div className={`flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
-      <Avatar name={user?.name ?? "?"} photoUrl={user?.profilePictureUrl} />
+      {/* The menu photo, or the portfolio photo until one is set. */}
+      <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} />
       <div className="min-w-0">
         <p className="truncate font-semibold text-neutral-900 dark:text-white">{name}</p>
         {user && (

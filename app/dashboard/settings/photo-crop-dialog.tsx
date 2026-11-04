@@ -20,8 +20,14 @@ export function PhotoCropDialog({
   error,
   onSave,
   onCancel,
+  circleOnly = false,
+  title = "Your photo",
+  outputSize,
 }: {
   photo: ImageBitmap;
+  circleOnly?: boolean; // the menu photo: crop to a circle only, no "Whole photo"
+  title?: string;
+  outputSize?: number; // px square for the circle crop (default: sharp enough for the portfolio)
   saving: boolean;
   error: string | null;
   onSave: (photo: PreparedPhoto) => void;
@@ -30,7 +36,7 @@ export function PhotoCropDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wholeRef = useRef<HTMLCanvasElement>(null);
-  const [mode, setMode] = useState<Mode>("whole");
+  const [mode, setMode] = useState<Mode>(circleOnly ? "circle" : "whole");
   // size: the circle's on-screen width when the drag started, so moves track the finger on small phones too.
   const drag = useRef<{ id: number; x: number; y: number; size: number; crop: Crop } | null>(null);
   // The circle crop starts filled (a whole photo has its own mode now).
@@ -90,7 +96,7 @@ export function PhotoCropDialog({
   async function save() {
     setExporting(true);
     try {
-      onSave(await (mode === "whole" ? exportWhole(photo) : exportCrop(photo, crop)));
+      onSave(await (mode === "whole" ? exportWhole(photo) : exportCrop(photo, crop, outputSize)));
     } finally {
       setExporting(false);
     }
@@ -113,14 +119,14 @@ export function PhotoCropDialog({
     >
       <div className="px-6 pt-6 pb-2 sm:px-8">
         <h2 id="crop-title" className="text-xl font-semibold text-neutral-900 dark:text-white">
-          Your photo
+          {title}
         </h2>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
           {mode === "whole"
             ? "The whole picture, nothing cut off. Your portfolio shows it full size; your menu shows a small round version."
             : "Drag to move it. Zoom out to show more, or in to fill the circle."}
         </p>
-        <div role="radiogroup" aria-label="How to save the photo" className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
+        <div role="radiogroup" aria-label="How to save the photo" hidden={circleOnly} className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
           {(
             [
               ["whole", "Whole photo"],
@@ -200,7 +206,7 @@ export function PhotoCropDialog({
                 aria-pressed={fitted}
                 className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${fitted ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300" : "border-neutral-300 text-neutral-700 hover:border-neutral-400 dark:border-neutral-700 dark:text-neutral-200"}`}
               >
-                Fit whole photo
+                Fit in circle
               </button>
               <button
                 type="button"
