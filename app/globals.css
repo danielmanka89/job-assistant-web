@@ -79,6 +79,20 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
 .glass-shell :is(.rounded-3xl, .rounded-2xl).shadow-sm {
   box-shadow: var(--glass-shadow);
 }
+/*
+ * Opt-out: .glass-solid keeps its original opaque Tailwind colors (hover and dark variants
+ * included). For surfaces that must stay solid, such as the spreadsheet, whose sticky header row
+ * and frozen Job column scroll over other cells. On see-through glass, those cells would show through.
+ * revert-layer drops these unlayered glass rules and falls back to the utility classes. The doubled
+ * .glass-shell outranks the glass selectors above.
+ */
+.glass-shell.glass-shell :is(.glass-solid, .glass-solid *) {
+  background-color: revert-layer;
+  border-color: revert-layer;
+  box-shadow: revert-layer;
+  -webkit-backdrop-filter: revert-layer;
+  backdrop-filter: revert-layer;
+}
 
 @theme inline {
   --color-background: var(--background);
