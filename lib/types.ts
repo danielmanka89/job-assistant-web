@@ -18,12 +18,17 @@ export interface User {
   name: string;
   role: UserRole;
   clockTemplate: ClockTemplate;
+  clockColor: ClockColor;
   createdAt: string; // ISO 8601
 }
 
 /** How the live clocks at the top of the dashboard sidebar look; chosen in Settings. */
 export type ClockTemplate = "MINIMALIST" | "NEON" | "GLASS";
 export const CLOCK_TEMPLATES: readonly ClockTemplate[] = ["MINIMALIST", "NEON", "GLASS"];
+
+/** The color of those clocks (Neon glow, Glass gradient, Minimalist labels); also chosen in Settings. */
+export type ClockColor = "BLUE" | "GREEN" | "RED";
+export const CLOCK_COLORS: readonly ClockColor[] = ["BLUE", "GREEN", "RED"];
 
 /** Job seekers tailor resumes; employers can also post jobs and see their own postings. */
 export type UserRole = "SEEKER" | "EMPLOYER";
@@ -57,6 +62,7 @@ export interface UpdateAccountRequest {
   newPassword?: string; // plain text over HTTPS only; hashed with bcrypt before storage
   currentPassword?: string; // required when email or newPassword is sent
   clockTemplate?: ClockTemplate;
+  clockColor?: ClockColor;
 }
 
 /** A motivational quote shown in the banner at the bottom of the dashboard. */

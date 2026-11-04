@@ -84,6 +84,7 @@ function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User 
     name,
     role,
     clockTemplate: "MINIMALIST",
+    clockColor: "RED",
     createdAt: new Date().toISOString(),
   };
 }
@@ -149,6 +150,7 @@ async function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<A
         ...(request.name !== undefined ? { name: request.name.trim() } : {}),
         ...(request.email !== undefined ? { email: request.email.trim().toLowerCase() } : {}),
         ...(request.clockTemplate !== undefined ? { clockTemplate: request.clockTemplate } : {}),
+        ...(request.clockColor !== undefined ? { clockColor: request.clockColor } : {}),
       },
     },
   };

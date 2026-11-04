@@ -9,8 +9,10 @@ import type {
   User as UserRow,
 } from "@/lib/generated/prisma/client";
 import {
+  CLOCK_COLORS,
   CLOCK_TEMPLATES,
   type ApiError,
+  type ClockColor,
   type ClockTemplate,
   type Education,
   type GeneratedFile,
@@ -80,6 +82,7 @@ export function toUser(row: UserRow): User {
     name: row.name,
     role: row.role as UserRole,
     clockTemplate: CLOCK_TEMPLATES.includes(row.clockTemplate as ClockTemplate) ? (row.clockTemplate as ClockTemplate) : "MINIMALIST",
+    clockColor: CLOCK_COLORS.includes(row.clockColor as ClockColor) ? (row.clockColor as ClockColor) : "RED",
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { SESSION_COOKIE, deleteOtherSessions } from "@/lib/session";
-import { CLOCK_TEMPLATES, type AccountResponse, type ClockTemplate } from "@/lib/types";
+import { CLOCK_COLORS, CLOCK_TEMPLATES, type AccountResponse, type ClockColor, type ClockTemplate } from "@/lib/types";
 
 /** GET /api/account — the logged-in user, fresh from the database. */
 export async function GET(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * PATCH /api/account — updates name, email, password and/or clock template (see UpdateAccountRequest).
+ * PATCH /api/account — updates name, email, password and/or clock template and color (see UpdateAccountRequest).
  * Email and password changes need the current password; a new password signs out every other session.
  */
 export async function PATCH(request: NextRequest) {
@@ -46,6 +46,13 @@ export async function PATCH(request: NextRequest) {
       fieldErrors.clockTemplate = "Choose Minimalist, Neon or Glass";
     } else if (body.clockTemplate !== user.clockTemplate) {
       data.clockTemplate = body.clockTemplate as ClockTemplate;
+    }
+  }
+  if (body.clockColor !== undefined) {
+    if (!CLOCK_COLORS.includes(body.clockColor as ClockColor)) {
+      fieldErrors.clockColor = "Choose Blue, Green or Red";
+    } else if (body.clockColor !== user.clockColor) {
+      data.clockColor = body.clockColor as ClockColor;
     }
   }
   const newPassword = body.newPassword === undefined ? undefined : typeof body.newPassword === "string" ? body.newPassword : "";
