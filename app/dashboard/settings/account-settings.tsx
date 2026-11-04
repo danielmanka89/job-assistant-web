@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { CLOCK_TEMPLATES, type ApiError, type ThemeColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
-import { getAccount, logout, updateAccount } from "@/lib/client/api";
+import { getAccount, logout, removeProfilePhoto, updateAccount, uploadProfilePhoto } from "@/lib/client/api";
+import { squarePhoto } from "@/lib/client/square-photo";
+import { Avatar } from "@/components/ui/avatar";
 import { storeUser } from "@/lib/client/current-user";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { ErrorAlert } from "@/components/ui/alert";
@@ -79,6 +81,7 @@ export function AccountSettings() {
   return (
     <div className="space-y-6">
       <ThemeColorForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
+      <ProfilePhotoForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <ProfileForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PasswordForm email={state.user.email} onUnauthorized={onUnauthorized} />
       <ClockTemplateForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
@@ -211,6 +214,94 @@ function ProfileForm({
           </div>
         </fieldset>
       </form>
+    </SettingsCard>
+  );
+}
+
+/* ---------- Profile photo ---------- */
+
+/** Uploads (cropped to a square in the browser first) or removes the profile photo. */
+function ProfilePhotoForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
+  const [busy, setBusy] = useState<"uploading" | "removing" | null>(null);
+  const [status, setStatus] = useState<{ kind: "saved" | "error"; message: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File | undefined) {
+    if (!file) return;
+    setStatus(null);
+    setBusy("uploading");
+    try {
+      const photo = await squarePhoto(file);
+      const result = await uploadProfilePhoto(photo);
+      if (!result.ok) {
+        if (isUnauthorized(result.error)) return onUnauthorized();
+        setStatus({ kind: "error", message: result.error.message });
+        return;
+      }
+      onSaved(result.data.user); // the sidebar avatar updates at once
+      setStatus({ kind: "saved", message: "Photo saved. It shows on your public portfolio too." });
+    } catch (error) {
+      setStatus({ kind: "error", message: error instanceof Error ? error.message : "Couldn't use that photo." });
+    } finally {
+      setBusy(null);
+      if (inputRef.current) inputRef.current.value = ""; // choosing the same file again still uploads
+    }
+  }
+
+  async function remove() {
+    setStatus(null);
+    setBusy("removing");
+    const result = await removeProfilePhoto();
+    setBusy(null);
+    if (!result.ok) {
+      if (isUnauthorized(result.error)) return onUnauthorized();
+      setStatus({ kind: "error", message: result.error.message });
+      return;
+    }
+    onSaved(result.data.user);
+    setStatus({ kind: "saved", message: "Photo removed. Your initials show instead." });
+  }
+
+  return (
+    <SettingsCard
+      id="photo-title"
+      title="Profile photo"
+      description="Shown in your menu and in the circle on your public portfolio. Without one, your initials show."
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+          <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.3l1.4-2h5.6l1.4 2h1.3A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-9Z" strokeLinejoin="round" />
+          <circle cx="12" cy="13" r="3.5" />
+        </svg>
+      }
+    >
+      <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+        <Avatar name={user.name} photoUrl={user.profilePictureUrl} className="size-24 text-3xl ring-4 ring-white/80 dark:ring-neutral-800" />
+        <div className="flex flex-col items-center gap-2 sm:items-start">
+          <div className="flex flex-wrap justify-center gap-3">
+            <input
+              ref={inputRef}
+              id="profile-photo-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={(e) => upload(e.target.files?.[0])}
+              disabled={busy !== null}
+            />
+            <Button type="button" onClick={() => inputRef.current?.click()} loading={busy === "uploading"} disabled={busy !== null}>
+              {busy === "uploading" ? "Uploading…" : user.profilePictureUrl ? "Change photo" : "Upload photo"}
+            </Button>
+            {user.profilePictureUrl && (
+              <Button type="button" variant="secondary" onClick={remove} loading={busy === "removing"} disabled={busy !== null}>
+                Remove
+              </Button>
+            )}
+          </div>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">JPEG, PNG or WebP. We crop it to a square.</p>
+        </div>
+      </div>
+      <p role="status" className={`mt-4 min-h-5 text-sm ${status?.kind === "error" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}>
+        {status?.message}
+      </p>
     </SettingsCard>
   );
 }

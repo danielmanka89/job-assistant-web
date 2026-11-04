@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
@@ -77,7 +78,7 @@ export default async function PublicPortfolioPage({ params }: Props) {
 
       <header className="shrink-0 px-14 pt-8 text-center sm:px-6 sm:pt-10 lg:[@media(max-height:820px)]:pt-5">
         <h1 className="font-display text-3xl leading-tight font-bold tracking-tight uppercase sm:text-5xl lg:text-6xl lg:[@media(max-height:820px)]:text-5xl">
-          Hello, <span className="text-brand-600 dark:text-brand-500">{p.name}</span>
+          Hello, I&apos;m <span className="text-brand-600 dark:text-brand-500">{p.name}</span>
         </h1>
         {headline && <p className="mt-2 text-sm font-medium text-neutral-500 sm:text-base dark:text-neutral-400">{headline}</p>}
       </header>
@@ -91,7 +92,7 @@ export default async function PublicPortfolioPage({ params }: Props) {
             </div>
           ))}
         </div>
-        <Portrait name={p.name} />
+        <Portrait name={p.name} photoUrl={p.profilePictureUrl} />
         <div className="flex h-full min-h-0 flex-col justify-center gap-4 [@media(max-height:820px)]:gap-3">
           {right.map((card, i) => (
             <div key={i} className={`min-h-0 ${i === 1 ? "" : "-translate-x-10"}`}>
@@ -104,7 +105,7 @@ export default async function PublicPortfolioPage({ params }: Props) {
       {/* Phones and tablets: the circle, then the cards in a row that swipes sideways. */}
       <div className="flex min-h-0 flex-1 flex-col lg:hidden">
         <div className="grid shrink-0 place-items-center py-7">
-          <Portrait name={p.name} small />
+          <Portrait name={p.name} photoUrl={p.profilePictureUrl} small />
         </div>
         {/* role + tabIndex: a named region keyboard users can focus and scroll with the arrow keys
             (most cards have nothing focusable inside, and Safari doesn't focus plain scrollers). */}
@@ -133,7 +134,7 @@ export default async function PublicPortfolioPage({ params }: Props) {
   );
 }
 
-function Portrait({ name, small = false }: { name: string; small?: boolean }) {
+function Portrait({ name, photoUrl, small = false }: { name: string; photoUrl: string | null; small?: boolean }) {
   return (
     <div className={`relative grid shrink-0 place-items-center ${small ? "size-[min(30vh,14rem)]" : "size-[min(46vh,24rem)]"}`}>
       {/* An orbit ring around the portrait. */}
@@ -142,17 +143,24 @@ function Portrait({ name, small = false }: { name: string; small?: boolean }) {
         aria-hidden="true"
       />
       <div className="absolute -inset-2 rounded-full bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 shadow-2xl shadow-brand-600/30" aria-hidden="true" />
-      {/* Placeholder until candidates can add a photo. */}
+      {/* The candidate's photo (added in Settings), or their initials over a silhouette. */}
       <div
         role="img"
         aria-label={`${name}'s portrait`}
         className="relative grid size-full place-items-center overflow-hidden rounded-full border-4 border-white bg-gradient-to-b from-neutral-50 to-brand-50 dark:border-neutral-900 dark:from-neutral-900 dark:to-brand-950/40"
       >
-        <svg viewBox="0 0 100 100" className="absolute inset-x-0 bottom-0 h-[78%] w-full text-brand-600/10 dark:text-brand-500/15" aria-hidden="true">
-          <circle cx="50" cy="38" r="20" fill="currentColor" />
-          <path d="M10 100c4-22 20-34 40-34s36 12 40 34Z" fill="currentColor" />
-        </svg>
-        <span className={`relative font-display font-bold text-brand-600 dark:text-brand-500 ${small ? "text-5xl" : "text-7xl"}`}>{initials(name)}</span>
+        {photoUrl ? (
+          // unoptimized: already a small square from our own API. priority: it's the page's main image.
+          <Image src={photoUrl} alt="" fill unoptimized priority sizes="24rem" className="object-cover" />
+        ) : (
+          <>
+            <svg viewBox="0 0 100 100" className="absolute inset-x-0 bottom-0 h-[78%] w-full text-brand-600/10 dark:text-brand-500/15" aria-hidden="true">
+              <circle cx="50" cy="38" r="20" fill="currentColor" />
+              <path d="M10 100c4-22 20-34 40-34s36 12 40 34Z" fill="currentColor" />
+            </svg>
+            <span className={`relative font-display font-bold text-brand-600 dark:text-brand-500 ${small ? "text-5xl" : "text-7xl"}`}>{initials(name)}</span>
+          </>
+        )}
       </div>
     </div>
   );

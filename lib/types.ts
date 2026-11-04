@@ -19,6 +19,7 @@ export interface User {
   role: UserRole;
   clockTemplate: ClockTemplate;
   themeColor: ThemeColor;
+  profilePictureUrl: string | null; // the profile photo, or null to show initials
   createdAt: string; // ISO 8601
 }
 
@@ -351,6 +352,7 @@ export interface PublicPortfolio {
   education: Pick<Education, "institution" | "degree" | "fieldOfStudy" | "startDate" | "endDate">[];
   resumeFileName: string | null; // the original upload, if there is one to download
   themeColor: ThemeColor; // the portfolio is shown in its owner's theme color
+  profilePictureUrl: string | null; // shown in the portrait circle; null shows initials
 }
 
 /** Returned by POST and DELETE /api/profile/public: whether the portfolio is shared, and its link. */

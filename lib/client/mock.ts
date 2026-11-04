@@ -86,6 +86,7 @@ function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User 
     role,
     clockTemplate: "MINIMALIST",
     themeColor: "RED",
+    profilePictureUrl: null,
     createdAt: new Date().toISOString(),
   };
 }
@@ -609,6 +610,24 @@ async function listTailoredResumes(): Promise<ApiResult<TailoredResumeWithFiles[
   };
 }
 
+// The photo is kept as a data URL on the stored user, for this browser only.
+async function uploadProfilePhoto(photo: Blob): Promise<ApiResult<AccountResponse>> {
+  await delay(500);
+  const url = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(photo);
+  });
+  const user = readStoredUser() ?? mockUser("jane@example.com", "Jane Doe");
+  return { ok: true, data: { user: { ...user, profilePictureUrl: url } } };
+}
+
+async function removeProfilePhoto(): Promise<ApiResult<AccountResponse>> {
+  await delay(300);
+  const user = readStoredUser() ?? mockUser("jane@example.com", "Jane Doe");
+  return { ok: true, data: { user: { ...user, profilePictureUrl: null } } };
+}
+
 // A few of the seeded quotes, rotated the same way as the real endpoint.
 const MOCK_QUOTES = [
   { text: "Whether you think you can or you think you can't, you're right.", author: "Henry Ford" },
@@ -813,6 +832,8 @@ async function exportSubmissions(): Promise<ApiResult<Blob>> {
 }
 
 export const mockApi = {
+  uploadProfilePhoto,
+  removeProfilePhoto,
   setPortfolioPublic,
   getRandomQuote,
   register,

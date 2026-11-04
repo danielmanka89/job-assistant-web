@@ -127,6 +127,28 @@ export async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   return result.ok ? { ok: true, data: toDashboardStats(result.data) } : result;
 }
 
+/** Sets the profile photo (PUT /api/profile/photo, multipart) and returns the updated user. */
+export async function uploadProfilePhoto(photo: Blob): Promise<ApiResult<AccountResponse>> {
+  if (USE_MOCK_API) return mockApi.uploadProfilePhoto(photo);
+  const form = new FormData();
+  form.append("file", photo, "photo");
+  let res: Response;
+  try {
+    res = await fetch("/api/profile/photo", { method: "PUT", body: form, credentials: "same-origin" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  const body: unknown = await res.json().catch(() => null);
+  if (!res.ok) return { ok: false, error: toApiError(body, res.status) };
+  return { ok: true, data: body as AccountResponse };
+}
+
+/** Removes the profile photo (DELETE /api/profile/photo); initials show again. */
+export function removeProfilePhoto(): Promise<ApiResult<AccountResponse>> {
+  if (USE_MOCK_API) return mockApi.removeProfilePhoto();
+  return sendJson<Record<string, never>, AccountResponse>("DELETE", "/api/profile/photo", {});
+}
+
 /** The banner's current quote from GET /api/quotes/random. */
 export async function getRandomQuote(): Promise<ApiResult<RandomQuoteResponse>> {
   if (USE_MOCK_API) return mockApi.getRandomQuote();
