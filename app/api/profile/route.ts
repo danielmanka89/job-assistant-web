@@ -19,13 +19,25 @@ export async function GET(request: NextRequest) {
     prisma.resume.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" } }),
   ]);
   const resume = latest ? toResume(latest) : null;
-  if (row) return NextResponse.json<ProfileResponse>({ values: row.values as ProfileValues, updatedAt: row.updatedAt.toISOString(), resume });
-  if (!resume) return NextResponse.json<ProfileResponse>({ values: {}, updatedAt: null, resume: null });
+  if (row) {
+    return NextResponse.json<ProfileResponse>({
+      values: row.values as ProfileValues,
+      updatedAt: row.updatedAt.toISOString(),
+      resume,
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+    });
+  }
+  if (!resume) return NextResponse.json<ProfileResponse>({ values: {}, updatedAt: null, resume: null, publishedAt: null });
 
   const created = await prisma.candidateProfile.upsert({
     where: { userId: user.id },
     create: { userId: user.id, values: profileFromResume(resume) },
     update: {},
   });
-  return NextResponse.json<ProfileResponse>({ values: created.values as ProfileValues, updatedAt: created.updatedAt.toISOString(), resume });
+  return NextResponse.json<ProfileResponse>({
+    values: created.values as ProfileValues,
+    updatedAt: created.updatedAt.toISOString(),
+    resume,
+    publishedAt: created.publishedAt?.toISOString() ?? null,
+  });
 }
