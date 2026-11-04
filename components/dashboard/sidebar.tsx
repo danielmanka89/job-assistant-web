@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/brand";
+import { Avatar } from "@/components/ui/avatar";
 import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { logout } from "@/lib/client/api";
 import { useCurrentUser } from "@/lib/client/current-user";
@@ -120,11 +121,6 @@ const NAV: NavItem[] = [
 ];
 
 const ROLE_LABEL: Record<User["role"], string> = { SEEKER: "Job Seeker", EMPLOYER: "Employer" };
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
-}
 
 /** Left sidebar on large screens; a top bar with a slide-in menu on phones and tablets. */
 export function Sidebar() {
@@ -258,9 +254,7 @@ function UserCard({ user, className = "" }: { user: User | null | undefined; cla
   const name = user?.name || "Your account";
   return (
     <div className={`flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
-      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 font-display text-lg font-semibold text-white shadow-md shadow-brand-600/25">
-        {user ? initials(user.name) : "?"}
-      </span>
+      <Avatar name={user?.name ?? "?"} photoUrl={user?.profilePictureUrl} />
       <div className="min-w-0">
         <p className="truncate font-semibold text-neutral-900 dark:text-white">{name}</p>
         {user && (

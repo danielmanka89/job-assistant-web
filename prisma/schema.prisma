@@ -19,6 +19,9 @@ model User {
   // The candidate's color theme for the whole app (buttons, links, clocks…): "BLUE" | "GREEN" | "RED".
   // Stored in the column first added for clock colors.
   themeColor      String            @default("RED") @map("clockColor")
+  // Link to the profile photo ("/api/profile/photo/<id>?v=<saved at>"); null shows initials instead.
+  // The image itself is in ProfilePhoto, so loading a user never loads the picture.
+  profilePictureUrl String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   resumes         Resume[]
@@ -30,6 +33,16 @@ model User {
   submissions     Submission[]
   profile         CandidateProfile?
   learningPaths   LearningPath[]
+  profilePhoto    ProfilePhoto?
+}
+
+// A user's profile photo, cropped to a square in the browser before upload (at most 1.5 MB).
+model ProfilePhoto {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Bytes
+  mimeType  String // image/jpeg, image/png or image/webp
+  updatedAt DateTime @updatedAt
 }
 
 model Resume {
