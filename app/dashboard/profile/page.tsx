@@ -5,7 +5,7 @@ import { ProfileView } from "./profile-view";
 
 export const metadata: Metadata = { title: "My Profile" };
 
-// On large screens the page fills the window and the two columns scroll on their own, so Market
+// On large screens the page fills the window (above the quote banner) and the two columns scroll on their own, so Market
 // Reach stays in view while reading the profile (and the other way round). The scrollbars are hidden
 // to keep the page calm; the columns still scroll with the wheel, trackpad and keyboard. Phones
 // scroll as one page.
@@ -16,7 +16,7 @@ const column =
 
 export default function ProfilePage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:flex lg:h-dvh lg:flex-col lg:pb-0">
+    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:flex lg:h-[calc(100dvh-var(--quote-banner-h))] lg:flex-col lg:pb-0">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:shrink-0">
         <div className="max-w-2xl">
           <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">My Profile</h1>

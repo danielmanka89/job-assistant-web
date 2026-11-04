@@ -59,6 +59,19 @@ export interface UpdateAccountRequest {
   clockTemplate?: ClockTemplate;
 }
 
+/** A motivational quote shown in the banner at the bottom of the dashboard. */
+export interface Quote {
+  id: number;
+  text: string;
+  author: string | null;
+}
+
+/** Returned by GET /api/quotes/random. */
+export interface RandomQuoteResponse {
+  quote: Quote;
+  nextChangeAt: string; // ISO 8601; the banner asks again every 15 seconds
+}
+
 /** Returned by GET and PATCH /api/account: the logged-in user as stored. */
 export interface AccountResponse {
   user: User;

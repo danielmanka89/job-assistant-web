@@ -28,6 +28,7 @@ import type {
   LoginRequest,
   ProfileResponse,
   ProfileValues,
+  RandomQuoteResponse,
   RegisterRequest,
   GeneratedFile,
   JobPosting,
@@ -49,6 +50,7 @@ import type {
   User,
   UserRole,
 } from "@/lib/types";
+import { quoteSlot } from "@/lib/quote-rotation";
 import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
 import { roadmapStepIds } from "@/lib/learning-content";
 import { marketReach } from "@/lib/market-reach";
@@ -604,6 +606,22 @@ async function listTailoredResumes(): Promise<ApiResult<TailoredResumeWithFiles[
   };
 }
 
+// A few of the seeded quotes, rotated the same way as the real endpoint.
+const MOCK_QUOTES = [
+  { text: "Whether you think you can or you think you can't, you're right.", author: "Henry Ford" },
+  { text: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+  { text: "The best way out is always through.", author: "Robert Frost" },
+  { text: "Nothing will work unless you do.", author: "Maya Angelou" },
+  { text: "Make each day your masterpiece.", author: "John Wooden" },
+  { text: "Failure is simply the opportunity to begin again, this time more intelligently.", author: "Henry Ford" },
+];
+
+async function getRandomQuote(): Promise<ApiResult<RandomQuoteResponse>> {
+  await delay(150);
+  const { index, nextChangeAt } = quoteSlot(Date.now(), MOCK_QUOTES.length);
+  return { ok: true, data: { quote: { id: index + 1, ...MOCK_QUOTES[index] }, nextChangeAt: new Date(nextChangeAt).toISOString() } };
+}
+
 async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   await delay(500);
   const jobs = sampleJobs();
@@ -780,6 +798,7 @@ async function exportSubmissions(): Promise<ApiResult<Blob>> {
 }
 
 export const mockApi = {
+  getRandomQuote,
   register,
   login,
   logout,

@@ -3,6 +3,15 @@
 :root {
   --background: #f6f6f6;
   --foreground: #111111;
+  /* Height of the quote banner at the bottom of the dashboard on large screens; pages that fill
+     the window (My Profile) subtract it so the banner stays in view. */
+  --quote-banner-h: 4.5rem;
+}
+
+/* Pages with a save bar fixed to the bottom of the window: lift the quote banner above it so the
+   bar doesn't cover it at the end of the page. */
+body:has([data-fixed-bottom-bar]) [data-quote-banner] {
+  margin-bottom: 4.75rem;
 }
 
 @theme inline {
@@ -16,6 +25,17 @@
   /* Landing hero: the glass panel fades up into place; the glow behind the site name breathes. */
   --animate-glass-in: glass-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-glow-pulse: glow-pulse 3.2s ease-in-out infinite;
+  /* Dashboard quote banner: the red line along its top fills up until the next quote (15s). */
+  --animate-quote-progress: quote-progress 15s linear both;
+
+  @keyframes quote-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
 
   @keyframes glass-in {
     from {

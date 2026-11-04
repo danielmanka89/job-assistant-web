@@ -14,6 +14,7 @@ import type {
   LearningPath,
   LoginRequest,
   ProfileResponse,
+  RandomQuoteResponse,
   RegisterRequest,
   Resume,
   ResumeCompareResponse,
@@ -123,6 +124,23 @@ export async function getDashboardStats(): Promise<ApiResult<DashboardStats>> {
   if (USE_MOCK_API) return mockApi.getDashboardStats();
   const result = await getJson("/api/dashboard-stats");
   return result.ok ? { ok: true, data: toDashboardStats(result.data) } : result;
+}
+
+/** The banner's current quote from GET /api/quotes/random. */
+export async function getRandomQuote(): Promise<ApiResult<RandomQuoteResponse>> {
+  if (USE_MOCK_API) return mockApi.getRandomQuote();
+  const result = await getJson("/api/quotes/random");
+  if (!result.ok) return result;
+  const body = result.data as Partial<RandomQuoteResponse> | null;
+  const quote = body?.quote;
+  if (!quote || typeof quote.text !== "string") return { ok: false, error: { code: "BAD_RESPONSE", message: "Unexpected quote response" } };
+  return {
+    ok: true,
+    data: {
+      quote: { id: Number(quote.id), text: quote.text, author: typeof quote.author === "string" ? quote.author : null },
+      nextChangeAt: typeof body.nextChangeAt === "string" ? body.nextChangeAt : new Date().toISOString(),
+    },
+  };
 }
 
 /** The user's tailored resumes, newest first, from GET /api/tailored-resumes ({ tailoredResumes: [...] }). */
