@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { SESSION_COOKIE, deleteOtherSessions } from "@/lib/session";
-import type { AccountResponse } from "@/lib/types";
+import { CLOCK_TEMPLATES, type AccountResponse, type ClockTemplate } from "@/lib/types";
 
 /** GET /api/account — the logged-in user, fresh from the database. */
 export async function GET(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * PATCH /api/account — updates name, email and/or password (see UpdateAccountRequest).
+ * PATCH /api/account — updates name, email, password and/or clock template (see UpdateAccountRequest).
  * Email and password changes need the current password; a new password signs out every other session.
  */
 export async function PATCH(request: NextRequest) {
@@ -40,6 +40,13 @@ export async function PATCH(request: NextRequest) {
     const error = emailError(email);
     if (error) fieldErrors.email = error;
     else if (email !== user.email) data.email = email;
+  }
+  if (body.clockTemplate !== undefined) {
+    if (!CLOCK_TEMPLATES.includes(body.clockTemplate as ClockTemplate)) {
+      fieldErrors.clockTemplate = "Choose Minimalist, Neon or Glass";
+    } else if (body.clockTemplate !== user.clockTemplate) {
+      data.clockTemplate = body.clockTemplate as ClockTemplate;
+    }
   }
   const newPassword = body.newPassword === undefined ? undefined : typeof body.newPassword === "string" ? body.newPassword : "";
   if (newPassword !== undefined) {

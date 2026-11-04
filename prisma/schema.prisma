@@ -15,6 +15,7 @@ model User {
   name            String
   passwordHash    String // bcrypt hash; never returned by the API
   role            String            @default("SEEKER") // "SEEKER" | "EMPLOYER"
+  clockTemplate   String            @default("MINIMALIST") // dashboard clock style: "MINIMALIST" | "NEON" | "GLASS"
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   resumes         Resume[]
