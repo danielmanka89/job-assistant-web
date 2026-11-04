@@ -78,7 +78,7 @@ export function ImmersiveHero() {
   }
 
   return (
-    <section aria-label="Welcome" className="relative isolate flex min-h-[40rem] items-end overflow-hidden bg-neutral-950 h-dvh">
+    <section aria-label="Welcome" className="mono-grayscale relative isolate flex min-h-[40rem] items-end overflow-hidden bg-neutral-950 h-dvh">
       <video
         ref={pauseIfReducedMotion}
         className="absolute inset-0 -z-20 size-full object-cover"
@@ -128,25 +128,28 @@ export function ImmersiveHero() {
           </button>
 
           {entered && (
-            <div className="mt-5 animate-glass-in motion-reduce:animate-none">
-              {/* What the voice says, for anyone who can't hear it. */}
-              <p className="text-center text-sm leading-relaxed text-white/80 italic">&ldquo;{WELCOME}&rdquo;</p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Link
-                  href="/register"
-                  className="rounded-full bg-white px-4 py-2.5 text-center font-display text-sm font-medium tracking-wider text-neutral-900 uppercase transition hover:bg-white/90"
-                >
-                  Get started
-                </Link>
-                <Link
-                  href="/login"
-                  className="rounded-full border border-white/30 px-4 py-2.5 text-center font-display text-sm font-medium tracking-wider text-white uppercase transition hover:bg-white/10"
-                >
-                  Sign in
-                </Link>
-              </div>
-            </div>
+            /* What the voice says, for anyone who can't hear it. */
+            <p className="mt-5 animate-glass-in text-center text-sm leading-relaxed text-white/80 italic motion-reduce:animate-none">
+              &ldquo;{WELCOME}&rdquo;
+            </p>
           )}
+
+          {/* Always shown: on phones the page header is below this full-screen hero, so these are the
+              only visible way to sign up or sign in without playing the voice first. */}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Link
+              href="/register"
+              className="rounded-full bg-white px-4 py-2.5 text-center font-display text-sm font-medium tracking-wider text-neutral-900 uppercase transition hover:bg-white/90"
+            >
+              Get started
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-full border border-white/30 px-4 py-2.5 text-center font-display text-sm font-medium tracking-wider text-white uppercase transition hover:bg-white/10"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </div>
 
