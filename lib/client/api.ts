@@ -13,6 +13,7 @@ import type {
   LearningInsights,
   LearningPath,
   LoginRequest,
+  IntroductionResponse,
   PortfolioStatusResponse,
   ProfileResponse,
   RandomQuoteResponse,
@@ -220,6 +221,19 @@ function toProfileResponse(body: unknown): ProfileResponse {
     resume,
     publishedAt: typeof b.publishedAt === "string" ? b.publishedAt : null,
   };
+}
+
+/** The saved interview introduction, if any (GET /api/profile/introduction). */
+export async function getIntroduction(): Promise<ApiResult<IntroductionResponse>> {
+  if (USE_MOCK_API) return mockApi.getIntroduction();
+  const result = await getJson("/api/profile/introduction");
+  return result.ok ? { ok: true, data: result.data as IntroductionResponse } : result;
+}
+
+/** Writes (or rewrites) the introduction from the latest resume (POST /api/profile/introduction); takes up to a minute. */
+export function writeIntroduction(): Promise<ApiResult<IntroductionResponse>> {
+  if (USE_MOCK_API) return mockApi.writeIntroduction();
+  return sendJson<Record<string, never>, IntroductionResponse>("POST", "/api/profile/introduction", {});
 }
 
 /** Approves sharing (POST) or makes the public portfolio private again (DELETE /api/profile/public). */

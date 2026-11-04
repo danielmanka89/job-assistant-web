@@ -357,6 +357,17 @@ export interface PublicPortfolio {
   profilePictureSize: { width: number; height: number } | null; // a tall or wide photo is shown at its own shape
 }
 
+/** The interview introduction from GET/POST /api/profile/introduction. */
+export interface IntroductionResponse {
+  introduction: {
+    paragraphs: string[];
+    wordCount: number;
+    createdAt: string; // ISO 8601
+    upToDate: boolean; // false when it was written from an older resume
+  } | null;
+  hasResume: boolean;
+}
+
 /** Returned by POST and DELETE /api/profile/public: whether the portfolio is shared, and its link. */
 export interface PortfolioStatusResponse {
   userId: string;

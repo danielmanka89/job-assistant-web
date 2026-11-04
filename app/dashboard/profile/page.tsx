@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AddToResumeButton } from "./add-to-resume-button";
+import { MyIntroductionButton } from "./my-introduction";
 import { PublicPortfolioButton } from "./public-portfolio-button";
 import { MarketReachPanel } from "./market-reach-panel";
 import { ProfileView } from "./profile-view";
@@ -28,6 +29,7 @@ export default function ProfilePage() {
         </div>
         {/* Stacked, so both fit beside the title at every width. */}
         <div className="flex shrink-0 flex-col gap-3 sm:items-end">
+          <MyIntroductionButton />
           <PublicPortfolioButton />
           <AddToResumeButton />
         </div>

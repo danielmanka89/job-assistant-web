@@ -18,7 +18,6 @@ type NavItem = {
   employerOnly?: boolean;
 };
 
-const TAILOR_FLOW = ["/dashboard/upload", "/dashboard/review", "/dashboard/analyze", "/dashboard/download"];
 const under = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}/`);
 
 const ICON = "size-5 shrink-0";
@@ -78,17 +77,6 @@ const NAV: NavItem[] = [
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
         <rect x="3.5" y="4" width="17" height="16" rx="2" />
         <path d="M3.5 9.5h17M3.5 14.75h17M9.5 9.5V20" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/dashboard/upload",
-    label: "Upload Resume",
-    match: (p) => TAILOR_FLOW.some((prefix) => under(p, prefix)),
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" strokeLinejoin="round" />
-        <path d="M14 3v5h5M12 18v-6m0 0-2.5 2.5M12 12l2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },

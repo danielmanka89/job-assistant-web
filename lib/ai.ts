@@ -345,3 +345,63 @@ export async function generateSummaryOptions(
   if (options.some((s) => !s)) throw new AiError("unreadable", "A summary option came back empty");
   return options;
 }
+
+// ---------------------------------------------------------------------------
+// Interview introduction (practice script for "Tell me about yourself")
+// ---------------------------------------------------------------------------
+
+const IntroductionSchema = z.object({
+  paragraphs: z
+    .array(z.string())
+    .describe("The introduction as spoken paragraphs, in order, each 60-160 words. Plain text, no headings or bullets."),
+});
+
+const INTRODUCTION_SYSTEM_PROMPT = `You write a candidate's spoken self-introduction for job interviews, so they can practise reading it aloud.
+
+Write in the first person, as the candidate speaking: warm, natural, conversational English, like a confident person talking to an interviewer. Use contractions and short-to-medium sentences that are easy to say aloud. No headings, bullet points, emojis or stage directions. Avoid buzzword soup and filler.
+
+Length: 1,700 to 2,000 words in total (never under 1,500), split into paragraphs of 60 to 160 words.
+
+Cover everything in the resume, in this order:
+1. A short greeting and who I am: my current or most recent role, years of experience, and what I focus on.
+2. Each job, most recent first: the company, my title and roughly when; what the team or product was; my day-to-day responsibilities; the projects I worked on and how I approached them; the tools and technologies I used there; and the results, using the resume's own numbers where given.
+3. My education: degrees, fields and schools, and how they shaped my work.
+4. Certifications, if any.
+5. My core skills, grouped naturally (for example languages, frameworks, cloud, data), told as how I use them rather than a list.
+6. How I work with people: collaboration, communication, ownership, learning, drawn from what the resume shows.
+7. A brief, forward-looking close: what I'm looking for next and why I'd be a good fit, then a simple thank-you.
+
+Facts: use only what the resume says. Never invent employers, dates, projects, numbers, certifications or tools. Where the resume is thin, describe the work in general, honest terms ("my day-to-day was mostly…") rather than making details up. Say dates naturally ("since January 2024", "for about two years"), not as YYYY-MM.`;
+
+/**
+ * Writes a 1,700–2,000 word spoken introduction covering the whole resume, for interview practice.
+ * Uses only facts from the resume. Throws AiError.
+ */
+export async function generateIntroduction(resume: Resume): Promise<string[]> {
+  const resumeForModel = {
+    name: resume.contact.fullName,
+    location: resume.contact.location ?? null,
+    summary: resume.summary ?? null,
+    workExperience: resume.workExperience.map((w) => ({
+      jobTitle: w.jobTitle,
+      company: w.company,
+      location: w.location ?? null,
+      startDate: w.startDate,
+      endDate: w.endDate ?? "present",
+      bullets: w.bullets.map((b) => b.text),
+    })),
+    education: resume.education.map((e) => ({
+      degree: e.degree,
+      fieldOfStudy: e.fieldOfStudy ?? null,
+      institution: e.institution,
+      startDate: e.startDate ?? null,
+      endDate: e.endDate === null ? "in progress" : (e.endDate ?? null),
+    })),
+    skills: resume.skills,
+    certifications: resume.certifications ?? [],
+  };
+  const result = await callStructured(IntroductionSchema, INTRODUCTION_SYSTEM_PROMPT, `<resume>\n${JSON.stringify(resumeForModel, null, 2)}\n</resume>`);
+  const paragraphs = result.paragraphs.map((p) => p.trim()).filter(Boolean);
+  if (!paragraphs.length) throw new AiError("unreadable", "The introduction came back empty");
+  return paragraphs;
+}
