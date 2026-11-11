@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ApiError, DashboardStats, GeneratedFile, TailoredResumeWithFiles } from "@/lib/types";
-import { getDashboardStats, listTailoredResumes, logout } from "@/lib/client/api";
+import type { ApiError, DashboardStats, GeneratedFile, Submission, TailoredResumeWithFiles } from "@/lib/types";
+import { getDashboardStats, listSubmissions, listTailoredResumes, logout } from "@/lib/client/api";
+import { appliedCounts } from "@/lib/deadlines";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { ErrorAlert } from "@/components/ui/alert";
 import { ScoreBadge } from "@/components/ui/score-badge";
@@ -21,19 +22,21 @@ export function DashboardOverview() {
   const user = useCurrentUser();
   const [stats, setStats] = useState<Load<DashboardStats>>({ status: "loading" });
   const [resumes, setResumes] = useState<Load<TailoredResumeWithFiles[]>>({ status: "loading" });
+  const [applications, setApplications] = useState<Load<Submission[]>>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getDashboardStats(), listTailoredResumes()]).then(async ([s, r]) => {
+    Promise.all([getDashboardStats(), listTailoredResumes(), listSubmissions()]).then(async ([s, r, a]) => {
       if (!active) return;
-      if ((!s.ok && isUnauthorized(s.error)) || (!r.ok && isUnauthorized(r.error))) {
+      if ([s, r, a].some((result) => !result.ok && isUnauthorized(result.error))) {
         await logout();
         router.replace("/login");
         return;
       }
       setStats(s.ok ? { status: "ready", data: s.data } : { status: "error", message: s.error.message });
       setResumes(r.ok ? { status: "ready", data: r.data } : { status: "error", message: r.error.message });
+      setApplications(a.ok ? { status: "ready", data: a.data } : { status: "error", message: a.error.message });
     });
     return () => {
       active = false;
@@ -43,6 +46,7 @@ export function DashboardOverview() {
   function retry() {
     setStats({ status: "loading" });
     setResumes({ status: "loading" });
+    setApplications({ status: "loading" });
     setAttempt((n) => n + 1);
   }
 
@@ -79,7 +83,7 @@ export function DashboardOverview() {
         </div>
       )}
 
-      <StatCards stats={stats} resumes={resumes} />
+      <StatCards stats={stats} applications={applications} />
 
       <section aria-labelledby="my-resumes">
         <h2 id="my-resumes" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
@@ -96,42 +100,40 @@ export function DashboardOverview() {
 
 /* ---------- Stats ---------- */
 
-const percentText = (v: number | null) => (v === null ? "—" : `${v}%`);
+const monthName = new Intl.DateTimeFormat(undefined, { month: "long" });
 
-function StatCards({ stats, resumes }: { stats: Load<DashboardStats>; resumes: Load<TailoredResumeWithFiles[]> }) {
+function StatCards({ stats, applications }: { stats: Load<DashboardStats>; applications: Load<Submission[]> }) {
   if (stats.status === "error") return null;
   const s = stats.status === "ready" ? stats.data : null;
-  // The stats endpoint has no best score, so take it from the saved scores in the list.
-  const best =
-    resumes.status === "ready"
-      ? resumes.data.reduce<number | null>(
-          (max, r) => (r.finalMatchPercent === null ? max : Math.max(max ?? 0, r.finalMatchPercent)),
-          null,
-        )
-      : undefined;
+  // Counted here, not on the server, so "today" and "this week" follow the viewer's own calendar.
+  const now = new Date();
+  const applied = applications.status === "ready" ? appliedCounts(applications.data, now) : null;
+  // null shows the loading bar; a dash means the applications couldn't be loaded.
+  const appliedText = (n: number | undefined) => (n === undefined ? (applications.status === "error" ? "—" : null) : String(n));
+  // Layout: the two totals on the first row and the three applied counts below. On narrow screens
+  // (two columns) Today spans the row, so no card is left on its own.
+  const total = "lg:col-span-3";
+  const count = "lg:col-span-2";
   const cards = [
-    { label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
-    { label: "Average Match", value: s && percentText(s.averageMatchPercent), hint: "Final keyword match", icon: <GaugeIcon /> },
+    { layout: total, label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
     {
-      label: "Best Match",
-      value: best === undefined ? (resumes.status === "error" ? "—" : null) : percentText(best),
-      hint: "Your top result",
-      icon: <TrophyIcon />,
-    },
-    {
+      layout: total,
       label: "Open Jobs",
       value: s && String(s.jobs.total),
       hint: s ? `${s.jobs.native} posted on JobAssistant` : "On the job board",
       icon: <BriefcaseIcon />,
     },
+    { layout: `min-[420px]:col-span-2 ${count}`, label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
+    { layout: count, label: "This Week", value: appliedText(applied?.week), hint: "Jobs applied since Monday", icon: <CalendarIcon /> },
+    { layout: count, label: "This Month", value: appliedText(applied?.month), hint: `Jobs applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
   ];
 
   return (
-    <section aria-label="Your stats" aria-busy={!s} className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Your stats" aria-busy={!s} className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-6">
       {cards.map((card) => (
         <div
           key={card.label}
-          className="group relative overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60"
+          className={`${card.layout} group relative overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60`}
         >
           <span
             className="pointer-events-none absolute -top-10 -right-10 size-28 rounded-full bg-brand-500/5 transition group-hover:bg-brand-500/10"
@@ -139,7 +141,7 @@ function StatCards({ stats, resumes }: { stats: Load<DashboardStats>; resumes: L
           />
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{card.label}</p>
-            <span className="grid size-10 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
               {card.icon}
             </span>
           </div>
@@ -304,20 +306,19 @@ function SparkIcon() {
   );
 }
 
-function GaugeIcon() {
+function SendIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <path d="M4.5 17a8.5 8.5 0 1 1 15 0" strokeLinecap="round" />
-      <path d="m12 14 4-5" strokeLinecap="round" />
-      <circle cx="12" cy="14" r="1.5" fill="currentColor" />
+      <path d="M20.5 3.5 10 14M20.5 3.5 14 20.5l-4-6.5-6.5-4 17-6.5Z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function TrophyIcon() {
+function CalendarIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <path d="M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" strokeLinecap="round" />
     </svg>
   );
 }

@@ -35,6 +35,24 @@ export function localDate(now: Date): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+/** How many jobs the user applied to today, this week (from Monday) and this month, on their own calendar. */
+export function appliedCounts(rows: Submission[], now: Date): { today: number; week: number; month: number } {
+  const today = localDate(now);
+  const weekStart = addDays(today, -((now.getDay() + 6) % 7)); // Monday
+  const monthStart = `${today.slice(0, 8)}01`;
+  const counts = { today: 0, week: 0, month: 0 };
+  for (const row of rows) {
+    // The date typed on the Spreadsheet wins; otherwise the day the row was added.
+    const typed = row.submission.submittedOn;
+    const on = isDateString(typed) ? typed : localDate(new Date(row.createdAt));
+    if (!isDateString(on) || on > today) continue;
+    if (on === today) counts.today += 1;
+    if (on >= weekStart) counts.week += 1;
+    if (on >= monthStart) counts.month += 1;
+  }
+  return counts;
+}
+
 /** The tracker items for one Spreadsheet row: its interview, or a follow-up if it's still waiting for a reply. */
 export function submissionDeadlines(row: Submission): DeadlineItem[] {
   const cells = row.submission;
