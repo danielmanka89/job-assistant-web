@@ -59,6 +59,8 @@ import { marketReach } from "@/lib/market-reach";
 import { isEmptyProfile, profileFromResume, syncProfileToResume } from "@/lib/profile";
 import { SHEETS, buildSubmissionWorkbook, prefillSubmission, validateSheetValues } from "@/lib/spreadsheet";
 import { XLSX_MIME } from "@/lib/xlsx";
+import { addDays, customDeadline, customDeadlineId, localDate, submissionDeadlines } from "@/lib/deadlines";
+import type { CreateDeadlineRequest, DeadlineItem } from "@/lib/types";
 import type { ApiResult } from "./api";
 import { readStoredUser } from "./current-user";
 import { SESSION_COOKIE } from "./session";
@@ -873,6 +875,41 @@ async function exportSubmissions(): Promise<ApiResult<Blob>> {
   return { ok: true, data: new Blob([new Uint8Array(bytes)], { type: XLSX_MIME }) };
 }
 
+// The deadline tracker's own deadlines, kept in memory for this page load.
+let mockDeadlines: { id: string; title: string; dueOn: string; done: boolean }[] | null = null;
+
+function mockDeadlineRows() {
+  if (mockDeadlines) return mockDeadlines;
+  const today = localDate(new Date());
+  return (mockDeadlines = isNewUser() ? [] : [{ id: "deadline_mock_1", title: "Send references", dueOn: addDays(today, 2), done: false }]);
+}
+
+async function listDeadlines(): Promise<ApiResult<DeadlineItem[]>> {
+  await delay(300);
+  return { ok: true, data: [...mockSubmissionRows().flatMap(submissionDeadlines), ...mockDeadlineRows().map(customDeadline)] };
+}
+
+async function createDeadline(request: CreateDeadlineRequest): Promise<ApiResult<DeadlineItem>> {
+  await delay(200);
+  const row = { id: `deadline_mock_${Date.now()}`, title: request.title.trim(), dueOn: request.dueOn, done: false };
+  mockDeadlineRows().push(row);
+  return { ok: true, data: customDeadline(row) };
+}
+
+async function updateDeadline(itemId: string, done: boolean): Promise<ApiResult<DeadlineItem>> {
+  await delay(150);
+  const row = mockDeadlineRows().find((d) => d.id === customDeadlineId(itemId));
+  if (!row) return { ok: false, error: { code: "DEADLINE_NOT_FOUND", message: "That deadline was removed" } };
+  row.done = done;
+  return { ok: true, data: customDeadline(row) };
+}
+
+async function deleteDeadline(itemId: string): Promise<ApiResult<null>> {
+  await delay(150);
+  mockDeadlines = mockDeadlineRows().filter((d) => d.id !== customDeadlineId(itemId));
+  return { ok: true, data: null };
+}
+
 export const mockApi = {
   getIntroduction,
   writeIntroduction,
@@ -910,4 +947,8 @@ export const mockApi = {
   updateSubmission,
   deleteSubmission,
   exportSubmissions,
+  listDeadlines,
+  createDeadline,
+  updateDeadline,
+  deleteDeadline,
 };

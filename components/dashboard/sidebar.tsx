@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/brand";
 import { Avatar } from "@/components/ui/avatar";
 import { SidebarClocks } from "@/components/dashboard/us-clocks";
+import { DeadlineTracker } from "@/components/dashboard/deadline-tracker";
 import { logout } from "@/lib/client/api";
 import { useCurrentUser } from "@/lib/client/current-user";
 import type { User } from "@/lib/types";
@@ -230,6 +231,8 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </li>
         </ul>
       </nav>
+
+      {user?.role !== "EMPLOYER" && <DeadlineTracker />}
     </div>
   );
 }

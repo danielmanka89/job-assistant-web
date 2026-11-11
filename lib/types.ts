@@ -450,3 +450,34 @@ export interface UpdateLearningPathRequest {
   status?: LearningStatus;
   completedSteps?: string[];
 }
+
+/** Where a deadline tracker item comes from: a Spreadsheet row, a learning path or the user's own list. */
+export type DeadlineKind = "interview" | "follow_up" | "learning" | "custom";
+
+/** One item in the sidebar's deadline tracker. */
+export interface DeadlineItem {
+  id: string; // unique across kinds, e.g. "interview:<submissionId>"; custom items use "custom:<deadlineId>"
+  kind: DeadlineKind;
+  title: string;
+  detail: string;
+  dueOn: string | null; // "YYYY-MM-DD"; null for learning paths, which have no date
+  progress: number | null; // 0-100 for learning paths
+  done: boolean; // only custom items can be done
+  href: string | null; // the page the item opens
+}
+
+/** Returned by GET /api/deadlines. */
+export interface DeadlineListResponse {
+  items: DeadlineItem[];
+}
+
+/** POST /api/deadlines: adds one of the user's own deadlines. */
+export interface CreateDeadlineRequest {
+  title: string;
+  dueOn: string; // "YYYY-MM-DD"
+}
+
+/** PATCH /api/deadlines/:id. */
+export interface UpdateDeadlineRequest {
+  done: boolean;
+}
