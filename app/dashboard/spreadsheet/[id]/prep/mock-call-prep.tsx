@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMockCallPrep, logout, writeMockCallPrep } from "@/lib/client/api";
@@ -37,6 +37,13 @@ export function MockCallPrep({ submissionId }: { submissionId: string }) {
   const [jobDescriptionError, setJobDescriptionError] = useState<string | null>(null);
   const [filter, setFilter] = useState<PrepCategory | "all">("all");
   const [practice, setPractice] = useState(false); // answers hidden until each is opened
+  const jobDescriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [focusJobDescription, setFocusJobDescription] = useState(0);
+
+  // After a rejected job description, put the cursor back in the box (it re-renders once writing ends).
+  useEffect(() => {
+    if (focusJobDescription) jobDescriptionRef.current?.focus();
+  }, [focusJobDescription]);
 
   const signOut = useCallback(async () => {
     await logout();
@@ -68,8 +75,10 @@ export function MockCallPrep({ submissionId }: { submissionId: string }) {
     if (!result.ok) {
       if (isUnauthorized(result.error)) return void signOut();
       const fieldError = result.error.fieldErrors?.jobDescription;
-      if (fieldError) setJobDescriptionError(fieldError);
-      else setWriteError(result.error.message);
+      if (fieldError) {
+        setJobDescriptionError(fieldError);
+        setFocusJobDescription((n) => n + 1);
+      } else setWriteError(result.error.message);
       return;
     }
     setLoad({ status: "ready", data: result.data });
@@ -103,7 +112,11 @@ export function MockCallPrep({ submissionId }: { submissionId: string }) {
         )}
       </div>
 
-      {load.status === "loading" && <div className="h-64 animate-pulse rounded-3xl bg-neutral-100 dark:bg-neutral-900" aria-hidden="true" />}
+      {load.status === "loading" && (
+        <div role="status" className="h-64 animate-pulse rounded-3xl bg-neutral-100 dark:bg-neutral-900">
+          <span className="sr-only">Loading your call prep…</span>
+        </div>
+      )}
       {load.status === "error" && <ErrorAlert>{load.message}</ErrorAlert>}
 
       {data && !data.hasResume && (
@@ -146,6 +159,7 @@ export function MockCallPrep({ submissionId }: { submissionId: string }) {
                 This row was added by hand, so paste the job description to prepare against.
               </p>
               <textarea
+                ref={jobDescriptionRef}
                 id="prep-jd"
                 rows={8}
                 value={jobDescription}
@@ -201,7 +215,8 @@ export function MockCallPrep({ submissionId }: { submissionId: string }) {
 
           <ol className="space-y-3">
             {shown.map((q) => (
-              <li key={q.number} className="rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-neutral-800 dark:bg-neutral-900/60">
+              // value keeps the list number in step with the badge when the list is filtered.
+              <li key={q.number} value={q.number} className="rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-neutral-800 dark:bg-neutral-900/60">
                 <div className="flex items-start gap-4">
                   <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-50 font-display text-sm font-semibold text-brand-700 tabular-nums dark:bg-brand-500/15 dark:text-brand-300">
                     {q.number}
