@@ -110,49 +110,48 @@ function StatCards({ stats, applications }: { stats: Load<DashboardStats>; appli
   const applied = applications.status === "ready" ? appliedCounts(applications.data, now) : null;
   // null shows the loading bar; a dash means the applications couldn't be loaded.
   const appliedText = (n: number | undefined) => (n === undefined ? (applications.status === "error" ? "—" : null) : String(n));
-  // Layout: the two totals on the first row and the three applied counts below. On narrow screens
-  // (two columns) Today spans the row, so no card is left on its own.
-  const total = "lg:col-span-3";
-  const count = "lg:col-span-2";
+  // Layout: all five in one row on wide screens. On narrower ones (two columns) Resumes Tailored
+  // spans the row, so no card is left on its own.
   const cards = [
-    { layout: total, label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
+    { layout: "min-[420px]:col-span-2 xl:col-span-1", label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
+    { layout: "", label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
+    { layout: "", label: "This Week", value: appliedText(applied?.week), hint: "Applied since Monday", icon: <CalendarIcon /> },
+    { layout: "", label: "This Month", value: appliedText(applied?.month), hint: `Applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
     {
-      layout: total,
+      layout: "",
       label: "Open Jobs",
       value: s && String(s.jobs.total),
-      hint: s ? `${s.jobs.native} posted on JobAssistant` : "On the job board",
+      hint: s ? `${s.jobs.native} on JobAssistant` : "On the job board",
       icon: <BriefcaseIcon />,
     },
-    { layout: `min-[420px]:col-span-2 ${count}`, label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
-    { layout: count, label: "This Week", value: appliedText(applied?.week), hint: "Jobs applied since Monday", icon: <CalendarIcon /> },
-    { layout: count, label: "This Month", value: appliedText(applied?.month), hint: `Jobs applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
   ];
 
   return (
-    <section aria-label="Your stats" aria-busy={!s} className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-6">
+    <section aria-label="Your stats" aria-busy={!s} className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-5 xl:gap-3">
       {cards.map((card) => (
+        // Compact: five have to fit side by side, so the icon shares the number's row and the label keeps the full width.
         <div
           key={card.label}
-          className={`${card.layout} group relative overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60`}
+          className={`${card.layout} group relative overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60`}
         >
           <span
-            className="pointer-events-none absolute -top-10 -right-10 size-28 rounded-full bg-brand-500/5 transition group-hover:bg-brand-500/10"
+            className="pointer-events-none absolute -right-10 -bottom-10 size-28 rounded-full bg-brand-500/5 transition group-hover:bg-brand-500/10"
             aria-hidden="true"
           />
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{card.label}</p>
-            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+          <p className="text-sm font-medium whitespace-nowrap text-neutral-500 dark:text-neutral-400">{card.label}</p>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            {card.value === null ? (
+              <span className="block h-9 w-16 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
+            ) : (
+              <p className="font-display text-4xl leading-9 font-semibold tracking-tight text-neutral-900 tabular-nums dark:text-white">
+                {card.value}
+              </p>
+            )}
+            <span className="grid size-9 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
               {card.icon}
             </span>
           </div>
-          {card.value === null ? (
-            <span className="mt-3 block h-9 w-20 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
-          ) : (
-            <p className="mt-3 font-display text-4xl font-semibold tracking-tight text-neutral-900 tabular-nums dark:text-white">
-              {card.value}
-            </p>
-          )}
-          <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">{card.hint}</p>
+          <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">{card.hint}</p>
         </div>
       ))}
     </section>
