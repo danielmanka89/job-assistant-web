@@ -302,7 +302,7 @@ function PanelHeader({
           type="button"
           onClick={onClose}
           aria-label="Close deadlines"
-          className="grid size-9 place-items-center rounded-xl text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-white"
+          className="grid size-9 place-items-center rounded-xl text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none dark:hover:bg-neutral-800 dark:hover:text-white"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5" aria-hidden="true">
             <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
@@ -321,7 +321,7 @@ function PanelHeader({
             type="button"
             onClick={() => onView(v.key)}
             aria-pressed={view === v.key}
-            className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition ${
+            className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none ${
               view === v.key
                 ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-white"
                 : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
@@ -394,20 +394,44 @@ const TABS: { kind: DeadlineKind; label: string }[] = [
 function TabsView({ items, ...handlers }: { items: DeadlineItem[] } & ItemHandlers) {
   const [tab, setTab] = useState<DeadlineKind>(() => TABS.find((t) => items.some((i) => i.kind === t.kind && !i.done))?.kind ?? "interview");
   const list = items.filter((i) => i.kind === tab);
+  const baseId = useId();
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Arrow keys, Home and End move between tabs (one Tab stop for the whole row).
+  function onTabKey(e: React.KeyboardEvent, index: number) {
+    const last = TABS.length - 1;
+    let to: number | null = null;
+    if (e.key === "ArrowRight") to = index === last ? 0 : index + 1;
+    else if (e.key === "ArrowLeft") to = index === 0 ? last : index - 1;
+    else if (e.key === "Home") to = 0;
+    else if (e.key === "End") to = last;
+    if (to === null) return;
+    e.preventDefault();
+    setTab(TABS[to].kind);
+    tabRefs.current[to]?.focus();
+  }
+
   return (
     <>
-      <div role="tablist" aria-label="Deadline type" className="sticky top-0 z-10 flex gap-1 overflow-x-auto bg-white pt-2 pb-2 dark:bg-neutral-950">
-        {TABS.map((t) => {
+      <div role="tablist" aria-label="Deadline type" className="sticky top-0 z-10 flex gap-1 overflow-x-auto bg-white px-1 pt-2 pb-2 dark:bg-neutral-950">
+        {TABS.map((t, index) => {
           const count = items.filter((i) => i.kind === t.kind && !i.done).length;
           const active = tab === t.kind;
           return (
             <button
               key={t.kind}
+              ref={(el) => {
+                tabRefs.current[index] = el;
+              }}
+              id={`${baseId}-tab-${t.kind}`}
               type="button"
               role="tab"
               aria-selected={active}
+              aria-controls={`${baseId}-panel`}
+              tabIndex={active ? 0 : -1}
               onClick={() => setTab(t.kind)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
+              onKeyDown={(e) => onTabKey(e, index)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold transition focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none ${
                 active ? "bg-brand-600 text-white" : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
@@ -417,15 +441,17 @@ function TabsView({ items, ...handlers }: { items: DeadlineItem[] } & ItemHandle
           );
         })}
       </div>
-      {list.length ? (
-        <ul role="tabpanel" className="space-y-1">
-          {list.map((item) => (
-            <ItemRow key={item.id} item={item} {...handlers} />
-          ))}
-        </ul>
-      ) : (
-        <Empty kind={tab} />
-      )}
+      <div role="tabpanel" id={`${baseId}-panel`} aria-labelledby={`${baseId}-tab-${tab}`}>
+        {list.length ? (
+          <ul className="space-y-1">
+            {list.map((item) => (
+              <ItemRow key={item.id} item={item} {...handlers} />
+            ))}
+          </ul>
+        ) : (
+          <Empty kind={tab} />
+        )}
+      </div>
     </>
   );
 }
@@ -532,7 +558,8 @@ function ItemRow({ item, today, onToggle, onRemove, onNavigate, compact = false 
           type="button"
           onClick={() => onRemove(item)}
           aria-label={`Delete "${item.title}"`}
-          className="grid size-7 shrink-0 place-items-center rounded-lg text-neutral-400 opacity-0 transition group-hover/row:opacity-100 hover:bg-neutral-100 hover:text-red-600 focus-visible:opacity-100 dark:hover:bg-neutral-800"
+          // Always shown on touch screens (no hover there); elsewhere it appears on row hover or focus.
+          className="grid size-7 shrink-0 place-items-center rounded-lg text-neutral-500 transition group-hover/row:opacity-100 hover:bg-neutral-100 hover:text-red-600 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none [@media(hover:hover)]:opacity-0 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-4" aria-hidden="true">
             <path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" strokeLinecap="round" strokeLinejoin="round" />
@@ -543,7 +570,7 @@ function ItemRow({ item, today, onToggle, onRemove, onNavigate, compact = false 
   }
   return (
     <li>
-      <Link href={item.href ?? "#"} onClick={onNavigate} className={`${rowClass} transition hover:bg-neutral-100 dark:hover:bg-neutral-800/70`}>
+      <Link href={item.href ?? "#"} onClick={onNavigate} className={`${rowClass} transition hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:hover:bg-neutral-800/70`}>
         {!compact && <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${iconTone}`}>{KIND_ICON[item.kind]}</span>}
         {body}
       </Link>
@@ -623,7 +650,7 @@ function AddDeadlineForm({ today, onAdded }: { today: string | null; onAdded: (i
         <button
           type="submit"
           disabled={saving || !date}
-          className="flex-[1_1_4rem] rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 disabled:opacity-60"
+          className="flex-[1_1_4rem] rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none disabled:opacity-60"
         >
           {saving ? "Adding…" : "Add"}
         </button>
