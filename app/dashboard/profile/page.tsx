@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AddToResumeButton } from "./add-to-resume-button";
-import { MyIntroductionButton } from "./my-introduction";
+// Hidden for now; restore this import and the button below to bring My Introduction back.
+// import { MyIntroductionButton } from "./my-introduction";
 import { PublicPortfolioButton } from "./public-portfolio-button";
 import { MarketReachPanel } from "./market-reach-panel";
 import { ProfileView } from "./profile-view";
@@ -29,9 +30,9 @@ export default function ProfilePage() {
         </div>
         {/* Stacked, so both fit beside the title at every width. */}
         <div className="flex shrink-0 flex-col gap-3 sm:items-end">
-          <MyIntroductionButton />
-          <PublicPortfolioButton />
+          {/* <MyIntroductionButton /> */}
           <AddToResumeButton />
+          <PublicPortfolioButton />
         </div>
       </div>
       <div className="grid items-start gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-stretch lg:gap-8">

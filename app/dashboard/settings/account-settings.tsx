@@ -13,6 +13,7 @@ import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldEr
 import { ErrorAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
+import { ThemePicker } from "@/components/theme-toggle";
 import { THEME_COLOR_LABEL, CLOCK_TEMPLATE_LABEL, UsClocks } from "@/components/dashboard/us-clocks";
 
 type Load = { status: "loading" } | { status: "ready"; user: User } | { status: "error"; message: string };
@@ -82,6 +83,7 @@ export function AccountSettings() {
 
   return (
     <div className="space-y-6">
+      <AppearanceCard />
       <ThemeColorForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PhotoForm kind="menu" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PhotoForm kind="portfolio" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
@@ -379,6 +381,27 @@ function PortfolioThumb({ name, url }: { name: string; url: string | null }) {
     <span className="relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-2xl bg-neutral-100 ring-4 ring-white/80 dark:bg-neutral-800 dark:ring-neutral-800">
       <Image src={url} alt="" fill unoptimized sizes="96px" className="object-contain" />
     </span>
+  );
+}
+
+/* ---------- Appearance ---------- */
+
+/** Light, dark or black & white. Kept in this browser, not on the account. */
+function AppearanceCard() {
+  return (
+    <SettingsCard
+      id="appearance-title"
+      title="Appearance"
+      description="Light, dark or black & white. Saved on this device; until you pick one, the app follows your device's setting."
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none" />
+        </svg>
+      }
+    >
+      <ThemePicker />
+    </SettingsCard>
   );
 }
 

@@ -35,6 +35,7 @@ model User {
   submissions     Submission[]
   profile         CandidateProfile?
   learningPaths   LearningPath[]
+  deadlines       Deadline[]
   profilePhoto    ProfilePhoto?
   avatarPhoto     AvatarPhoto?
   introduction    Introduction?
@@ -202,6 +203,21 @@ model CandidateProfile {
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+// A deadline the user added themselves in the sidebar's deadline tracker. Interviews, follow-ups and
+// learning in the tracker come from Submission and LearningPath rows instead (lib/deadlines.ts).
+model Deadline {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  dueOn     String // "YYYY-MM-DD", the same shape as the Spreadsheet's date cells
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, dueOn])
 }
 
 // A skill the user chose to learn from the Learning page, with their roadmap progress.

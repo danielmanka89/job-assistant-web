@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Oswald } from "next/font/google";
 import { ThemeAccent } from "@/components/theme-accent";
 import { ACCENT_INIT_SCRIPT } from "@/lib/theme-color";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeSync } from "@/components/theme-toggle";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-init";
 import "./globals.css";
 
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full">
         {children}
-        <ThemeToggle />
+        <ThemeSync />
         <ThemeAccent />
       </body>
     </html>

@@ -90,34 +90,62 @@ const OPTIONS: { theme: Theme; label: string; icon: ReactNode }[] = [
 ];
 
 /**
- * Round button pinned to the top-right corner. Each click moves to the next theme:
- * Light → Dark → Black & White → Light. The icon shows the theme on screen now.
+ * Keeps this tab in step when the theme is switched in another tab. Shows nothing; it sits in the
+ * root layout so every page listens, not just Settings.
  */
-export function ThemeToggle() {
-  const theme = useSyncExternalStore<Theme | null>(subscribe, currentTheme, () => null);
-  // Set only on click, so screen readers hear the change but nothing is announced on page load.
-  const [announcement, setAnnouncement] = useState("");
-  const index = OPTIONS.findIndex((o) => o.theme === theme);
-  const current = OPTIONS[index];
-  const next = OPTIONS[(index + 1) % OPTIONS.length];
+export function ThemeSync() {
+  useSyncExternalStore<Theme | null>(subscribe, currentTheme, () => null);
+  return null;
+}
 
-  function cycle() {
-    choose(next.theme);
-    setAnnouncement(`${next.label} theme`);
-  }
+/**
+ * Light / Dark / Black & White picker for the Settings page. The choice applies at once and is kept
+ * in this browser. Nothing is selected until the page has loaded, since the server can't know it.
+ */
+export function ThemePicker() {
+  const theme = useSyncExternalStore<Theme | null>(subscribe, currentTheme, () => null);
+  // Set only on a change, so screen readers hear it but nothing is announced on page load.
+  const [announcement, setAnnouncement] = useState("");
 
   return (
     <>
-      <button
-        type="button"
-        onClick={cycle}
-        // The accessible name stays the same on every click; the live region below says what changed.
-        aria-label="Theme"
-        title={current ? `Theme: ${current.label} (click for ${next.label})` : "Theme"}
-        className="fixed top-3 right-3 z-[60] grid size-10 place-items-center rounded-full border border-neutral-200 bg-white/90 text-neutral-800 shadow-md backdrop-blur transition outline-none hover:border-neutral-300 hover:bg-white focus-visible:ring-4 focus-visible:ring-brand-500/30 active:scale-95 dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-neutral-100 dark:hover:border-neutral-500 dark:hover:bg-neutral-900"
-      >
-        {current?.icon ?? <span className="size-5" aria-hidden="true" />}
-      </button>
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend className="sr-only">Appearance</legend>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {OPTIONS.map((option) => {
+            const selected = theme === option.theme;
+            return (
+              <label
+                key={option.theme}
+                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/30 ${
+                  selected
+                    ? "border-brand-600 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10"
+                    : "border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="appearance"
+                  value={option.theme}
+                  checked={selected}
+                  onChange={() => {
+                    choose(option.theme);
+                    setAnnouncement(`${option.label} theme`);
+                  }}
+                  className="sr-only"
+                />
+                <span
+                  className="grid size-10 shrink-0 place-items-center rounded-full border border-neutral-200 bg-white text-neutral-800 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                  aria-hidden="true"
+                >
+                  {option.icon}
+                </span>
+                <span className="min-w-0 font-semibold text-neutral-900 dark:text-white">{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
       <span role="status" aria-live="polite" className="sr-only">
         {announcement}
       </span>

@@ -3,7 +3,9 @@ import type {
   AddSkillsRequest,
   ApiError,
   AuthResponse,
+  CreateDeadlineRequest,
   CreateSubmissionRequest,
+  DeadlineItem,
   CreateSubmissionResponse,
   GapAnalysisRequest,
   CreateJobPostingRequest,
@@ -38,6 +40,8 @@ import { toDashboardStats, toTailoredResumeList } from "./dashboard";
 import { toJobList } from "./jobs";
 import { toCreateSubmissionResponse, toSubmission, toSubmissionList } from "./submissions";
 import { mockApi } from "./mock";
+import { customDeadlineId } from "@/lib/deadlines";
+import { toDeadlineItem, toDeadlineList } from "./deadlines";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
@@ -291,6 +295,46 @@ export async function removeLearningPath(id: string): Promise<ApiResult<null>> {
   let res: Response;
   try {
     res = await fetch(`/api/learning/paths/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "same-origin" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (res.ok) return { ok: true, data: null };
+  return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
+}
+
+/** Everything the sidebar's deadline tracker shows, from GET /api/deadlines. */
+export async function listDeadlines(): Promise<ApiResult<DeadlineItem[]>> {
+  if (USE_MOCK_API) return mockApi.listDeadlines();
+  const result = await getJson("/api/deadlines");
+  return result.ok ? { ok: true, data: toDeadlineList(result.data) } : result;
+}
+
+/** Adds one of the user's own deadlines with POST /api/deadlines. */
+export async function createDeadline(request: CreateDeadlineRequest): Promise<ApiResult<DeadlineItem>> {
+  if (USE_MOCK_API) return mockApi.createDeadline(request);
+  const result = await postJson<CreateDeadlineRequest, unknown>("/api/deadlines", request);
+  if (!result.ok) return result;
+  const data = toDeadlineItem(result.data);
+  return data ? { ok: true, data } : { ok: false, error: toApiError(null, 500) };
+}
+
+/** Ticks one of the user's own deadlines off (or back on). Takes the tracker item id ("custom:<id>"). */
+export async function updateDeadline(itemId: string, done: boolean): Promise<ApiResult<DeadlineItem>> {
+  if (USE_MOCK_API) return mockApi.updateDeadline(itemId, done);
+  const id = customDeadlineId(itemId) ?? itemId;
+  const result = await sendJson<{ done: boolean }, unknown>("PATCH", `/api/deadlines/${encodeURIComponent(id)}`, { done });
+  if (!result.ok) return result;
+  const data = toDeadlineItem(result.data);
+  return data ? { ok: true, data } : { ok: false, error: toApiError(null, 500) };
+}
+
+/** Removes one of the user's own deadlines. Takes the tracker item id ("custom:<id>"). */
+export async function deleteDeadline(itemId: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) return mockApi.deleteDeadline(itemId);
+  const id = customDeadlineId(itemId) ?? itemId;
+  let res: Response;
+  try {
+    res = await fetch(`/api/deadlines/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "same-origin" });
   } catch {
     return { ok: false, error: NETWORK_ERROR };
   }

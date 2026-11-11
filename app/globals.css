@@ -110,6 +110,19 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
   --animate-neon-flicker: neon-flicker 6s linear infinite;
   /* Dashboard quote banner: the red line along its top fills up until the next quote (15s). */
   --animate-quote-progress: quote-progress 15s linear both;
+  /* Sidebar deadline tracker: its panel slides out from the sidebar. */
+  --animate-panel-in: panel-in 180ms ease-out both;
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
 
   @keyframes quote-progress {
     from {
@@ -352,7 +365,7 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
 }
 
 /*
- * Themes, picked with <ThemeToggle> and stored as data-theme on <html>:
+ * Themes, picked with <ThemePicker> (Settings) and stored as data-theme on <html>:
  *   (none) follows the device's light/dark setting, "light" and "dark" force one,
  *   "mono" is black & white (always on a light background).
  * Tailwind's dark: variant follows the same rule instead of the media query alone.
