@@ -39,6 +39,56 @@ model User {
   profilePhoto    ProfilePhoto?
   avatarPhoto     AvatarPhoto?
   introduction    Introduction?
+  connectionsFrom Connection[]      @relation("ConnectionFrom")
+  connectionsTo   Connection[]      @relation("ConnectionTo")
+  conversationsA  Conversation[]    @relation("ConversationA")
+  conversationsB  Conversation[]    @relation("ConversationB")
+  messages        Message[]
+}
+
+// "fromUser is connected to toUser" (Chat > People), labelled with what they are to them. One-way,
+// like following: A can be connected to B without B being connected to A. The account's two counts
+// are the rows from the user and the rows to the user.
+model Connection {
+  id         String   @id @default(cuid())
+  fromUserId String
+  fromUser   User     @relation("ConnectionFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId   String
+  toUser     User     @relation("ConnectionTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  kind       String   @default("friend") // ConnectionKind: "friend" | "vendor" | "employer" | "recruiter" | "colleague" | "other"
+  createdAt  DateTime @default(now())
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId])
+}
+
+// A one-to-one chat. The two users are stored in id order (userAId < userBId) so a pair has one row.
+model Conversation {
+  id            String    @id @default(cuid())
+  userAId       String
+  userA         User      @relation("ConversationA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId       String
+  userB         User      @relation("ConversationB", fields: [userBId], references: [id], onDelete: Cascade)
+  aLastReadAt   DateTime? // when each side last opened the chat; later messages from the other side are unread
+  bLastReadAt   DateTime?
+  lastMessageAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  messages      Message[]
+
+  @@unique([userAId, userBId])
+  @@index([userBId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 // The candidate's AI-written interview introduction (My Profile > My Introduction), kept so it opens
