@@ -5,7 +5,8 @@ import type { JobPosting, ProfileValues, Resume, SheetKey, SheetValues, Submissi
 import { withProfile } from "@/lib/profile";
 import { scoreText } from "@/lib/skills";
 
-export type ColumnType = "text" | "date" | "select" | "long";
+// "link" columns aren't stored cells: each row shows a link to one of its pages (see linkHref).
+export type ColumnType = "text" | "date" | "select" | "long" | "link";
 
 export interface Column {
   key: string;
@@ -56,6 +57,7 @@ export const SHEETS: readonly Sheet[] = [
     key: "submission",
     title: "Submission Details",
     columns: [
+      { key: "mockCallPrep", label: "Mock Call Prep", type: "link", width: 20 },
       { key: "submittedOn", label: "Submission Date", type: "date", width: 16 },
       { key: "status", label: "Status", type: "select", options: SUBMISSION_STATUSES, width: 20 },
       { key: "candidateName", label: "Candidate Name", width: 22 },
@@ -112,6 +114,12 @@ export const SHEET_KEYS: readonly SheetKey[] = SHEETS.map((s) => s.key);
 
 export const MAX_CELL_CHARS = 2000;
 
+/** Where a "link" column points for a row, e.g. its mock call preparation page. */
+export function linkHref(column: Column, submissionId: string): string | null {
+  if (column.key === "mockCallPrep") return `/dashboard/spreadsheet/${encodeURIComponent(submissionId)}/prep`;
+  return null;
+}
+
 /** Every row is labelled by its job and client, so rows line up across the four sheets. */
 export function rowLabel(row: Pick<Submission, "submission" | "client">): { title: string; company: string } {
   return { title: row.submission.jobTitle?.trim() || "Untitled submission", company: row.client.clientCompany?.trim() || "" };
@@ -134,7 +142,7 @@ export function validateSheetValues(
   for (const [key, raw] of Object.entries(input as Record<string, unknown>)) {
     const path = `${sheet.key}.${key}`;
     const column = sheet.columns.find((c) => c.key === key);
-    if (!column) fieldErrors[path] = "Unknown column";
+    if (!column || column.type === "link") fieldErrors[path] = "Unknown column";
     else if (typeof raw !== "string") fieldErrors[path] = "Must be text";
     else {
       const value = raw.trim();
@@ -250,8 +258,11 @@ export function prefillSubmission(
   };
 }
 
-/** The Spreadsheet as an Excel workbook: one worksheet per sheet, newest submission first. */
-export async function buildSubmissionWorkbook(submissions: Submission[]): Promise<Uint8Array> {
+/**
+ * The Spreadsheet as an Excel workbook: one worksheet per sheet, newest submission first.
+ * `origin` (e.g. "https://example.com") turns link columns into full web addresses.
+ */
+export async function buildSubmissionWorkbook(submissions: Submission[], origin = ""): Promise<Uint8Array> {
   const { buildXlsx } = await import("@/lib/xlsx"); // loaded on demand so the page bundle stays small
   return buildXlsx(
     SHEETS.map((sheet) => ({
@@ -259,7 +270,7 @@ export async function buildSubmissionWorkbook(submissions: Submission[]): Promis
       columns: [{ header: "Job", width: 34 }, ...sheet.columns.map((c) => ({ header: c.label, width: c.width ?? 18 }))],
       rows: submissions.map((row) => {
         const { title, company } = rowLabel(row);
-        return [company ? `${title} — ${company}` : title, ...sheet.columns.map((c) => row[sheet.key][c.key] ?? "")];
+        return [company ? `${title} — ${company}` : title, ...sheet.columns.map((c) => (c.type === "link" ? `${origin}${linkHref(c, row.id) ?? ""}` : (row[sheet.key][c.key] ?? "")))];
       }),
     })),
   );

@@ -368,6 +368,33 @@ export interface IntroductionResponse {
   hasResume: boolean;
 }
 
+/** What a mock call question is about. */
+export const PREP_CATEGORIES = ["job", "experience", "projects", "skills", "summary"] as const;
+export type PrepCategory = (typeof PREP_CATEGORIES)[number];
+
+export interface PrepQuestion {
+  category: PrepCategory;
+  question: string;
+  answer: string; // a first-person answer the candidate can practise
+}
+
+/** Mock call preparation for one submission, from GET/POST /api/submissions/:id/prep. */
+export interface MockCallPrepResponse {
+  job: { title: string; company: string };
+  hasResume: boolean;
+  hasJobDescription: boolean; // false for a row added by hand until a job description is pasted
+  prep: {
+    questions: PrepQuestion[];
+    createdAt: string; // ISO 8601
+    upToDate: boolean; // false when it was written from an older resume
+  } | null;
+}
+
+/** POST /api/submissions/:id/prep. jobDescription is only needed for rows that have no job posting. */
+export interface WriteMockCallPrepRequest {
+  jobDescription?: string;
+}
+
 /** Returned by POST and DELETE /api/profile/public: whether the portfolio is shared, and its link. */
 export interface PortfolioStatusResponse {
   userId: string;

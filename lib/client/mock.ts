@@ -28,6 +28,9 @@ import type {
   LoginRequest,
   ProfileResponse,
   IntroductionResponse,
+  MockCallPrepResponse,
+  PrepQuestion,
+  WriteMockCallPrepRequest,
   PortfolioStatusResponse,
   ProfileValues,
   RandomQuoteResponse,
@@ -57,7 +60,7 @@ import { matchPercent, mergeSkills, scoreText } from "@/lib/skills";
 import { roadmapStepIds } from "@/lib/learning-content";
 import { marketReach } from "@/lib/market-reach";
 import { isEmptyProfile, profileFromResume, syncProfileToResume } from "@/lib/profile";
-import { SHEETS, buildSubmissionWorkbook, prefillSubmission, validateSheetValues } from "@/lib/spreadsheet";
+import { SHEETS, buildSubmissionWorkbook, prefillSubmission, rowLabel, validateSheetValues } from "@/lib/spreadsheet";
 import { XLSX_MIME } from "@/lib/xlsx";
 import { addDays, customDeadline, customDeadlineId, localDate, submissionDeadlines } from "@/lib/deadlines";
 import type { CreateDeadlineRequest, DeadlineItem } from "@/lib/types";
@@ -864,6 +867,73 @@ async function updateSubmission(id: string, changes: UpdateSubmissionRequest): P
   return { ok: true, data: next };
 }
 
+// A stand-in for the AI: 50 questions stitched together from the sample resume and the row's job.
+const mockPreps = new Map<string, NonNullable<MockCallPrepResponse["prep"]>>();
+const mockPrepDescriptions = new Set<string>(); // hand-added rows that have had a job description pasted
+
+function mockPrepState(id: string): MockCallPrepResponse | null {
+  const row = mockSubmissionRows().find((r) => r.id === id);
+  if (!row) return null;
+  return {
+    job: rowLabel(row),
+    hasResume: !isNewUser(),
+    hasJobDescription: Boolean(row.jobId) || mockPrepDescriptions.has(id),
+    prep: mockPreps.get(id) ?? null,
+  };
+}
+
+async function getMockCallPrep(id: string): Promise<ApiResult<MockCallPrepResponse>> {
+  await delay(200);
+  const state = mockPrepState(id);
+  return state ? { ok: true, data: state } : fail({ code: "SUBMISSION_NOT_FOUND", message: "That submission was deleted" });
+}
+
+async function writeMockCallPrep(id: string, request: WriteMockCallPrepRequest): Promise<ApiResult<MockCallPrepResponse>> {
+  await delay(1800);
+  const state = mockPrepState(id);
+  if (!state) return fail({ code: "SUBMISSION_NOT_FOUND", message: "That submission was deleted" });
+  if (!state.hasJobDescription) {
+    if ((request.jobDescription ?? "").trim().length < 50) {
+      return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { jobDescription: "That looks too short. Paste the full job description (at least 50 characters)." } });
+    }
+    mockPrepDescriptions.add(id);
+  }
+  const r = mockLatestResume ?? sampleResume();
+  const role = state.job.title;
+  const jobs = r.workExperience;
+  const bullets = jobs.flatMap((w) => w.bullets.map((b) => ({ text: b.text, company: w.company })));
+  const pick = <T,>(list: T[], i: number): T | undefined => (list.length ? list[i % list.length] : undefined);
+  const make = (category: PrepQuestion["category"], count: number, build: (i: number) => [string, string]): PrepQuestion[] =>
+    Array.from({ length: count }, (_, i) => {
+      const [question, answer] = build(i);
+      return { category, question, answer };
+    });
+  const questions: PrepQuestion[] = [
+    ...make("summary", 4, (i) => [
+      ["Tell me about yourself.", `Why are you interested in the ${role} role?`, "What are you looking for in your next position?", "How would you describe your strengths?"][i],
+      `${r.summary ?? `I'm ${r.contact.fullName}.`} Most recently I've been at ${jobs[0]?.company ?? "my current company"} as a ${jobs[0]?.jobTitle ?? "team member"}, and this role lines up closely with the work I enjoy most.`,
+    ]),
+    ...make("job", 14, (i) => [
+      `This ${role} role needs strong ${pick(r.skills, i) ?? "communication"} skills. How does your background fit?`,
+      `I've used ${pick(r.skills, i) ?? "that"} in my day-to-day work. For example, at ${pick(bullets, i)?.company ?? "my last job"}: ${pick(bullets, i)?.text ?? "I owned work from start to finish."} That's the experience I'd bring to this role.`,
+    ]),
+    ...make("experience", 12, (i) => [
+      `Walk me through your time at ${pick(jobs, i)?.company ?? "your last company"} (part ${Math.floor(i / Math.max(jobs.length, 1)) + 1}).`,
+      `I worked there as a ${pick(jobs, i)?.jobTitle ?? "team member"}. ${pick(pick(jobs, i)?.bullets ?? [], i)?.text ?? ""} I worked closely with the people around me and owned my part from start to finish.`,
+    ]),
+    ...make("projects", 10, (i) => [
+      `Tell me more about this piece of work: "${pick(bullets, i)?.text ?? "a recent project"}"`,
+      `That was at ${pick(bullets, i)?.company ?? "my last job"}. The goal was clear, I broke it into small steps, checked in often with the team, and kept the solution simple. ${pick(bullets, i)?.text ?? ""}`,
+    ]),
+    ...make("skills", 10, (i) => [
+      `How have you used ${pick(r.skills, i + 3) ?? "your core tools"} in practice?`,
+      `I've used ${pick(r.skills, i + 3) ?? "them"} on real work, alongside ${pick(r.skills, i + 4) ?? "other tools"}. I'm comfortable picking up whatever the project needs and I'm happy to go deeper on any of it.`,
+    ]),
+  ];
+  mockPreps.set(id, { questions, createdAt: new Date().toISOString(), upToDate: true });
+  return { ok: true, data: mockPrepState(id)! };
+}
+
 async function deleteSubmission(id: string): Promise<ApiResult<null>> {
   await delay(300);
   mockSubmissions = mockSubmissionRows().filter((r) => r.id !== id);
@@ -871,7 +941,7 @@ async function deleteSubmission(id: string): Promise<ApiResult<null>> {
 }
 
 async function exportSubmissions(): Promise<ApiResult<Blob>> {
-  const bytes = await buildSubmissionWorkbook(mockSubmissionRows());
+  const bytes = await buildSubmissionWorkbook(mockSubmissionRows(), window.location.origin);
   return { ok: true, data: new Blob([new Uint8Array(bytes)], { type: XLSX_MIME }) };
 }
 
@@ -947,6 +1017,8 @@ export const mockApi = {
   updateSubmission,
   deleteSubmission,
   exportSubmissions,
+  getMockCallPrep,
+  writeMockCallPrep,
   listDeadlines,
   createDeadline,
   updateDeadline,

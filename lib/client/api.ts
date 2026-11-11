@@ -16,6 +16,8 @@ import type {
   LearningPath,
   LoginRequest,
   IntroductionResponse,
+  MockCallPrepResponse,
+  WriteMockCallPrepRequest,
   PortfolioStatusResponse,
   ProfileResponse,
   RandomQuoteResponse,
@@ -368,6 +370,19 @@ export async function updateSubmission(id: string, changes: UpdateSubmissionRequ
   if (!result.ok) return result;
   const data = toSubmission(result.data);
   return data ? { ok: true, data } : { ok: false, error: toApiError(null, 500) };
+}
+
+/** The saved mock call preparation for a submission, from GET /api/submissions/:id/prep. */
+export async function getMockCallPrep(id: string): Promise<ApiResult<MockCallPrepResponse>> {
+  if (USE_MOCK_API) return mockApi.getMockCallPrep(id);
+  const result = await getJson(`/api/submissions/${encodeURIComponent(id)}/prep`);
+  return result.ok ? { ok: true, data: result.data as MockCallPrepResponse } : result;
+}
+
+/** Writes (or rewrites) the 50 questions and answers with POST /api/submissions/:id/prep. Takes a few minutes. */
+export function writeMockCallPrep(id: string, request: WriteMockCallPrepRequest = {}): Promise<ApiResult<MockCallPrepResponse>> {
+  if (USE_MOCK_API) return mockApi.writeMockCallPrep(id, request);
+  return sendJson<WriteMockCallPrepRequest, MockCallPrepResponse>("POST", `/api/submissions/${encodeURIComponent(id)}/prep`, request);
 }
 
 /** Removes a row from every sheet with DELETE /api/submissions/:id. */

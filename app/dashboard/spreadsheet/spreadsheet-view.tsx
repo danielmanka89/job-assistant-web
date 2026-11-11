@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ApiError, SheetKey, Submission } from "@/lib/types";
-import { SHEETS, rowLabel, workbookFileName, type Column, type Sheet } from "@/lib/spreadsheet";
+import { SHEETS, linkHref, rowLabel, workbookFileName, type Column, type Sheet } from "@/lib/spreadsheet";
 import { createSubmission, deleteSubmission, exportSubmissions, listSubmissions, logout, updateSubmission } from "@/lib/client/api";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -288,7 +288,7 @@ function SheetTable({
   }, []);
 
   return (
-    <div ref={scroller} className="max-h-[70vh] overflow-auto">
+    <div ref={scroller} className="scrollbar-slim max-h-[70vh] overflow-auto">
       <table className="min-w-full border-separate border-spacing-0 text-sm">
         <caption className="sr-only">{sheet.title}</caption>
         <thead className="sticky top-0 z-20 bg-neutral-50 dark:bg-neutral-800">
@@ -331,12 +331,16 @@ function SheetTable({
                 </th>
                 {sheet.columns.map((c) => (
                   <td key={c.key} className={`${grid} px-1 py-1 align-middle group-hover:bg-neutral-50 dark:group-hover:bg-neutral-800`}>
+                    {c.type === "link" ? (
+                      <RowLink column={c} rowId={row.id} label={`${c.label}, ${company ? `${title} at ${company}` : title}`} />
+                    ) : (
                     <Cell
                       column={c}
                       value={row[sheet.key][c.key] ?? ""}
                       label={`${c.label}, ${company ? `${title} at ${company}` : title}`}
                       onSave={(value) => onSave(row, sheet.key, c.key, value)}
                     />
+                    )}
                   </td>
                 ))}
                 <td className={`${grid} border-r-0 px-2 py-1 align-middle group-hover:bg-neutral-50 dark:group-hover:bg-neutral-800`}>
@@ -363,6 +367,25 @@ function SheetTable({
 
 const CELL =
   "block w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 dark:text-neutral-100 dark:placeholder:text-neutral-600 dark:focus:bg-neutral-900";
+
+/** A "link" column's cell: opens one of the row's pages, e.g. its mock call preparation. */
+function RowLink({ column, rowId, label }: { column: Column; rowId: string; label: string }) {
+  const href = linkHref(column, rowId);
+  if (!href) return null;
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="mx-1 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-brand-700 transition outline-none hover:bg-brand-100 focus-visible:ring-4 focus-visible:ring-brand-500/30 dark:bg-brand-500/15 dark:text-brand-300 dark:hover:bg-brand-500/25"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4" aria-hidden="true">
+        <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H11l-4.5 4v-4h-1A1.5 1.5 0 0 1 4 14.5v-9Z" strokeLinejoin="round" />
+        <path d="M9.8 8.6a2.2 2.2 0 1 1 3 2.1c-.5.2-.8.6-.8 1.1M12 13.6v.1" strokeLinecap="round" />
+      </svg>
+      Prepare
+    </Link>
+  );
+}
 
 /** One editable cell. Text saves when it loses focus (or on Enter); dropdowns and dates save on change. */
 function Cell({ column, value, label, onSave }: { column: Column; value: string; label: string; onSave: (value: string) => void }) {
