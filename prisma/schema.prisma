@@ -189,8 +189,22 @@ model Submission {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  mockCallPrep MockCallPrep?
+
   @@unique([userId, jobPostingId]) // applying twice to the same job reuses the row
   @@index([userId, createdAt])
+}
+
+// Mock call preparation for one submission (Spreadsheet > Submission Details > Mock Call Prep):
+// 50 interview questions with answers, written by the AI from the job description and the resume.
+model MockCallPrep {
+  submissionId   String     @id
+  submission     Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  resumeId       String // the resume the answers were written from
+  jobDescription String? // pasted by the user for rows added by hand; null when it comes from the job posting
+  questions      Json // PrepQuestion[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }
 
 // The job seeker's saved profile, one per user. Used when they apply to a job (Spreadsheet row)

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to download your spreadsheet");
 
   const rows = await prisma.submission.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
-  const bytes = await buildSubmissionWorkbook(rows.map(toSubmission));
+  const bytes = await buildSubmissionWorkbook(rows.map(toSubmission), request.nextUrl.origin);
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": XLSX_MIME,
