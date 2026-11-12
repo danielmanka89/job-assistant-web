@@ -165,7 +165,7 @@ export function Sidebar() {
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-20 items-center justify-between px-6">
+        <div className="flex h-20 shrink-0 items-center justify-between px-6 short:h-16">
           <Logo />
           <button
             type="button"
@@ -197,22 +197,25 @@ function SidebarContent({ pathname }: { pathname: string }) {
     router.replace("/"); // back to the landing page
   }
 
-  const itemClass = "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] font-medium transition";
+  // Items share the free height: 44px each when there is room, down to 32px on short screens, so the
+  // whole menu (and the deadline tracker under it) fits without scrolling.
+  const itemClass = "flex w-full items-center gap-3 rounded-xl px-3.5 text-[15px] font-medium transition";
+  const itemSlot = "flex min-h-8 max-h-11 flex-1 basis-0";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6 short:pb-3">
       <SidebarClocks />
-      <UserCard user={user} chat={chat} className="mt-4" />
+      <UserCard user={user} chat={chat} className="mt-4 short:mt-3" />
 
-      <nav aria-label="Main" className="mt-6">
-        <p className="px-3.5 pb-2 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
+      <nav aria-label="Main" className="mt-6 flex min-h-0 flex-1 flex-col short:mt-3">
+        <p className="px-3.5 pb-2 short:pb-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
           Menu
         </p>
-        <ul className="space-y-1">
+        <ul className="flex min-h-0 flex-1 flex-col gap-1">
           {items.map((item) => {
             const active = item.match(pathname);
             return (
-              <li key={item.href}>
+              <li key={item.href} className={itemSlot}>
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
@@ -234,7 +237,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
               </li>
             );
           })}
-          <li>
+          <li className={itemSlot}>
             <button
               type="button"
               onClick={signOut}
@@ -286,7 +289,7 @@ function UserCard({ user, chat, className = "" }: { user: User | null | undefine
   }
   const name = user?.name || "Your account";
   return (
-    <div className={`rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
+    <div className={`rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 short:p-3 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
       <div className="flex items-center gap-3">
         {/* The menu photo, or the portfolio photo until one is set. */}
         <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} />

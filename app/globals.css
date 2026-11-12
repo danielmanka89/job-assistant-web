@@ -370,6 +370,9 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
  *   "mono" is black & white (always on a light background).
  * Tailwind's dark: variant follows the same rule instead of the media query alone.
  */
+/* Short windows (laptops, browser zoom): the sidebar tightens its spacing so it fits without scrolling. */
+@custom-variant short (@media (max-height: 56rem));
+
 @custom-variant dark {
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     @slot;

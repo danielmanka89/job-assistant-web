@@ -152,7 +152,7 @@ export function DeadlineTracker() {
   const added = (item: DeadlineItem) => setItems((list) => [...(list ?? []), item]);
 
   return (
-    <div className="mt-auto pt-6" onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+    <div className="mt-auto shrink-0 pt-6 short:pt-3" onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
       <button
         ref={buttonRef}
         type="button"
