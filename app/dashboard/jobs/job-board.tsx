@@ -7,7 +7,8 @@ import type { JobPosting } from "@/lib/types";
 import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
-import { JobCard, ROW_COLUMNS } from "./job-card";
+import { JobCard, ROW_COLUMNS, STAGE_TONE } from "./job-card";
+import { STAGES } from "@/lib/application-stage";
 import { JOB_TYPES, JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 
 // The Posted filter: how recently a job was put on the board.
@@ -52,7 +53,8 @@ export function JobBoard() {
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [navigating, startNavigation] = useTransition();
   // Jobs with a row in the Spreadsheet, and the message about the latest Apply click.
-  const [appliedIds, setAppliedIds] = useState<ReadonlySet<string>>(new Set());
+  // The Spreadsheet Status of each job you applied to, by job id; it sets the row's color.
+  const [statuses, setStatuses] = useState<Readonly<Record<string, string>>>({});
   const [notice, setNotice] = useState<{ id: number; text: string; error?: boolean } | null>(null);
   const noticeCount = useRef(0);
   // Your "Why should I hire you?" answers, by job id.
@@ -70,11 +72,12 @@ export function JobBoard() {
 
   useEffect(() => {
     let active = true;
-    // Only marks jobs as applied; the board works without it.
+    // Only colors applied jobs; the board works without it.
     listSubmissions().then((result) => {
       if (!active || !result.ok) return;
-      const ids = result.data.map((s) => s.jobId).filter((id): id is string => id !== null);
-      setAppliedIds((prev) => new Set([...prev, ...ids]));
+      const found: Record<string, string> = {};
+      for (const s of result.data) if (s.jobId) found[s.jobId] = s.submission.status ?? "";
+      setStatuses((prev) => ({ ...found, ...prev }));
     });
     return () => {
       active = false;
@@ -137,7 +140,7 @@ export function JobBoard() {
   async function recordApplication(job: JobPosting) {
     const result = await createSubmission({ jobId: job.id });
     if (result.ok) {
-      setAppliedIds((prev) => new Set(prev).add(job.id));
+      setStatuses((prev) => ({ ...prev, [job.id]: result.data.submission.submission.status ?? prev[job.id] ?? "Applied" }));
       const text = result.data.created
         ? `Added "${job.title}" to your Spreadsheet.`
         : `"${job.title}" is already in your Spreadsheet.`;
@@ -231,6 +234,16 @@ export function JobBoard() {
           }
         />
       ) : (
+        <>
+          {/* What the row colors mean (applied jobs only). */}
+          <ul aria-label="Application colors" className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-neutral-600 dark:text-neutral-300">
+            {STAGES.filter((s) => s.stage !== "withdrawn").map((s) => (
+              <li key={s.stage} className="inline-flex items-center gap-1.5" title={s.hint}>
+                <span className={`size-2.5 rounded-sm ${STAGE_TONE[s.stage].dot}`} aria-hidden="true" />
+                {s.label}
+              </li>
+            ))}
+          </ul>
         <div className="mb-20 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
           {/* Column headings (md and up); the rows use the same grid. */}
           <div
@@ -260,7 +273,7 @@ export function JobBoard() {
                   }
                   onTailor={() => tailorFor(job)}
                   onApply={() => void recordApplication(job)}
-                  applied={appliedIds.has(job.id)}
+                  status={job.id in statuses ? statuses[job.id] : null}
                   opening={navigating && openingId === job.id}
                   disabled={navigating}
                 />
@@ -268,6 +281,7 @@ export function JobBoard() {
             ))}
           </ul>
         </div>
+        </>
       )}
 
       <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-16 z-50 flex justify-center lg:left-72">
