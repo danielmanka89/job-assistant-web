@@ -8,6 +8,7 @@ import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { JobCard, ROW_COLUMNS } from "./job-card";
+import { JOB_TYPES, JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 
 type State =
   | { status: "loading" }
@@ -19,6 +20,7 @@ export function JobBoard() {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<JobType | "All">("All");
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [navigating, startNavigation] = useTransition();
   // Jobs with a row in the Spreadsheet, and the message about the latest Apply click.
@@ -78,13 +80,22 @@ export function JobBoard() {
   }, [attempt, router]);
 
   const jobs = useMemo(() => (state.status === "ready" ? state.jobs : []), [state]);
-  const filtered = useMemo(() => {
+  const searched = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return jobs;
     return jobs.filter((job) =>
       [job.title, job.company, job.location, job.description].some((field) => field?.toLowerCase().includes(q)),
     );
   }, [jobs, query]);
+  // Split by position type: a job open to several types shows under each of them.
+  const filtered = useMemo(
+    () => (typeFilter === "All" ? searched : searched.filter((job) => job.employmentTypes.includes(typeFilter))),
+    [searched, typeFilter],
+  );
+  const typeTabs = [
+    { key: "All" as const, label: "All", count: searched.length },
+    ...JOB_TYPES.map((t) => ({ key: t, label: JOB_TYPE_LABEL[t], count: searched.filter((job) => job.employmentTypes.includes(t)).length })),
+  ];
 
   function tailorFor(job: JobPosting) {
     storePendingJob({ id: job.id, title: job.title, company: job.company, description: job.description });
@@ -147,6 +158,26 @@ export function JobBoard() {
         </p>
       </div>
 
+      <div role="group" aria-label="Position type" className="flex flex-wrap gap-1 rounded-xl bg-neutral-100 p-1 sm:inline-flex dark:bg-neutral-900">
+        {typeTabs.map((tab) => {
+          const active = typeFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setTypeFilter(tab.key)}
+              aria-pressed={active}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none ${
+                active ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-white" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+              }`}
+            >
+              {tab.label}
+              <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${active ? "bg-brand-600 text-white" : "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"}`}>{tab.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {jobs.some((job) => job.source === "mock") && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           Jobs marked <span className="font-semibold">Demo</span> are sample listings for trying the app, not real
@@ -157,7 +188,14 @@ export function JobBoard() {
       {jobs.length === 0 ? (
         <EmptyBoard title="No jobs yet" body="New postings will show up here. Check back soon." />
       ) : filtered.length === 0 ? (
-        <EmptyBoard title="No matching jobs" body={`Nothing matches "${query.trim()}". Try a different search.`} />
+        <EmptyBoard
+          title="No matching jobs"
+          body={
+            query.trim()
+              ? `Nothing matches "${query.trim()}"${typeFilter === "All" ? "" : ` in ${JOB_TYPE_LABEL[typeFilter]}`}. Try a different search.`
+              : `No ${JOB_TYPE_LABEL[typeFilter as JobType]} positions right now. Try another type.`
+          }
+        />
       ) : (
         <div className="mb-20 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
           {/* Column headings (md and up); the rows use the same grid. */}
@@ -166,6 +204,7 @@ export function JobBoard() {
             className={`hidden items-center gap-x-4 border-b border-neutral-200/80 bg-neutral-50 px-4 py-2 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase md:grid dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 ${ROW_COLUMNS}`}
           >
             <span className="pl-11">Role</span>
+            <span>Type</span>
             <span>Location</span>
             <span>Posted</span>
             <span>Status</span>

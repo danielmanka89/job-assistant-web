@@ -8,9 +8,9 @@ export const DESCRIPTION_MAX = 20_000;
 export type JobField = keyof CreateJobPostingRequest;
 export type JobFormErrors = Partial<Record<JobField, string>>;
 
-export const JOB_FIELDS: JobField[] = ["title", "company", "location", "applyUrl", "description"];
+export const JOB_FIELDS: JobField[] = ["title", "company", "location", "employmentTypes", "applyUrl", "description"];
 
-export const EMPTY_JOB: CreateJobPostingRequest = { title: "", company: "", location: "", applyUrl: "", description: "" };
+export const EMPTY_JOB: CreateJobPostingRequest = { title: "", company: "", location: "", applyUrl: "", description: "", employmentTypes: [] };
 
 export function cleanJob(values: CreateJobPostingRequest): CreateJobPostingRequest {
   return {
@@ -19,6 +19,7 @@ export function cleanJob(values: CreateJobPostingRequest): CreateJobPostingReque
     location: values.location.trim(),
     applyUrl: values.applyUrl.trim(),
     description: values.description.trim(),
+    employmentTypes: values.employmentTypes,
   };
 }
 
@@ -31,6 +32,8 @@ export function validateJob(values: CreateJobPostingRequest): JobFormErrors {
     if (!job[key]) errors[key] = `${labels[key]} is required.`;
     else if (job[key].length > LIMITS[key]) errors[key] = `Keep it under ${LIMITS[key]} characters.`;
   }
+
+  if (!job.employmentTypes.length) errors.employmentTypes = "Choose at least one: Full Time, C2C or W2.";
 
   if (!job.applyUrl) {
     errors.applyUrl = "Add the link where candidates apply.";

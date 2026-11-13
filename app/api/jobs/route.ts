@@ -3,6 +3,7 @@ import { apiError, readJsonObject, toJobPosting } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { syncExternalJobs } from "@/lib/job-providers";
+import { JOB_TYPES, parseJobTypes } from "@/lib/job-types";
 import type { CreateJobPostingRequest, JobListResponse, JobPosting, JobSource } from "@/lib/types";
 
 const SOURCES: JobSource[] = ["native", "adzuna", "mock"];
@@ -63,6 +64,7 @@ function validate(body: Record<string, unknown>): { fieldErrors: Record<string, 
     location: text("location"),
     description: text("description"),
     applyUrl: text("applyUrl"),
+    employmentTypes: parseJobTypes(body.employmentTypes) ?? [],
   };
   const fieldErrors: Record<string, string> = {};
 
@@ -88,6 +90,8 @@ function validate(body: Record<string, unknown>): { fieldErrors: Record<string, 
   } else if (data.applyUrl.length > LIMITS.applyUrl) {
     fieldErrors.applyUrl = `Must be ${LIMITS.applyUrl} characters or fewer`;
   }
+
+  if (!data.employmentTypes.length) fieldErrors.employmentTypes = `Choose at least one: ${JOB_TYPES.join(", ")}`;
 
   return Object.keys(fieldErrors).length ? { fieldErrors } : { data };
 }

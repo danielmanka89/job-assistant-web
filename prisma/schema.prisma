@@ -241,6 +241,7 @@ model JobPosting {
   location    String
   description String // full job description text
   applyUrl    String // http(s) only
+  employmentTypes String[] @default([]) // "Full-time" | "C2C" | "W2" (lib/job-types.ts); empty for older rows: read from the description
   source      String // "native" | "adzuna" | "mock"
   externalId  String? // the provider's id; null for native jobs
   postedById  String? // user who posted a native job

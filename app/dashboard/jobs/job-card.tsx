@@ -6,9 +6,10 @@ import type { JobPosting, JobSource } from "@/lib/types";
 import { safeApplyUrl } from "@/lib/client/jobs";
 import { saveJobPitch } from "@/lib/client/api";
 import { MAX_PITCH_WORDS, countWords, limitWords } from "@/lib/pitch";
+import { JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 
-/** The table's columns from md up: Role · Location · Posted · Status · Actions · toggle. Shared with the header row. */
-export const ROW_COLUMNS = "md:grid-cols-[minmax(0,1fr)_9rem_4.5rem_6.5rem_8.75rem_1.5rem]";
+/** The table's columns from md up: Role · Type · Location · Posted · Status · Actions · toggle. Shared with the header row. */
+export const ROW_COLUMNS = "md:grid-cols-[minmax(0,1fr)_7.5rem_8.5rem_4.5rem_6rem_8.75rem_1.5rem]";
 
 // One job on the Job Board, as a compact list row. Clicking the row opens its description and the
 // "Why should I hire you?" answer (up to 300 words, saved per job).
@@ -120,6 +121,13 @@ export function JobCard({
           </svg>
         </button>
 
+        <span className="col-span-2 flex flex-wrap gap-1 md:col-span-1">
+          <span className="sr-only">Position type: </span>
+          {job.employmentTypes.map((type) => (
+            <TypeChip key={type} type={type} />
+          ))}
+        </span>
+
         <span className="hidden truncate text-xs text-neutral-600 md:block dark:text-neutral-300">
           <span className="sr-only">Location: </span>
           {job.location}
@@ -194,6 +202,16 @@ export function JobCard({
       )}
     </article>
   );
+}
+
+const TYPE_CHIP: Record<JobType, string> = {
+  "Full-time": "border-emerald-200 text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-300",
+  C2C: "border-violet-200 text-violet-700 dark:border-violet-500/30 dark:text-violet-300",
+  W2: "border-sky-200 text-sky-700 dark:border-sky-500/30 dark:text-sky-300",
+};
+
+function TypeChip({ type }: { type: JobType }) {
+  return <span className={`rounded border px-1.5 py-px text-[10px] font-semibold whitespace-nowrap ${TYPE_CHIP[type]}`}>{JOB_TYPE_LABEL[type]}</span>;
 }
 
 /** "Why should I hire you?" for one job: up to 300 words, saved to your account. */

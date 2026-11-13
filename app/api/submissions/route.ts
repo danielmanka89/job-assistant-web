@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getProfileValues } from "@/lib/profile-store";
 import { prefillSubmission } from "@/lib/spreadsheet";
+import { jobTypesOf } from "@/lib/job-types";
 import type { CreateSubmissionResponse, SubmissionListResponse } from "@/lib/types";
 
 const MAX_SUBMISSIONS = 2000; // per user; keeps the page and the Excel export a sensible size
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
       getProfileValues(user.id),
     ]);
     cells = prefillSubmission(
-      job,
+      { ...job, employmentTypes: jobTypesOf(job.employmentTypes, job.description) },
       resume ? toResume(resume) : null,
       analysis
         ? { matchedKeywords: analysis.matchedKeywords as string[], missingKeywords: analysis.missingKeywords as string[] }

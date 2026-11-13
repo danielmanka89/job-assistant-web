@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { JobType } from "@/lib/job-types";
 import type { JobSource } from "@/lib/types";
 
 /** A job as returned by an external provider, before it is stored. */
@@ -9,6 +10,7 @@ export interface ExternalJob {
   location: string;
   description: string;
   applyUrl: string;
+  employmentTypes: JobType[];
 }
 
 interface JobProvider {
@@ -25,8 +27,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Brightline Analytics (demo)",
     location: "Berlin, Germany",
     description:
-      "Join our data platform team building internal tools in Python. You will write and test FastAPI services, work with PostgreSQL, and help automate data pipelines.\n\nRequirements: 1+ years of Python, basic SQL, Git, and an interest in testing with Pytest. Nice to have: Docker, AWS.",
+      "Join our data platform team building internal tools in Python. You will write and test FastAPI services, work with PostgreSQL, and help automate data pipelines.\n\nRequirements: 1+ years of Python, basic SQL, Git, and an interest in testing with Pytest. Nice to have: Docker, AWS.\n\nEmployment: full-time, permanent.",
     applyUrl: "https://example.com/jobs/mock-1",
+    employmentTypes: ["Full-time"],
   },
   {
     externalId: "mock-2",
@@ -34,8 +37,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Cobalt Harbor Systems (demo)",
     location: "Remote (EU)",
     description:
-      "We are looking for a frontend engineer to own our customer dashboard. You will build accessible React and TypeScript components, work closely with designers, and improve page performance.\n\nRequirements: 3+ years of React, TypeScript, CSS, REST APIs. Nice to have: Next.js, Tailwind, testing with Playwright.",
+      "We are looking for a frontend engineer to own our customer dashboard. You will build accessible React and TypeScript components, work closely with designers, and improve page performance.\n\nRequirements: 3+ years of React, TypeScript, CSS, REST APIs. Nice to have: Next.js, Tailwind, testing with Playwright.\n\nEmployment: full-time, permanent.",
     applyUrl: "https://example.com/jobs/mock-2",
+    employmentTypes: ["Full-time"],
   },
   {
     externalId: "mock-3",
@@ -43,8 +47,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Fernway Health Tech (demo)",
     location: "Munich, Germany",
     description:
-      "Help us bring ML models for clinical forecasting into production. You will train and evaluate models in Python (scikit-learn, PyTorch), package them as services, and monitor them in production.\n\nRequirements: 3+ years in ML engineering, Python, NumPy, pandas, model deployment with Docker. Nice to have: healthcare data experience, MLflow.",
+      "Help us bring ML models for clinical forecasting into production. You will train and evaluate models in Python (scikit-learn, PyTorch), package them as services, and monitor them in production.\n\nRequirements: 3+ years in ML engineering, Python, NumPy, pandas, model deployment with Docker. Nice to have: healthcare data experience, MLflow.\n\nEmployment: contract, C2C or W2.",
     applyUrl: "https://example.com/jobs/mock-3",
+    employmentTypes: ["C2C", "W2"],
   },
   {
     externalId: "mock-4",
@@ -52,8 +57,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Quarrystone Cloud (demo)",
     location: "Hamburg, Germany",
     description:
-      "Own our CI/CD and cloud infrastructure. You will maintain Jenkins and GitHub Actions pipelines, manage AWS with Terraform and CloudFormation, and improve observability.\n\nRequirements: AWS, Docker, Kubernetes, Linux, scripting in Bash or Python. Nice to have: Puppet or Ansible, Prometheus, Grafana.",
+      "Own our CI/CD and cloud infrastructure. You will maintain Jenkins and GitHub Actions pipelines, manage AWS with Terraform and CloudFormation, and improve observability.\n\nRequirements: AWS, Docker, Kubernetes, Linux, scripting in Bash or Python. Nice to have: Puppet or Ansible, Prometheus, Grafana.\n\nEmployment: contract, C2C or W2.",
     applyUrl: "https://example.com/jobs/mock-4",
+    employmentTypes: ["C2C", "W2"],
   },
   {
     externalId: "mock-5",
@@ -61,8 +67,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Lumen Parcel (demo)",
     location: "Remote",
     description:
-      "Build the APIs behind our delivery tracking platform. You will design REST and event-driven services in Node.js and TypeScript, model data in PostgreSQL, and keep services secure and fast.\n\nRequirements: 3+ years Node.js, TypeScript, SQL, authentication with OAuth/JWT. Nice to have: Kafka, Redis, GraphQL.",
+      "Build the APIs behind our delivery tracking platform. You will design REST and event-driven services in Node.js and TypeScript, model data in PostgreSQL, and keep services secure and fast.\n\nRequirements: 3+ years Node.js, TypeScript, SQL, authentication with OAuth/JWT. Nice to have: Kafka, Redis, GraphQL.\n\nEmployment: contract on W2.",
     applyUrl: "https://example.com/jobs/mock-5",
+    employmentTypes: ["W2"],
   },
   {
     externalId: "mock-6",
@@ -70,8 +77,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Tidewater Retail Group (demo)",
     location: "Frankfurt, Germany",
     description:
-      "Turn sales and customer data into decisions. You will build dashboards, write SQL, and present findings to business teams.\n\nRequirements: strong SQL, Excel, a BI tool such as Power BI or Tableau, and clear communication. Nice to have: Python with pandas, A/B testing experience.",
+      "Turn sales and customer data into decisions. You will build dashboards, write SQL, and present findings to business teams.\n\nRequirements: strong SQL, Excel, a BI tool such as Power BI or Tableau, and clear communication. Nice to have: Python with pandas, A/B testing experience.\n\nEmployment: full-time, permanent.",
     applyUrl: "https://example.com/jobs/mock-6",
+    employmentTypes: ["Full-time"],
   },
   {
     externalId: "mock-7",
@@ -79,8 +87,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Orchard Learning (demo)",
     location: "Cologne, Germany",
     description:
-      "Work across our e-learning platform: Django REST APIs on the backend and React on the frontend. You will ship features end to end and take part in code reviews.\n\nRequirements: Python, Django, React, JavaScript, SQL, Git. Nice to have: Celery, Docker, experience with education products.",
+      "Work across our e-learning platform: Django REST APIs on the backend and React on the frontend. You will ship features end to end and take part in code reviews.\n\nRequirements: Python, Django, React, JavaScript, SQL, Git. Nice to have: Celery, Docker, experience with education products.\n\nEmployment: full-time, or a contract-to-hire start on W2.",
     applyUrl: "https://example.com/jobs/mock-7",
+    employmentTypes: ["Full-time", "W2"],
   },
   {
     externalId: "mock-8",
@@ -88,8 +97,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Pinecrest Fintech (demo)",
     location: "Remote (Germany)",
     description:
-      "Build and maintain automated tests for our payments apps. You will write API and UI tests, run them in CI, and work with developers to prevent regressions.\n\nRequirements: test automation with Pytest or Jest, Selenium or Playwright, CI pipelines, API testing. Nice to have: performance testing, fintech experience.",
+      "Build and maintain automated tests for our payments apps. You will write API and UI tests, run them in CI, and work with developers to prevent regressions.\n\nRequirements: test automation with Pytest or Jest, Selenium or Playwright, CI pipelines, API testing. Nice to have: performance testing, fintech experience.\n\nEmployment: contract on W2.",
     applyUrl: "https://example.com/jobs/mock-8",
+    employmentTypes: ["W2"],
   },
   {
     externalId: "mock-9",
@@ -97,8 +107,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Silverpine Consulting (demo)",
     location: "Stuttgart, Germany",
     description:
-      "Design cloud architectures for enterprise clients and guide migrations to AWS. You will lead technical workshops, write architecture documents, and support delivery teams.\n\nRequirements: 5+ years in cloud engineering, AWS certification, networking and security fundamentals. Nice to have: Azure, cost optimization.",
+      "Design cloud architectures for enterprise clients and guide migrations to AWS. You will lead technical workshops, write architecture documents, and support delivery teams.\n\nRequirements: 5+ years in cloud engineering, AWS certification, networking and security fundamentals. Nice to have: Azure, cost optimization.\n\nEmployment: contract, C2C (corp-to-corp).",
     applyUrl: "https://example.com/jobs/mock-9",
+    employmentTypes: ["C2C"],
   },
   {
     externalId: "mock-10",
@@ -106,8 +117,9 @@ const MOCK_JOBS: ExternalJob[] = [
     company: "Wayfarer Transit (demo)",
     location: "Leipzig, Germany",
     description:
-      "Build our passenger app for iOS and Android with React Native. You will implement new screens, integrate with REST APIs, and improve app stability.\n\nRequirements: React Native, TypeScript, REST APIs, publishing to app stores. Nice to have: offline sync, push notifications, accessibility.",
+      "Build our passenger app for iOS and Android with React Native. You will implement new screens, integrate with REST APIs, and improve app stability.\n\nRequirements: React Native, TypeScript, REST APIs, publishing to app stores. Nice to have: offline sync, push notifications, accessibility.\n\nEmployment: contract, C2C or W2.",
     applyUrl: "https://example.com/jobs/mock-10",
+    employmentTypes: ["C2C", "W2"],
   },
 ];
 
