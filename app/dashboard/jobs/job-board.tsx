@@ -7,8 +7,7 @@ import type { JobPosting } from "@/lib/types";
 import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
-import { JobCard, ROW_COLUMNS, STAGE_TONE } from "./job-card";
-import { STAGES } from "@/lib/application-stage";
+import { JobCard } from "./job-card";
 import { JOB_TYPES, JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 
 // The Posted filter: how recently a job was put on the board.
@@ -235,29 +234,7 @@ export function JobBoard() {
         />
       ) : (
         <>
-          {/* What the row colors mean (applied jobs only). */}
-          <ul aria-label="Application colors" className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-neutral-600 dark:text-neutral-300">
-            {STAGES.filter((s) => s.stage !== "withdrawn").map((s) => (
-              <li key={s.stage} className="inline-flex items-center gap-1.5" title={s.hint}>
-                <span className={`size-2.5 rounded-sm ${STAGE_TONE[s.stage].dot}`} aria-hidden="true" />
-                {s.label}
-              </li>
-            ))}
-          </ul>
-        <div className="mb-20 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-          {/* Column headings (md and up); the rows use the same grid. */}
-          <div
-            aria-hidden="true"
-            className={`hidden items-center gap-x-4 border-b border-neutral-200/80 bg-neutral-50 px-4 py-2 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase md:grid dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 ${ROW_COLUMNS}`}
-          >
-            <span className="pl-11">Role</span>
-            <span>Location</span>
-            <span>Posted</span>
-            <span>Status</span>
-            <span className="text-right">Actions</span>
-            <span />
-          </div>
-          <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+          <ul className="mb-20 divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
             {filtered.map((job) => (
               <li key={job.id}>
                 <JobCard
@@ -280,7 +257,6 @@ export function JobBoard() {
               </li>
             ))}
           </ul>
-        </div>
         </>
       )}
 

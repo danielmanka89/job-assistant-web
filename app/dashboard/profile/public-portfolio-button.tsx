@@ -75,16 +75,16 @@ export function PublicPortfolioButton() {
   }
 
   return (
-    <div className="flex flex-col items-stretch gap-2 sm:items-end">
-      <Button type="button" onClick={() => setAsking(true)} className="px-7 py-3 text-base">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5" aria-hidden="true">
+    <div className="flex flex-col items-start gap-1 sm:items-end">
+      <Button type="button" onClick={() => setAsking(true)} size="sm">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-4" aria-hidden="true">
           <circle cx="12" cy="12" r="9" />
           <path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z" strokeLinejoin="round" />
         </svg>
         View Public Portfolio
       </Button>
       {publicPath && (
-        <p className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm text-neutral-600 dark:text-neutral-300">
+        <p className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1 text-xs text-neutral-600 dark:text-neutral-300">
           <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
             <span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
             Public

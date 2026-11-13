@@ -3,6 +3,13 @@ import type { ButtonHTMLAttributes } from "react";
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean;
   variant?: "primary" | "secondary";
+  /** md: the big rounded capitals used for main actions; sm: a compact button in normal case. */
+  size?: "md" | "sm";
+};
+
+const sizes = {
+  md: "rounded-full px-6 py-2.5 font-display text-[15px] font-medium uppercase tracking-wider",
+  sm: "rounded-xl px-3.5 py-2 text-sm font-semibold",
 };
 
 const variants = {
@@ -15,6 +22,7 @@ const variants = {
 export function Button({
   loading = false,
   variant = "primary",
+  size = "md",
   disabled,
   className = "",
   children,
@@ -24,7 +32,7 @@ export function Button({
     <button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 font-display text-[15px] font-medium uppercase tracking-wider transition outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 transition outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${sizes[size]} ${variants[variant]} ${className}`}
       {...props}
     >
       {loading && (

@@ -52,6 +52,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     keywords: "home stats today this week this month open jobs tailored count quote clocks",
     body: [
       "The dashboard shows your numbers at a glance: resumes tailored, jobs applied today, this week (since Monday) and this month, and how many jobs are open on the board.",
+      "Below them are My Resumes (each tailored resume with its match score and Word / PDF downloads) and Recent chats: your three latest conversations, with unread counts. Click a chat to open it.",
       "The sidebar shows Pacific, Central and Eastern time, and a motivational quote runs along the bottom of the screen.",
     ],
     href: "/dashboard",
@@ -108,10 +109,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
     body: [
       "Next to the search box, the Filters button opens a menu with two sections. Type splits positions into All, Full Time, C2C and W2; Posted shows only jobs posted in the last 24 hours, 48 hours, week or month. Each choice shows how many jobs it has, the button shows the filters that are on, and Clear filters resets them. Filters and search work together.",
       "C2C means a corp-to-corp contract and W2 a contract on the employer's or vendor's payroll. A job open to more than one type shows under each.",
-      "The Job Board lists open roles as a compact list. Click a job to open its full description. Tailor tailors your resume to it in one click: the job description comes with you, so you skip pasting it.",
+      "The Job Board shows each job on one row: a small status icon on the left, the role in the middle (title, company, location, when it was posted), and Tailor and Apply on the right. Click a job's title to open its full description. Tailor tailors your resume to it in one click: the job description comes with you, so you skip pasting it.",
       "Each job has a \"Why should I hire you?\" box under its description. Write your answer there (up to 300 words; the counter shows how many you've used) and press Save. It's kept for that job, and the job shows \"Pitch ✓\" once it's saved. Save it empty to remove it.",
       "Applying to a job adds it to your Spreadsheet automatically, filled in from the job, your profile and your latest resume.",
-      "Jobs you've applied to are colored by the Status on their Spreadsheet row: blue for Applied, amber for Under review (Submitted to vendor or On hold), green for Approved (Submitted to client, Interview scheduled, Interviewed, Offer or Placed), red for Not selected (Rejected), and grey for Withdrawn. Change the Status in your Spreadsheet and the color follows.",
+      "The status icon follows the Status on the job's Spreadsheet row: a blue paper plane means you applied, an amber clock means it's under review (Submitted to vendor or On hold), a green check means it's moving ahead (Submitted to client, Interview, Offer or Placed), and a grey box means it's closed. A dashed briefcase means you haven't applied yet. Hover over an icon to see what it means; change the Status in your Spreadsheet and the icon follows.",
     ],
     href: "/dashboard/jobs",
   },

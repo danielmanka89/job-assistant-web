@@ -14,8 +14,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* The sunset behind the glass: fixed, so it stays put while pages scroll. */}
       <div className="glass-sunset mono-grayscale fixed inset-0 -z-10" aria-hidden="true" />
       <Sidebar />
-      {/* The app's window. From lg up it sits inside the frame and scrolls itself, so the scrollbar stays inside. */}
-      <div className="app-window min-h-dvh pb-(--quote-banner-space) lg:fixed lg:inset-(--edge) lg:min-h-0 lg:overflow-y-auto lg:pl-72">{children}</div>
+      {/* The app's window. From lg up it sits inside the frame and scrolls itself; no sideways scrolling. */}
+      <div className="app-window min-h-dvh overflow-x-hidden pb-(--quote-banner-space) lg:fixed lg:inset-(--edge) lg:min-h-0 lg:overflow-y-auto lg:pl-72">{children}</div>
       <QuoteBanner />
       <HelpAssistant />
       <div className="app-frame" aria-hidden="true" />

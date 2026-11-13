@@ -403,6 +403,19 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
   background: linear-gradient(135deg, #d4d4d4 0%, #f5f5f5 100%);
 }
 
+/*
+ * No scrollbars anywhere in the dashboard: pages and panels still scroll with the wheel, a trackpad
+ * swipe, touch or the keyboard, just without a bar on screen.
+ */
+.glass-shell,
+.glass-shell * {
+  scrollbar-width: none;
+}
+.glass-shell ::-webkit-scrollbar,
+.glass-shell::-webkit-scrollbar {
+  display: none;
+}
+
 /* The app's window: the light surface the pages sit on. */
 .app-window {
   background: var(--window-bg);

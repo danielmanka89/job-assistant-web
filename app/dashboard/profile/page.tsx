@@ -19,17 +19,16 @@ const column =
 
 export default function ProfilePage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:flex lg:h-[calc(100dvh-var(--quote-banner-space)-2*var(--edge))] lg:flex-col lg:pb-0">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:shrink-0">
-        <div className="max-w-2xl">
-          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">My Profile</h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-            Filled in from your resume and used automatically every time you apply to a job or tailor your resume.
-            To change it, add missing details to your resume or upload an updated one.
+    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:flex lg:h-[calc(100dvh-var(--quote-banner-space)-2*var(--edge))] lg:flex-col lg:pb-0">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-x-6 gap-y-3 lg:shrink-0">
+        <div className="min-w-0 flex-[999_1_20rem]">
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">My Profile</h1>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            Filled in from your resume and used every time you apply or tailor. To change it, update your resume.
           </p>
         </div>
-        {/* Stacked, so both fit beside the title at every width. */}
-        <div className="flex shrink-0 flex-col gap-3 sm:items-end">
+        {/* Side by side, compact; the public status sits under the portfolio button. */}
+        <div className="flex flex-wrap items-start gap-2">
           {/* <MyIntroductionButton /> */}
           <AddToResumeButton />
           <PublicPortfolioButton />
