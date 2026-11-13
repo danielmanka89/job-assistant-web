@@ -8,7 +8,6 @@ import { getDashboardStats, listSubmissions, listTailoredResumes, logout } from 
 import { appliedCounts } from "@/lib/deadlines";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { ErrorAlert } from "@/components/ui/alert";
-import { ScoreBadge } from "@/components/ui/score-badge";
 
 type Load<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string };
 
@@ -163,63 +162,74 @@ function formatDate(iso: string) {
   return Number.isNaN(d.getTime()) ? "" : dateFormat.format(d);
 }
 
-const bulletsText = (n: number) => (n === 0 ? "No bullet changes" : `${n} ${n === 1 ? "bullet" : "bullets"} updated`);
+const bulletsText = (n: number) => (n === 0 ? "no changes" : `${n} ${n === 1 ? "bullet" : "bullets"}`);
 
 function ResumeList({ items }: { items: TailoredResumeWithFiles[] }) {
   return (
-    <ul className="divide-y divide-neutral-100 overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
+    // Slim rows: when it was made and how much changed, its match score, and two tiny download buttons.
+    <ul className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
       {items.map((item) => (
-        <li key={item.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:px-6">
-          <div className="flex min-w-0 flex-1 items-center gap-4">
-            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-              <FileIcon />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-neutral-900 dark:text-white">Tailored resume</p>
-              <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-                <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-                <span className="mx-1.5 text-neutral-300 dark:text-neutral-600" aria-hidden="true">·</span>
-                {bulletsText(item.acceptedBulletIds?.length ?? 0)}
-              </p>
-            </div>
+        <li key={item.id} className="flex items-center gap-2 px-3.5 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-neutral-900 dark:text-white">
+              <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
+              <span className="mx-1 text-neutral-300 dark:text-neutral-600" aria-hidden="true">
+                ·
+              </span>
+              {bulletsText(item.acceptedBulletIds?.length ?? 0)}
+            </p>
+            <p className="truncate text-[11px] text-neutral-400 dark:text-neutral-500">Tailored resume</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 pl-15 sm:pl-0">
-            <ScoreBadge percent={item.finalMatchPercent} />
-            <div className="flex gap-2">
-              <FileLink file={item.files.find((f) => f.format === "docx")} format="docx" />
-              <FileLink file={item.files.find((f) => f.format === "pdf")} format="pdf" />
-            </div>
-          </div>
+          <ScoreChip percent={item.finalMatchPercent} />
+          <FileLink file={item.files.find((f) => f.format === "docx")} format="docx" />
+          <FileLink file={item.files.find((f) => f.format === "pdf")} format="pdf" />
         </li>
       ))}
     </ul>
   );
 }
 
+/** The resume's match with its job: green from 75%, amber from 50%, otherwise neutral (never red); "—" when unscored. */
+function ScoreChip({ percent }: { percent: number | null | undefined }) {
+  if (percent === null || percent === undefined) {
+    return (
+      <span title="No match score" className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">No match score</span>
+      </span>
+    );
+  }
+  const tone =
+    percent >= 75
+      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+      : percent >= 50
+        ? "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+        : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${tone}`}>
+      {percent}%<span className="sr-only"> match</span>
+    </span>
+  );
+}
+
 const FILE_STYLES = {
-  docx: { label: "DOCX", name: "Word", className: "mono-grayscale border-sky-200 text-sky-700 hover:bg-sky-50 dark:border-sky-500/30 dark:text-sky-300 dark:hover:bg-sky-500/10" },
-  pdf: { label: "PDF", name: "PDF", className: "mono-grayscale border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10" },
+  docx: { label: "W", name: "Word", className: "mono-grayscale bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25" },
+  pdf: { label: "PDF", name: "PDF", className: "mono-grayscale bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25" },
 } as const;
 
+/** A tiny download button: "W" for the Word file, "PDF" for the PDF. */
 function FileLink({ file, format }: { file?: GeneratedFile; format: "docx" | "pdf" }) {
   const style = FILE_STYLES[format];
-  const base = "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold tracking-wide transition";
+  const base = "grid size-7 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold tracking-wide transition focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none";
   if (!file) {
     return (
-      <span
-        className={`${base} cursor-not-allowed border-neutral-200 text-neutral-400 dark:border-neutral-800 dark:text-neutral-600`}
-        title={`${style.name} file not available`}
-      >
+      <span className={`${base} cursor-not-allowed bg-neutral-100 text-neutral-300 dark:bg-neutral-800 dark:text-neutral-600`} title={`${style.name} file not available`}>
         {style.label}
       </span>
     );
   }
   return (
-    <a href={file.downloadUrl} download={file.fileName} className={`${base} ${style.className}`} aria-label={`Download ${style.name} (${file.fileName})`}>
-      <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
-        <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-        <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-      </svg>
+    <a href={file.downloadUrl} download={file.fileName} title={`Download ${style.name}`} className={`${base} ${style.className}`} aria-label={`Download ${style.name} (${file.fileName})`}>
       {style.label}
     </a>
   );
@@ -227,15 +237,13 @@ function FileLink({ file, format }: { file?: GeneratedFile; format: "docx" | "pd
 
 function ResumeListSkeleton() {
   return (
-    <div className="divide-y divide-neutral-100 rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60" aria-busy="true">
+    <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60" aria-busy="true">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="flex items-center gap-4 p-4 sm:px-6">
-          <span className="size-11 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800" />
-          <div className="flex-1 space-y-2">
-            <span className="block h-4 w-48 max-w-full animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
-            <span className="block h-3 w-24 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
-          </div>
-          <span className="hidden h-7 w-40 animate-pulse rounded-full bg-neutral-100 sm:block dark:bg-neutral-800" />
+        <div key={i} className="flex items-center gap-2 px-3.5 py-3">
+          <span className="block h-3.5 flex-1 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
+          <span className="h-5 w-10 animate-pulse rounded-full bg-neutral-100 dark:bg-neutral-800" />
+          <span className="size-7 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" />
+          <span className="size-7 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" />
         </div>
       ))}
     </div>
@@ -327,11 +335,3 @@ function BriefcaseIcon() {
   );
 }
 
-function FileIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" strokeLinejoin="round" />
-      <path d="M14 3v5h5M9 13h6M9 17h4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
