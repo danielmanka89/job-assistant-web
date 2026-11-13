@@ -86,8 +86,9 @@ export function QuoteBanner() {
     <footer
       data-quote-banner
       aria-label="Motivational quote"
-      // A floating frosted-glass frame over the sunset, 0.5rem in from the window edges.
-      className="fixed inset-x-2 bottom-2 z-30 lg:right-[calc(var(--edge)+0.5rem)] lg:bottom-[calc(var(--edge)+0.5rem)] h-(--quote-banner-h) overflow-hidden rounded-2xl border border-white/70 bg-white/45 shadow-[0_8px_30px_rgba(124,45,18,0.12),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl backdrop-saturate-150 lg:left-[calc(var(--edge)+18rem+0.5rem)] dark:border-white/10 dark:bg-neutral-900/45 dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]"
+      // A frosted-glass strip flush with the bottom of the window: no gap at the bottom, left or right
+      // (from lg up it runs from the menu to the frame; the frame's rounded corner trims its end).
+      className="fixed inset-x-0 bottom-0 z-30 h-(--quote-banner-h) overflow-hidden border-t border-white/70 bg-white/70 backdrop-blur-xl backdrop-saturate-150 lg:right-(--edge) lg:bottom-(--edge) lg:left-[calc(var(--edge)+18rem)] dark:border-white/10 dark:bg-neutral-900/70"
     >
       {/* The top edge doubles as the progress line: it fills in red until the next quote. */}
       <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-white/50 dark:bg-white/10" aria-hidden="true">
