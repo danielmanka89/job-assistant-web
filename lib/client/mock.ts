@@ -32,6 +32,9 @@ import type {
   ChatMessage,
   ChatSummary,
   ChatThreadResponse,
+  EmailDetail,
+  EmailListResponse,
+  SendEmailRequest,
   ConnectRequest,
   ConnectionsResponse,
   Person,
@@ -887,12 +890,90 @@ const mockChats = new Map<string, { personId: string; messages: ChatMessage[]; r
 
 const mockUnread = (chat: { messages: ChatMessage[]; readAt: string }) => chat.messages.filter((m) => m.senderId !== MOCK_ME && m.createdAt > chat.readAt).length;
 
+// Inbox, kept in memory for this page load: two sample emails, and anything you send.
+const MOCK_ADDRESS = "sam.rivera.k7x2@mail.example.com";
+const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
+const mockEmails: EmailDetail[] = [
+  {
+    id: "email_1",
+    direction: "in",
+    fromAddress: "priya@northwind.example",
+    fromName: "Priya Raman",
+    toAddress: MOCK_ADDRESS,
+    subject: "Your application for Senior Frontend Engineer",
+    preview: "Thanks for applying. We'd like to set up a 30 minute call this week.",
+    body: "Hi,\n\nThanks for applying. We'd like to set up a 30 minute call this week. Which days suit you?\n\nPriya Raman\nNorthwind Staffing",
+    attachments: [],
+    unread: true,
+    createdAt: minutesAgo(42),
+  },
+  {
+    id: "email_2",
+    direction: "in",
+    fromAddress: "careers@acme.example",
+    fromName: "Acme Careers",
+    toAddress: MOCK_ADDRESS,
+    subject: "We received your application",
+    preview: "This confirms we have your application for Data Analyst. The job description is attached.",
+    body: "This confirms we have your application for Data Analyst. The job description is attached.\n\nAcme Careers",
+    attachments: ["Data-Analyst-JD.pdf"],
+    unread: false,
+    createdAt: minutesAgo(60 * 26),
+  },
+];
+
+async function listEmails(): Promise<ApiResult<EmailListResponse>> {
+  await delay(200);
+  const emails = [...mockEmails].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((e) => ({ ...e }));
+  return { ok: true, data: { address: MOCK_ADDRESS, canReceive: true, canSend: true, emails } };
+}
+
+async function getEmail(id: string): Promise<ApiResult<EmailDetail>> {
+  await delay(150);
+  const email = mockEmails.find((e) => e.id === id);
+  if (!email) return fail({ code: "EMAIL_NOT_FOUND", message: "That email doesn't exist" });
+  email.unread = false;
+  return { ok: true, data: { ...email } };
+}
+
+async function sendEmail(request: SendEmailRequest): Promise<ApiResult<EmailDetail>> {
+  await delay(500);
+  if (!/^\S+@\S+\.\S+$/.test(request.to.trim())) {
+    return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { to: "Enter one email address, like name@example.com" } });
+  }
+  const body = request.body.trim();
+  const email: EmailDetail = {
+    id: `email_${Date.now()}`,
+    direction: "out",
+    fromAddress: MOCK_ADDRESS,
+    fromName: "You",
+    toAddress: request.to.trim().toLowerCase(),
+    subject: request.subject.trim(),
+    preview: body.replace(/\s+/g, " ").slice(0, 140),
+    body,
+    attachments: [],
+    unread: false,
+    createdAt: new Date().toISOString(),
+  };
+  mockEmails.push(email);
+  return { ok: true, data: { ...email } };
+}
+
+async function deleteEmail(id: string): Promise<ApiResult<null>> {
+  await delay(150);
+  const index = mockEmails.findIndex((e) => e.id === id);
+  if (index < 0) return fail({ code: "EMAIL_NOT_FOUND", message: "That email doesn't exist" });
+  mockEmails.splice(index, 1);
+  return { ok: true, data: null };
+}
+
 async function getChatSummary(): Promise<ApiResult<ChatSummary>> {
   await delay(150);
   return {
     ok: true,
     data: {
       unread: [...mockChats.values()].reduce((n, c) => n + mockUnread(c), 0),
+      emailUnread: mockEmails.filter((e) => e.unread).length,
       connectedTo: mockPeople.filter((p) => p.connection).length,
       connectedToMe: mockPeople.filter((p) => p.connectedToMe).length,
     },
@@ -1129,6 +1210,10 @@ export const mockApi = {
   openChat,
   getChat,
   sendChatMessage,
+  listEmails,
+  getEmail,
+  sendEmail,
+  deleteEmail,
   writeMockCallPrep,
   listDeadlines,
   createDeadline,
