@@ -409,6 +409,7 @@ export interface ConnectRequest {
 /** GET /api/chat/summary: the numbers shown in the menu. */
 export interface ChatSummary {
   unread: number; // unread messages across all chats
+  emailUnread: number; // unread emails in the Inbox
   connectedTo: number;
   connectedToMe: number;
 }
@@ -442,6 +443,46 @@ export interface ChatThreadResponse {
 }
 
 export const MAX_MESSAGE_CHARS = 2000;
+
+/** One email in the Inbox list. "in" was received at your project address, "out" was sent from it. */
+export interface EmailSummary {
+  id: string;
+  direction: "in" | "out";
+  fromAddress: string;
+  fromName: string; // "" when the sender gave none
+  toAddress: string;
+  subject: string;
+  preview: string; // the start of the body, on one line
+  unread: boolean; // only ever true for "in"
+  createdAt: string; // ISO 8601
+}
+
+/** GET /api/email/:id. Opening an email marks it read. */
+export interface EmailDetail extends EmailSummary {
+  body: string; // plain text; HTML emails are converted when they arrive
+  attachments: string[]; // file names only; the files aren't kept
+}
+
+/** GET /api/email: your project address and your emails, newest first. */
+export interface EmailListResponse {
+  address: string | null; // null while email isn't set up on the server
+  canReceive: boolean;
+  canSend: boolean;
+  emails: EmailSummary[];
+}
+
+/** POST /api/email: send an email from your project address. */
+export interface SendEmailRequest {
+  to: string;
+  subject: string;
+  body: string;
+  replyToId?: string; // the received email this answers, so it threads in the other person's mailbox
+}
+
+export const MAX_EMAIL_SUBJECT_CHARS = 200;
+export const MAX_EMAIL_BODY_CHARS = 20_000;
+/** Emails one account can send in 24 hours. */
+export const MAX_EMAILS_PER_DAY = 25;
 
 /** What a mock call question is about. */
 export const PREP_CATEGORIES = ["job", "experience", "projects", "skills", "summary"] as const;

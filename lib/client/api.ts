@@ -22,6 +22,10 @@ import type {
   ChatThreadResponse,
   ConnectRequest,
   ConnectionsResponse,
+  EmailDetail,
+  EmailListResponse,
+  EmailSummary,
+  SendEmailRequest,
   Person,
   MockCallPrepResponse,
   WriteMockCallPrepRequest,
@@ -381,7 +385,7 @@ export async function updateSubmission(id: string, changes: UpdateSubmissionRequ
 
 /* ---------- Connections and chat ---------- */
 
-/** Fired after anything that changes the menu's chat numbers, so the sidebar refreshes at once. */
+/** Fired after anything that changes the menu's chat or inbox numbers, so the sidebar refreshes at once. */
 export const CHAT_CHANGED_EVENT = "job-assistant:chat-changed";
 const chatChanged = () => window.dispatchEvent(new Event(CHAT_CHANGED_EVENT));
 
@@ -461,6 +465,58 @@ export async function getChat(id: string, after?: string): Promise<ApiResult<Cha
 export async function sendChatMessage(id: string, body: string): Promise<ApiResult<ChatMessage>> {
   if (USE_MOCK_API) return mockApi.sendChatMessage(id, body);
   return postJson<{ body: string }, ChatMessage>(`/api/chat/${encodeURIComponent(id)}`, { body });
+}
+
+/* ---------- Inbox (project email) ---------- */
+
+/** Your project address and your emails, newest first, from GET /api/email. */
+export async function listEmails(): Promise<ApiResult<EmailListResponse>> {
+  if (USE_MOCK_API) return mockApi.listEmails();
+  const result = await getJson("/api/email");
+  if (!result.ok) return result;
+  const body = (result.data ?? {}) as Partial<EmailListResponse>;
+  return {
+    ok: true,
+    data: {
+      address: typeof body.address === "string" ? body.address : null,
+      canReceive: body.canReceive === true,
+      canSend: body.canSend === true,
+      emails: asArray<EmailSummary>(body.emails).filter((e) => !!e && typeof e.id === "string"),
+    },
+  };
+}
+
+/** One email in full from GET /api/email/:id. Marks it read, so the menu's number is refreshed. */
+export async function getEmail(id: string): Promise<ApiResult<EmailDetail>> {
+  const result = USE_MOCK_API ? await mockApi.getEmail(id) : await getJson(`/api/email/${encodeURIComponent(id)}`);
+  if (!result.ok) return result;
+  chatChanged();
+  const body = result.data as EmailDetail;
+  return { ok: true, data: { ...body, attachments: asArray<string>(body?.attachments) } };
+}
+
+/** Sends an email from your project address with POST /api/email. */
+export async function sendEmail(request: SendEmailRequest): Promise<ApiResult<EmailDetail>> {
+  if (USE_MOCK_API) return mockApi.sendEmail(request);
+  return postJson<SendEmailRequest, EmailDetail>("/api/email", request);
+}
+
+/** Deletes one of your emails with DELETE /api/email/:id. */
+export async function deleteEmail(id: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) {
+    const result = await mockApi.deleteEmail(id);
+    chatChanged();
+    return result;
+  }
+  let res: Response;
+  try {
+    res = await fetch(`/api/email/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "same-origin" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (!res.ok) return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
+  chatChanged();
+  return { ok: true, data: null };
 }
 
 /** The saved mock call preparation for a submission, from GET /api/submissions/:id/prep. */

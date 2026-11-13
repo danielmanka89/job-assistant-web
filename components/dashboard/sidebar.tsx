@@ -93,6 +93,17 @@ const NAV: NavItem[] = [
     ),
   },
   {
+    href: "/dashboard/inbox",
+    label: "Inbox",
+    match: (p) => under(p, "/dashboard/inbox"),
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3.5 7 8.5 6.5L20.5 7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/dashboard/employer",
     label: "Post a Job",
     match: (p) => under(p, "/dashboard/employer"),
@@ -227,12 +238,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
                 >
                   {item.icon}
                   {item.label}
-                  {item.href === "/dashboard/chat" && chat && chat.unread > 0 && (
-                    <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${active ? "bg-white text-brand-700" : "bg-brand-600 text-white"}`}>
-                      {chat.unread > 99 ? "99+" : chat.unread}
-                      <span className="sr-only"> unread messages</span>
-                    </span>
-                  )}
+                  <UnreadBadge count={item.href === "/dashboard/chat" ? chat?.unread : item.href === "/dashboard/inbox" ? chat?.emailUnread : 0} what={item.href === "/dashboard/inbox" ? "emails" : "messages"} active={active} />
                 </Link>
               </li>
             );
@@ -258,9 +264,20 @@ function SidebarContent({ pathname }: { pathname: string }) {
   );
 }
 
+/** The number at the end of a menu item (unread chat messages, unread emails); nothing when it's zero. */
+function UnreadBadge({ count, what, active }: { count: number | undefined; what: string; active: boolean }) {
+  if (!count || count < 1) return null;
+  return (
+    <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${active ? "bg-white text-brand-700" : "bg-brand-600 text-white"}`}>
+      {count > 99 ? "99+" : count}
+      <span className="sr-only"> unread {what}</span>
+    </span>
+  );
+}
+
 const SUMMARY_POLL_MS = 30000;
 
-/** Unread messages and connection counts for the menu; refreshed every 30 seconds and whenever chat changes. */
+/** Unread messages, unread emails and connection counts for the menu; refreshed every 30 seconds and whenever chat changes. */
 function useChatSummary(enabled: boolean): ChatSummary | null {
   const [summary, setSummary] = useState<ChatSummary | null>(null);
   useEffect(() => {

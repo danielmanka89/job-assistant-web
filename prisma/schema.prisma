@@ -44,6 +44,10 @@ model User {
   conversationsA  Conversation[]    @relation("ConversationA")
   conversationsB  Conversation[]    @relation("ConversationB")
   messages        Message[]
+  // The name part of this account's project email address (Inbox), e.g. "daniel.k7x2"; the domain is
+  // EMAIL_DOMAIN. Given the first time the account opens its inbox, then never changed.
+  mailboxName     String?           @unique
+  emails          EmailMessage[]
 }
 
 // "fromUser is connected to toUser" (Chat > People), labelled with what they are to them. One-way,
@@ -89,6 +93,29 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// One email in a user's project inbox (Inbox): received at their project address ("in") or sent
+// from it ("out"). Only plain text is kept; HTML mail is converted when it arrives.
+model EmailMessage {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  direction   String // "in" | "out"
+  providerId  String? // the email service's id for this email; a webhook delivered twice is stored once
+  fromAddress String
+  fromName    String    @default("")
+  toAddress   String // "out": who it was sent to; "in": the project address it arrived at
+  subject     String
+  body        String // plain text
+  preview     String    @default("") // the start of the body, for the list (which never loads bodies)
+  attachments Json      @default("[]") // string[]: file names only; the files themselves aren't kept
+  messageId   String? // the email's Message-ID header, so a reply threads in the other person's mailbox
+  readAt      DateTime? // null while an incoming email is unread
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, providerId])
+  @@index([userId, createdAt])
 }
 
 // The candidate's AI-written interview introduction (My Profile > My Introduction), kept so it opens
