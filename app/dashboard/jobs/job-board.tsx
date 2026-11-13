@@ -238,7 +238,6 @@ export function JobBoard() {
             className={`hidden items-center gap-x-4 border-b border-neutral-200/80 bg-neutral-50 px-4 py-2 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase md:grid dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 ${ROW_COLUMNS}`}
           >
             <span className="pl-11">Role</span>
-            <span>Type</span>
             <span>Location</span>
             <span>Posted</span>
             <span>Status</span>
