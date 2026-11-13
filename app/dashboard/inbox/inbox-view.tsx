@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { deleteEmail, getEmail, listEmails, logout, sendEmail } from "@/lib/client/api";
+import { focusFirst, focusLost, tabListKeyDown } from "@/lib/client/a11y";
 import {
   MAX_EMAIL_BODY_CHARS,
   MAX_EMAIL_SUBJECT_CHARS,
@@ -41,6 +42,7 @@ function fullTime(iso: string) {
 const otherParty = (e: EmailSummary) => (e.direction === "in" ? e.fromName || e.fromAddress : e.toAddress);
 
 type Box = "in" | "out";
+const BOXES: readonly Box[] = ["in", "out"];
 type Draft = { to: string; subject: string; body: string; replyToId?: string };
 /** What the right-hand side shows. */
 type Pane = { kind: "none" } | { kind: "read"; id: string } | { kind: "write"; draft: Draft };
@@ -56,6 +58,21 @@ export function InboxView() {
   const [inbox, setInbox] = useState<EmailListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pane, setPane] = useState<Pane>({ kind: "none" });
+  // Where focus goes when the right-hand pane closes (phones hide the list while it's open): the email
+  // that was open, or the tab when that email is gone.
+  const backTo = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (pane.kind !== "none") return;
+    const id = backTo.current;
+    backTo.current = null;
+    if (id !== null && focusLost()) focusFirst(`email-item-${id}`, `inbox-tab-${box}`);
+  }, [pane, box]);
+
+  function closePane() {
+    backTo.current = pane.kind === "read" ? pane.id : "";
+    setPane({ kind: "none" });
+  }
 
   const fail = useCallback(
     async (e: ApiError) => {
@@ -97,12 +114,14 @@ export function InboxView() {
   }
 
   function sent() {
+    backTo.current = "";
     setPane({ kind: "none" });
     setBox("out");
     void refresh();
   }
 
   function removed(id: string) {
+    backTo.current = id;
     setPane({ kind: "none" });
     setInbox((current) => current && { ...current, emails: current.emails.filter((e) => e.id !== id) });
   }
@@ -115,7 +134,7 @@ export function InboxView() {
         <section aria-label="Your emails" className={`${panel} flex min-h-0 flex-col ${pane.kind === "none" ? "flex" : "hidden lg:flex"}`}>
           <AddressCard inbox={inbox} onWrite={() => setPane({ kind: "write", draft: { to: "", subject: "", body: "" } })} />
           <div role="tablist" aria-label="Received or sent" className="mx-4 mb-3 grid grid-cols-2 gap-1 rounded-2xl bg-neutral-100 p-1 dark:bg-neutral-800/70">
-            {(["in", "out"] as const).map((b) => (
+            {BOXES.map((b) => (
               <button
                 key={b}
                 type="button"
@@ -123,7 +142,9 @@ export function InboxView() {
                 id={`inbox-tab-${b}`}
                 aria-selected={box === b}
                 aria-controls="inbox-panel"
+                tabIndex={box === b ? 0 : -1}
                 onClick={() => setBox(b)}
+                onKeyDown={(e) => tabListKeyDown(e, BOXES, box, setBox, (k) => `inbox-tab-${k}`)}
                 className={`rounded-xl px-3 py-2 text-sm font-semibold transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 ${
                   box === b ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-white" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
                 }`}
@@ -149,7 +170,7 @@ export function InboxView() {
               key={pane.id}
               id={pane.id}
               canSend={Boolean(inbox?.canSend)}
-              onBack={() => setPane({ kind: "none" })}
+              onBack={closePane}
               onReply={(draft) => setPane({ kind: "write", draft })}
               onRemoved={removed}
               onError={fail}
@@ -161,7 +182,7 @@ export function InboxView() {
               draft={pane.draft}
               from={inbox?.address ?? null}
               canSend={Boolean(inbox?.canSend)}
-              onBack={() => setPane({ kind: "none" })}
+              onBack={closePane}
               onSent={sent}
             />
           )}
@@ -264,6 +285,7 @@ function EmailList({ emails, box, openId, onOpen }: { emails: EmailSummary[] | n
           <li key={email.id}>
             <button
               type="button"
+              id={`email-item-${email.id}`}
               onClick={() => onOpen(email.id)}
               aria-current={active ? "true" : undefined}
               className={`flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 ${
@@ -326,6 +348,22 @@ function Reader({
   const [email, setEmail] = useState<EmailDetail | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const footer = useRef<HTMLElement>(null);
+  const wasConfirming = useRef(false);
+  const loaded = Boolean(email);
+
+  // On phones the list (and the email's button in it) is hidden now, so focus moves to the subject.
+  useEffect(() => {
+    if (loaded && focusLost()) heading.current?.focus();
+  }, [loaded]);
+
+  // The Delete button swaps for "Delete / Keep" and back, so focus follows: to Keep (the safe choice), then back to Delete.
+  useEffect(() => {
+    if (confirming) footer.current?.querySelector<HTMLElement>("[data-keep]")?.focus();
+    else if (wasConfirming.current) footer.current?.querySelector<HTMLElement>("[data-delete]")?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
 
   useEffect(() => {
     let live = true;
@@ -371,7 +409,9 @@ function Reader({
       <header className="flex items-start gap-3 border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
         <BackButton onBack={onBack} label="Back to your emails" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg leading-snug font-semibold break-words text-neutral-900 dark:text-white">{email.subject}</h2>
+          <h2 ref={heading} tabIndex={-1} className="text-lg leading-snug font-semibold break-words text-neutral-900 outline-none dark:text-white">
+            {email.subject}
+          </h2>
           <p className="mt-1 text-sm break-words text-neutral-600 dark:text-neutral-300">
             {received ? (
               <>
@@ -409,7 +449,7 @@ function Reader({
         )}
       </div>
 
-      <footer className="flex flex-wrap items-center gap-2 border-t border-neutral-100 p-3 dark:border-neutral-800">
+      <footer ref={footer} className="flex flex-wrap items-center gap-2 border-t border-neutral-100 p-3 dark:border-neutral-800">
         {received && (
           <Button type="button" onClick={reply} disabled={!canSend} className="px-5 py-2 text-sm">
             Reply
@@ -421,12 +461,12 @@ function Reader({
             <Button type="button" onClick={remove} loading={deleting} className="px-4 py-2 text-sm">
               Delete
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setConfirming(false)} disabled={deleting} className="px-4 py-2 text-sm">
+            <Button type="button" variant="secondary" data-keep onClick={() => setConfirming(false)} disabled={deleting} className="px-4 py-2 text-sm">
               Keep
             </Button>
           </>
         ) : (
-          <Button type="button" variant="secondary" onClick={() => setConfirming(true)} className="px-5 py-2 text-sm">
+          <Button type="button" variant="secondary" data-delete onClick={() => setConfirming(true)} className="px-5 py-2 text-sm">
             Delete
           </Button>
         )}
@@ -443,6 +483,18 @@ function Composer({ draft, from, canSend, onBack, onSent }: { draft: Draft; from
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const form = useRef<HTMLFormElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  // Opened from a list that phones hide: start at the form's heading.
+  useEffect(() => {
+    if (focusLost()) heading.current?.focus();
+  }, []);
+
+  // After a rejected send, put the cursor in the first field with a problem.
+  useEffect(() => {
+    form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [fieldErrors]);
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -458,11 +510,13 @@ function Composer({ draft, from, canSend, onBack, onSent }: { draft: Draft; from
   }
 
   return (
-    <form onSubmit={send} noValidate className="flex min-h-0 flex-1 flex-col">
+    <form ref={form} onSubmit={send} noValidate className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
         <BackButton onBack={onBack} label="Back to your emails" />
         <div className="min-w-0">
-          <h2 className="font-semibold text-neutral-900 dark:text-white">{draft.replyToId ? "Reply" : "New email"}</h2>
+          <h2 ref={heading} tabIndex={-1} className="font-semibold text-neutral-900 outline-none dark:text-white">
+            {draft.replyToId ? "Reply" : "New email"}
+          </h2>
           {from && <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">From {from}</p>}
         </div>
       </header>
