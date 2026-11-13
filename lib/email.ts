@@ -194,6 +194,9 @@ export async function sendEmail(input: {
 }): Promise<string | null> {
   // The display name goes in quotes, so drop the characters that would end them.
   const name = input.fromName.replace(/["\\\r\n<>]/g, "").trim();
+  // The Message-ID being answered came from the other person's mail server: send it only if it has
+  // the usual <id@host> shape, so it can't add headers of its own.
+  const inReplyTo = input.inReplyTo && /^<[^<>\s]{1,250}>$/.test(input.inReplyTo.trim()) ? input.inReplyTo.trim() : null;
   const result = await resend("/emails", {
     method: "POST",
     headers: { "Idempotency-Key": input.idempotencyKey },
@@ -202,7 +205,7 @@ export async function sendEmail(input: {
       to: [input.to],
       subject: input.subject,
       text: input.body,
-      ...(input.inReplyTo ? { headers: { "In-Reply-To": input.inReplyTo, References: input.inReplyTo } } : {}),
+      ...(inReplyTo ? { headers: { "In-Reply-To": inReplyTo, References: inReplyTo } } : {}),
     }),
   });
   return text(result.id) || null;

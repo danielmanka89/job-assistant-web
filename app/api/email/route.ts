@@ -56,14 +56,6 @@ export async function POST(request: NextRequest) {
   else if (body.length > MAX_EMAIL_BODY_CHARS) fieldErrors.body = `Emails can be at most ${MAX_EMAIL_BODY_CHARS.toLocaleString("en-US")} characters`;
   if (Object.keys(fieldErrors).length) return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", fieldErrors);
 
-  // A daily limit per account, so one account can't use the site to send bulk mail.
-  const sentToday = await prisma.emailMessage.count({
-    where: { userId: user.id, direction: "out", createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-  });
-  if (sentToday >= MAX_EMAILS_PER_DAY) {
-    return apiError(429, "EMAIL_LIMIT_REACHED", `You can send up to ${MAX_EMAILS_PER_DAY} emails a day. Try again tomorrow.`);
-  }
-
   const original = replyToId
     ? await prisma.emailMessage.findFirst({ where: { id: replyToId, userId: user.id, direction: "in" }, select: { messageId: true } })
     : null;
@@ -73,6 +65,17 @@ export async function POST(request: NextRequest) {
   const row = await prisma.emailMessage.create({
     data: { userId: user.id, direction: "out", fromAddress, fromName: user.name, toAddress: to, subject, body, preview: previewOf(body), readAt: new Date() },
   });
+
+  // A daily limit per account, so one account can't use the site to send bulk mail. Counted after
+  // saving (this row included), so requests sent at the same moment see each other's rows and can't
+  // all slip under it; a burst right at the limit errs on refusing.
+  const sentToday = await prisma.emailMessage.count({
+    where: { userId: user.id, direction: "out", createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+  });
+  if (sentToday > MAX_EMAILS_PER_DAY) {
+    await prisma.emailMessage.delete({ where: { id: row.id } }).catch(() => undefined);
+    return apiError(429, "EMAIL_LIMIT_REACHED", `You can send up to ${MAX_EMAILS_PER_DAY} emails a day. Try again tomorrow.`);
+  }
   try {
     const providerId = await sendEmail({ fromName: user.name, fromAddress, to, subject, body, inReplyTo: original?.messageId, idempotencyKey: `email-${row.id}` });
     const saved = providerId ? await prisma.emailMessage.update({ where: { id: row.id }, data: { providerId } }) : row;
