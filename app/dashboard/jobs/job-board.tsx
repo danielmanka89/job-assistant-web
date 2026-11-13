@@ -363,7 +363,8 @@ function FiltersMenu({ sections, onClear }: { sections: FilterSection[]; onClear
       {open && (
         <div
           id={menuId}
-          className="absolute right-0 z-30 mt-2 w-64 rounded-2xl border border-neutral-200/80 bg-white p-2 shadow-xl shadow-neutral-900/10 dark:border-neutral-800 dark:bg-neutral-950"
+          // Phones: the button wraps to the start of its own row, so the menu opens to the right of it.
+          className="absolute left-0 z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl sm:right-0 sm:left-auto border border-neutral-200/80 bg-white p-2 shadow-xl shadow-neutral-900/10 dark:border-neutral-800 dark:bg-neutral-950"
         >
           {sections.map((section) => (
             <fieldset key={section.name} className="px-1 py-1.5 [&+&]:border-t [&+&]:border-neutral-100 dark:[&+&]:border-neutral-800">
