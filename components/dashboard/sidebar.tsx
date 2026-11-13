@@ -21,7 +21,7 @@ type NavItem = {
 
 const under = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}/`);
 
-const ICON = "size-5 shrink-0";
+const ICON = "size-[18px] shrink-0";
 const NAV: NavItem[] = [
   {
     href: "/dashboard",
@@ -176,7 +176,7 @@ export function Sidebar() {
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-20 shrink-0 items-center justify-between px-6 short:h-16">
+        <div className="flex h-14 shrink-0 items-center justify-between px-5">
           <Logo />
           <button
             type="button"
@@ -208,31 +208,26 @@ function SidebarContent({ pathname }: { pathname: string }) {
     router.replace("/"); // back to the landing page
   }
 
-  // Items share the free height: 44px each when there is room, down to 32px on short screens, so the
-  // whole menu (and the deadline tracker under it) fits without scrolling.
-  const itemClass = "flex w-full items-center gap-3 rounded-xl px-3.5 text-[15px] font-medium transition";
-  const itemSlot = "flex min-h-8 max-h-11 flex-1 basis-0";
+  // Compact rows (36px) so clocks, account, menu and the deadline tracker all fit without scrolling.
+  const itemClass = "flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium transition";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6 short:pb-3">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-3">
       <SidebarClocks />
-      <UserCard user={user} chat={chat} className="mt-4 short:mt-3" />
+      <UserCard user={user} chat={chat} onSignOut={signOut} signingOut={signingOut} className="mt-3" />
 
-      <nav aria-label="Main" className="mt-6 flex min-h-0 flex-1 flex-col short:mt-3">
-        <p className="px-3.5 pb-2 short:pb-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
-          Menu
-        </p>
-        <ul className="flex min-h-0 flex-1 flex-col gap-1">
+      <nav aria-label="Main" className="mt-3">
+        <ul className="space-y-0.5">
           {items.map((item) => {
             const active = item.match(pathname);
             return (
-              <li key={item.href} className={itemSlot}>
+              <li key={item.href}>
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={`${itemClass} ${
                     active
-                      ? "bg-brand-600 text-white shadow-md shadow-brand-600/25"
+                      ? "bg-brand-600 text-white shadow-sm shadow-brand-600/25"
                       : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800/70 dark:hover:text-white"
                   }`}
                 >
@@ -243,19 +238,6 @@ function SidebarContent({ pathname }: { pathname: string }) {
               </li>
             );
           })}
-          <li className={itemSlot}>
-            <button
-              type="button"
-              onClick={signOut}
-              disabled={signingOut}
-              className={`${itemClass} text-neutral-600 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-60 dark:text-neutral-300 dark:hover:bg-brand-500/10 dark:hover:text-brand-300`}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-                <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {signingOut ? "Signing out…" : "Sign Out"}
-            </button>
-          </li>
         </ul>
       </nav>
 
@@ -268,7 +250,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
 function UnreadBadge({ count, what, active }: { count: number | undefined; what: string; active: boolean }) {
   if (!count || count < 1) return null;
   return (
-    <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${active ? "bg-white text-brand-700" : "bg-brand-600 text-white"}`}>
+    <span className={`ml-auto rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums ${active ? "bg-white text-brand-700" : "bg-brand-600 text-white"}`}>
       {count > 99 ? "99+" : count}
       <span className="sr-only"> unread {what}</span>
     </span>
@@ -299,42 +281,60 @@ function useChatSummary(enabled: boolean): ChatSummary | null {
   return summary;
 }
 
-function UserCard({ user, chat, className = "" }: { user: User | null | undefined; chat: ChatSummary | null; className?: string }) {
+function UserCard({
+  user,
+  chat,
+  onSignOut,
+  signingOut,
+  className = "",
+}: {
+  user: User | null | undefined;
+  chat: ChatSummary | null;
+  onSignOut: () => void;
+  signingOut: boolean;
+  className?: string;
+}) {
   // undefined while rendering on the server: keep the space so the layout doesn't jump.
   if (user === undefined) {
-    return <div className={`h-[76px] animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-900 ${className}`} aria-hidden="true" />;
+    return <div className={`h-[58px] animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-900 ${className}`} aria-hidden="true" />;
   }
   const name = user?.name || "Your account";
   return (
-    <div className={`rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 short:p-3 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
-      <div className="flex items-center gap-3">
-        {/* The menu photo, or the portfolio photo until one is set. */}
-        <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} />
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-neutral-900 dark:text-white">{name}</p>
-          {user && (
-            <p className="mt-0.5 inline-flex rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
-              {ROLE_LABEL[user.role]}
-            </p>
+    <div className={`flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
+      {/* The menu photo, or the portfolio photo until one is set. */}
+      <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} className="size-9 text-sm" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] leading-tight font-semibold text-neutral-900 dark:text-white">{name}</p>
+        <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] leading-tight text-neutral-500 dark:text-neutral-400">
+          {user && <span className="font-semibold text-brand-700 dark:text-brand-300">{ROLE_LABEL[user.role]}</span>}
+          {/* The account's connections: people you're connected to, and people connected to you. */}
+          {user && chat && (
+            <Link
+              href="/dashboard/chat"
+              title={`Connected to ${chat.connectedTo} · ${chat.connectedToMe} connected to you`}
+              className="truncate rounded tabular-nums hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:hover:text-white"
+            >
+              <span aria-hidden="true">· </span>
+              {chat.connectedTo} connected<span aria-hidden="true"> · </span>
+              <span className="sr-only">, </span>
+              {chat.connectedToMe} to you
+            </Link>
           )}
-        </div>
+        </p>
       </div>
-      {/* The account's connections: people you're connected to, and people connected to you. */}
-      {user && chat && (
-        <Link
-          href="/dashboard/chat"
-          className="mt-3 grid grid-cols-2 gap-2 rounded-xl text-center outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
+      {user && (
+        <button
+          type="button"
+          onClick={onSignOut}
+          disabled={signingOut}
+          aria-label={signingOut ? "Signing out" : "Sign out"}
+          title="Sign out"
+          className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-500 transition hover:bg-brand-50 hover:text-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:opacity-60 dark:text-neutral-400 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
         >
-          {[
-            { label: "Connected to", value: chat.connectedTo },
-            { label: "Connected to you", value: chat.connectedToMe },
-          ].map((item) => (
-            <span key={item.label} className="rounded-xl bg-white px-2 py-1.5 dark:bg-neutral-950/60">
-              <span className="block font-display text-lg leading-tight font-semibold text-neutral-900 tabular-nums dark:text-white">{item.value}</span>
-              <span className="block text-[11px] font-medium text-neutral-500 dark:text-neutral-400">{item.label}</span>
-            </span>
-          ))}
-        </Link>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-[18px]" aria-hidden="true">
+            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       )}
     </div>
   );
