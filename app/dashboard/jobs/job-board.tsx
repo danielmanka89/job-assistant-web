@@ -10,6 +10,22 @@ import { ErrorAlert } from "@/components/ui/alert";
 import { JobCard, ROW_COLUMNS } from "./job-card";
 import { JOB_TYPES, JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 
+// The Posted filter: how recently a job was put on the board.
+const POSTED_RANGES = [
+  { key: "any", label: "Any time", hours: null },
+  { key: "24h", label: "Last 24 hours", hours: 24 },
+  { key: "48h", label: "Last 48 hours", hours: 48 },
+  { key: "week", label: "Last week", hours: 24 * 7 },
+  { key: "month", label: "Last month", hours: 24 * 30 },
+] as const;
+type PostedRange = (typeof POSTED_RANGES)[number]["key"];
+
+function postedWithin(job: JobPosting, hours: number | null, now: number | null): boolean {
+  if (hours === null || now === null) return true;
+  const at = Date.parse(job.createdAt);
+  return Number.isFinite(at) && now - at <= hours * 3_600_000;
+}
+
 type State =
   | { status: "loading" }
   | { status: "error"; message: string }
@@ -21,6 +37,18 @@ export function JobBoard() {
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<JobType | "All">("All");
+  const [postedFilter, setPostedFilter] = useState<PostedRange>("any");
+  // The time the Posted filter counts back from, refreshed every minute (null until mounted).
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = window.setTimeout(tick, 0);
+    const timer = window.setInterval(tick, 60_000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(timer);
+    };
+  }, []);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [navigating, startNavigation] = useTransition();
   // Jobs with a row in the Spreadsheet, and the message about the latest Apply click.
@@ -80,13 +108,16 @@ export function JobBoard() {
   }, [attempt, router]);
 
   const jobs = useMemo(() => (state.status === "ready" ? state.jobs : []), [state]);
-  const searched = useMemo(() => {
+  const matching = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return jobs;
     return jobs.filter((job) =>
       [job.title, job.company, job.location, job.description].some((field) => field?.toLowerCase().includes(q)),
     );
   }, [jobs, query]);
+  const postedHours = POSTED_RANGES.find((r) => r.key === postedFilter)?.hours ?? null;
+  const searched = useMemo(() => matching.filter((job) => postedWithin(job, postedHours, now)), [matching, postedHours, now]);
+  const postedCounts = POSTED_RANGES.map((r) => matching.filter((job) => postedWithin(job, r.hours, now)).length);
   // Split by position type: a job open to several types shows under each of them.
   const filtered = useMemo(
     () => (typeFilter === "All" ? searched : searched.filter((job) => job.employmentTypes.includes(typeFilter))),
@@ -151,6 +182,20 @@ export function JobBoard() {
             className="block w-full rounded-xl border border-neutral-200 bg-white py-2.5 pr-3.5 pl-10 text-[15px] text-neutral-900 shadow-sm outline-none transition placeholder:text-neutral-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500"
           />
         </div>
+        <label className="flex items-center gap-2 text-sm text-neutral-600 sm:ml-auto dark:text-neutral-300">
+          <span className="font-medium">Posted</span>
+          <select
+            value={postedFilter}
+            onChange={(e) => setPostedFilter(e.target.value as PostedRange)}
+            className="rounded-xl border border-neutral-200 bg-white py-2 pr-8 pl-3 text-sm text-neutral-900 shadow-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          >
+            {POSTED_RANGES.map((r, i) => (
+              <option key={r.key} value={r.key}>
+                {r.label} ({postedCounts[i]})
+              </option>
+            ))}
+          </select>
+        </label>
         <p className="text-sm text-neutral-500 dark:text-neutral-400" aria-live="polite">
           {filtered.length === jobs.length
             ? `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}`
@@ -193,7 +238,9 @@ export function JobBoard() {
           body={
             query.trim()
               ? `Nothing matches "${query.trim()}"${typeFilter === "All" ? "" : ` in ${JOB_TYPE_LABEL[typeFilter]}`}. Try a different search.`
-              : `No ${JOB_TYPE_LABEL[typeFilter as JobType]} positions right now. Try another type.`
+              : postedFilter !== "any"
+                ? `No ${typeFilter === "All" ? "" : `${JOB_TYPE_LABEL[typeFilter]} `}positions posted in the ${POSTED_RANGES.find((r) => r.key === postedFilter)?.label.toLowerCase()}. Try a longer time range.`
+                : `No ${JOB_TYPE_LABEL[typeFilter as JobType]} positions right now. Try another type.`
           }
         />
       ) : (

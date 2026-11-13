@@ -11,6 +11,7 @@ export interface ExternalJob {
   description: string;
   applyUrl: string;
   employmentTypes: JobType[];
+  postedAt?: Date; // when the provider says it was posted; the first sync time otherwise
 }
 
 interface JobProvider {
@@ -18,11 +19,13 @@ interface JobProvider {
   fetchJobs(): Promise<ExternalJob[]>;
 }
 
-// Demo data so the job board works without provider API keys. Companies are made up and every
+// Demo data so the job board works without provider API keys. postedDaysAgo spreads the demo jobs
+// over the Posted filter's ranges (24 h, 48 h, week, month, older), counted from each sync. Companies are made up and every
 // apply link points at example.com, so these can't be mistaken for real openings.
-const MOCK_JOBS: ExternalJob[] = [
+const MOCK_JOBS: (Omit<ExternalJob, "postedAt"> & { postedDaysAgo: number })[] = [
   {
     externalId: "mock-1",
+    postedDaysAgo: 0,
     title: "Junior Python Developer",
     company: "Brightline Analytics (demo)",
     location: "Berlin, Germany",
@@ -33,6 +36,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-2",
+    postedDaysAgo: 0.5,
     title: "Frontend Engineer (React)",
     company: "Cobalt Harbor Systems (demo)",
     location: "Remote (EU)",
@@ -43,6 +47,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-3",
+    postedDaysAgo: 1.5,
     title: "Machine Learning Engineer",
     company: "Fernway Health Tech (demo)",
     location: "Munich, Germany",
@@ -53,6 +58,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-4",
+    postedDaysAgo: 3,
     title: "DevOps Engineer",
     company: "Quarrystone Cloud (demo)",
     location: "Hamburg, Germany",
@@ -63,6 +69,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-5",
+    postedDaysAgo: 5,
     title: "Backend Engineer (Node.js)",
     company: "Lumen Parcel (demo)",
     location: "Remote",
@@ -73,6 +80,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-6",
+    postedDaysAgo: 6,
     title: "Data Analyst",
     company: "Tidewater Retail Group (demo)",
     location: "Frankfurt, Germany",
@@ -83,6 +91,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-7",
+    postedDaysAgo: 10,
     title: "Full Stack Developer (Django + React)",
     company: "Orchard Learning (demo)",
     location: "Cologne, Germany",
@@ -93,6 +102,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-8",
+    postedDaysAgo: 14,
     title: "QA Automation Engineer",
     company: "Pinecrest Fintech (demo)",
     location: "Remote (Germany)",
@@ -103,6 +113,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-9",
+    postedDaysAgo: 22,
     title: "Cloud Solutions Architect",
     company: "Silverpine Consulting (demo)",
     location: "Stuttgart, Germany",
@@ -113,6 +124,7 @@ const MOCK_JOBS: ExternalJob[] = [
   },
   {
     externalId: "mock-10",
+    postedDaysAgo: 40,
     title: "Software Engineer, Mobile (React Native)",
     company: "Wayfarer Transit (demo)",
     location: "Leipzig, Germany",
@@ -125,7 +137,8 @@ const MOCK_JOBS: ExternalJob[] = [
 
 const mockProvider: JobProvider = {
   source: "mock",
-  fetchJobs: async () => MOCK_JOBS,
+  fetchJobs: async () =>
+    MOCK_JOBS.map(({ postedDaysAgo, ...job }) => ({ ...job, postedAt: new Date(Date.now() - postedDaysAgo * 86_400_000) })),
 };
 
 /** EXTERNAL_JOBS_PROVIDER=mock (default) or none. Adzuna can be added here as another JobProvider. */
@@ -146,11 +159,11 @@ export function syncExternalJobs(): Promise<void> {
       try {
         const jobs = await provider.fetchJobs();
         await prisma.$transaction(
-          jobs.map(({ externalId, ...fields }) =>
+          jobs.map(({ externalId, postedAt, ...fields }) =>
             prisma.jobPosting.upsert({
               where: { source_externalId: { source: provider.source, externalId } },
-              create: { ...fields, source: provider.source, externalId },
-              update: fields,
+              create: { ...fields, source: provider.source, externalId, ...(postedAt ? { createdAt: postedAt } : {}) },
+              update: { ...fields, ...(postedAt ? { createdAt: postedAt } : {}) },
             }),
           ),
         );
