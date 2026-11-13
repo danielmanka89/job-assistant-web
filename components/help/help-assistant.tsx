@@ -158,7 +158,7 @@ export function HelpAssistant() {
         aria-controls={open ? panelId : undefined}
         aria-label={open ? "Close help assistant" : "Help: ask how to use JobAssistant"}
         title="Help"
-        className="fixed right-4 bottom-[calc(var(--quote-banner-space)+0.5rem)] z-40 grid size-12 place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/40 focus-visible:outline-none"
+        className="fixed right-4 bottom-[calc(var(--quote-banner-space)+0.5rem)] z-40 lg:right-[calc(var(--edge)+1rem)] lg:bottom-[calc(var(--quote-banner-space)+var(--edge)+0.5rem)] grid size-12 place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/40 focus-visible:outline-none"
       >
         {open ? (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5" aria-hidden="true">
@@ -178,7 +178,7 @@ export function HelpAssistant() {
           id={panelId}
           role="dialog"
           aria-labelledby={titleId}
-          className="fixed right-4 bottom-[calc(var(--quote-banner-space)+4rem)] z-[55] flex h-[min(34rem,calc(100dvh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-2xl shadow-neutral-900/20 motion-safe:animate-panel-in dark:border-neutral-800 dark:bg-neutral-950"
+          className="fixed right-4 bottom-[calc(var(--quote-banner-space)+4rem)] z-[55] lg:right-[calc(var(--edge)+1rem)] lg:bottom-[calc(var(--quote-banner-space)+var(--edge)+4rem)] flex h-[min(34rem,calc(100dvh-9rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-2xl shadow-neutral-900/20 motion-safe:animate-panel-in dark:border-neutral-800 dark:bg-neutral-950"
         >
           <header className="flex items-center gap-2 border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
             <div className="min-w-0 flex-1">

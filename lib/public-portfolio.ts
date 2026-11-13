@@ -41,6 +41,6 @@ export async function getPublicPortfolio(userId: string): Promise<PublicPortfoli
       profile.user.profilePhoto?.width && profile.user.profilePhoto.height
         ? { width: profile.user.profilePhoto.width, height: profile.user.profilePhoto.height }
         : null,
-    themeColor: THEME_COLORS.includes(profile.user.themeColor as ThemeColor) ? (profile.user.themeColor as ThemeColor) : "RED",
+    themeColor: THEME_COLORS.includes(profile.user.themeColor as ThemeColor) ? (profile.user.themeColor as ThemeColor) : "BLUE",
   };
 }

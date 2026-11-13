@@ -172,7 +172,7 @@ export function Sidebar() {
 
       <aside
         id="dashboard-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-neutral-200/80 bg-white transition-transform duration-200 lg:translate-x-0 dark:border-neutral-800 dark:bg-neutral-950 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-neutral-200/80 bg-white transition-transform duration-200 lg:inset-y-(--edge) lg:left-(--edge) lg:translate-x-0 lg:rounded-l-[26px] dark:border-neutral-800 dark:bg-neutral-950 ${
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
@@ -227,7 +227,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
                   aria-current={active ? "page" : undefined}
                   className={`${itemClass} ${
                     active
-                      ? "bg-brand-600 text-white shadow-sm shadow-brand-600/25"
+                      ? "bg-white text-brand-700 shadow-md shadow-brand-600/15 dark:bg-white/10 dark:text-white"
                       : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800/70 dark:hover:text-white"
                   }`}
                 >
@@ -247,10 +247,10 @@ function SidebarContent({ pathname }: { pathname: string }) {
 }
 
 /** The number at the end of a menu item (unread chat messages, unread emails); nothing when it's zero. */
-function UnreadBadge({ count, what, active }: { count: number | undefined; what: string; active: boolean }) {
+function UnreadBadge({ count, what }: { count: number | undefined; what: string; active?: boolean }) {
   if (!count || count < 1) return null;
   return (
-    <span className={`ml-auto rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums ${active ? "bg-white text-brand-700" : "bg-brand-600 text-white"}`}>
+    <span className={`ml-auto rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums bg-brand-600 text-white`}>
       {count > 99 ? "99+" : count}
       <span className="sr-only"> unread {what}</span>
     </span>

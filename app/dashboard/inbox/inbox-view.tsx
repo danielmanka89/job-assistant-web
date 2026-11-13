@@ -130,7 +130,7 @@ export function InboxView() {
     <div className="space-y-4">
       {error && <ErrorAlert>{error}</ErrorAlert>}
       {inbox && !inbox.address && <SetupNotice />}
-      <div className="grid gap-4 lg:h-[calc(100dvh-17rem)] lg:min-h-[28rem] lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:h-[calc(100dvh-17rem-2*var(--edge))] lg:min-h-[28rem] lg:grid-cols-[22rem_minmax(0,1fr)]">
         <section aria-label="Your emails" className={`${panel} flex min-h-0 flex-col ${pane.kind === "none" ? "flex" : "hidden lg:flex"}`}>
           <AddressCard inbox={inbox} onWrite={() => setPane({ kind: "write", draft: { to: "", subject: "", body: "" } })} />
           <div role="tablist" aria-label="Received or sent" className="mx-4 mb-3 grid grid-cols-2 gap-1 rounded-2xl bg-neutral-100 p-1 dark:bg-neutral-800/70">

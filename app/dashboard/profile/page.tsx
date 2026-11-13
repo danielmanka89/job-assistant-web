@@ -19,7 +19,7 @@ const column =
 
 export default function ProfilePage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:flex lg:h-[calc(100dvh-var(--quote-banner-space))] lg:flex-col lg:pb-0">
+    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:flex lg:h-[calc(100dvh-var(--quote-banner-space)-2*var(--edge))] lg:flex-col lg:pb-0">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:shrink-0">
         <div className="max-w-2xl">
           <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">My Profile</h1>

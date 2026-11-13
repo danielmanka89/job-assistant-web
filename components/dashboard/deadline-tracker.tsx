@@ -197,7 +197,7 @@ export function DeadlineTracker() {
             aria-label="Deadlines and pending work"
             onMouseEnter={() => window.clearTimeout(timer.current)}
             onMouseLeave={hoverOut}
-            className={`fixed inset-2 z-[60] flex flex-col overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-2xl shadow-neutral-900/20 motion-safe:animate-panel-in sm:right-auto lg:left-[calc(18rem+0.5rem)] dark:border-neutral-800 dark:bg-neutral-950 ${
+            className={`fixed inset-2 z-[60] flex flex-col overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-2xl shadow-neutral-900/20 motion-safe:animate-panel-in sm:right-auto lg:inset-y-[calc(var(--edge)+0.5rem)] lg:left-[calc(var(--edge)+18rem+0.5rem)] dark:border-neutral-800 dark:bg-neutral-950 ${
               view === "board" ? "sm:w-[44rem]" : "sm:w-[26rem]"
             } max-w-[calc(100vw-1rem)]`}
           >
