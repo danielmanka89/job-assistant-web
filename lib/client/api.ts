@@ -755,3 +755,32 @@ export async function askHelp(
   }
   return { ok: true, data: answer };
 }
+
+/** Your "Why should I hire you?" answers, keyed by job id (GET /api/job-pitches). */
+export async function listJobPitches(): Promise<ApiResult<Record<string, string>>> {
+  if (USE_MOCK_API) return { ok: true, data: { ...mockPitches } };
+  const result = await getJson("/api/job-pitches");
+  if (!result.ok) return result;
+  const list = (result.data as { pitches?: unknown } | null)?.pitches;
+  const pitches: Record<string, string> = {};
+  if (Array.isArray(list)) {
+    for (const p of list) {
+      const { jobId, text } = (p ?? {}) as { jobId?: unknown; text?: unknown };
+      if (typeof jobId === "string" && typeof text === "string") pitches[jobId] = text;
+    }
+  }
+  return { ok: true, data: pitches };
+}
+
+const mockPitches: Record<string, string> = {};
+
+/** Saves (or, when empty, removes) your answer for one job with PUT /api/job-pitches/:jobId. */
+export async function saveJobPitch(jobId: string, text: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) {
+    if (text.trim()) mockPitches[jobId] = text.trim();
+    else delete mockPitches[jobId];
+    return { ok: true, data: null };
+  }
+  const result = await sendJson<{ text: string }, unknown>("PUT", `/api/job-pitches/${encodeURIComponent(jobId)}`, { text });
+  return result.ok ? { ok: true, data: null } : result;
+}

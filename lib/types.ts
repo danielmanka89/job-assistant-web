@@ -624,3 +624,15 @@ export interface CreateDeadlineRequest {
 export interface UpdateDeadlineRequest {
   done: boolean;
 }
+
+/** A job seeker's "Why should I hire you?" answer for one job (Job Board). */
+export interface JobPitch {
+  jobId: string;
+  text: string;
+  updatedAt: string; // ISO 8601
+}
+
+/** Returned by GET /api/job-pitches: the signed-in person's answers, one per job. */
+export interface JobPitchListResponse {
+  pitches: JobPitch[];
+}
