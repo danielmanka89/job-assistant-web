@@ -8,8 +8,6 @@ import { saveJobPitch } from "@/lib/client/api";
 import { MAX_PITCH_WORDS, countWords, limitWords } from "@/lib/pitch";
 import { STAGES, stageOf, type ApplicationStage } from "@/lib/application-stage";
 
-/** The table's columns from md up: Role · Location · Posted · Status · Actions · toggle. Shared with the header row. */
-export const ROW_COLUMNS = "md:grid-cols-[minmax(0,1fr)_9rem_4.5rem_5.5rem_8.75rem_1.5rem]";
 
 // One job on the Job Board, as a compact list row. Clicking the row opens its description and the
 // "Why should I hire you?" answer (up to 300 words, saved per job).
@@ -84,97 +82,92 @@ export function JobCard({
   return (
     <article
       aria-labelledby={titleId}
-      // Applied jobs carry their stage's color: a bar on the left edge and a light tint.
-      className={`border-l-4 ${tone ? `${tone.bar} ${tone.tint}` : "border-transparent"} ${
-        expanded ? "bg-neutral-50/80 dark:bg-neutral-900/80" : tone ? "" : "transition hover:bg-neutral-50/70 dark:hover:bg-neutral-900/50"
-      }`}
+      className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
     >
-      <div className={`grid grid-cols-[minmax(0,1fr)_1.5rem] items-center gap-x-4 gap-y-2 px-4 py-2.5 ${ROW_COLUMNS}`}>
-        {/* Role: opens the description and the "Why should I hire you?" answer. The heading wraps the
-            button (a heading can't sit inside one), so it still shows up in the page's list of headings. */}
-        <h3 className="min-w-0 font-sans text-sm tracking-normal">
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-controls={detailsId}
-          className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
-        >
-          <span className={`mono-grayscale grid size-8 shrink-0 place-items-center rounded-lg text-xs font-bold ${avatarColor(job.company)}`} aria-hidden="true">
-            {job.company.trim().charAt(0).toUpperCase() || "?"}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span id={titleId} className="block truncate text-sm font-semibold text-neutral-900 dark:text-white">
-              {job.title}
+      {/* Row 1: the job. The heading wraps the button (a heading can't sit inside one), so it still
+          shows up in the page's list of headings. Clicking opens the description and the pitch. */}
+      <div className="flex items-center gap-2 px-4 py-3">
+        <h3 className="min-w-0 flex-1 font-sans text-sm tracking-normal">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            aria-controls={detailsId}
+            className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
+          >
+            <span className={`mono-grayscale grid size-9 shrink-0 place-items-center rounded-xl text-sm font-bold ${avatarColor(job.company)}`} aria-hidden="true">
+              {job.company.trim().charAt(0).toUpperCase() || "?"}
             </span>
-            <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">
-              {company}
-              {badge && job.source !== "native" && <span className="text-neutral-400 dark:text-neutral-500"> · {badge.label}</span>}
-              {/* On phones, where there are no Location and Posted columns. */}
-              <span className="md:hidden">
-                {" "}
-                · {job.location}
-                {posted ? ` · ${posted}` : ""}
+            <span className="min-w-0 flex-1">
+              <span id={titleId} className="block truncate text-[15px] font-semibold text-neutral-900 dark:text-white">
+                {job.title}
+              </span>
+              <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">
+                {company}
+                {badge && job.source !== "native" && <span className="text-neutral-400 dark:text-neutral-500"> · {badge.label}</span>}
+                {" · "}
+                <span className="sr-only">Location: </span>
+                {job.location}
+                {posted && (
+                  <>
+                    {" · "}
+                    <span className="sr-only">Posted </span>
+                    {posted}
+                  </>
+                )}
               </span>
             </span>
-          </span>
-        </button>
+          </button>
         </h3>
-
-        {/* Chevron: the same toggle for the mouse; the role button above is the keyboard one. */}
+        {/* The same toggle for the mouse; the title button above is the keyboard one. */}
         <button
           type="button"
           tabIndex={-1}
           aria-hidden="true"
           onClick={() => setExpanded((v) => !v)}
-          className="grid size-6 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 md:order-last dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+          className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className={`size-4 transition ${expanded ? "rotate-180" : ""}`}>
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </button>
+      </div>
 
-        <span className="hidden truncate text-xs text-neutral-600 md:block dark:text-neutral-300">
-          <span className="sr-only">Location: </span>
-          {job.location}
-        </span>
-        <span className="hidden text-xs text-neutral-500 tabular-nums md:block dark:text-neutral-400">
-          {posted && <span className="sr-only">Posted </span>}
-          {posted ?? "—"}
-        </span>
-
-        <span className="col-span-2 flex flex-wrap items-center gap-1 md:col-span-1">
-          {stage && tone ? (
-            <Link
-              href="/dashboard/spreadsheet"
-              title={`Spreadsheet status: ${status || "Applied"}. Change it in your Spreadsheet.`}
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap hover:underline focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none ${tone.chip}`}
-            >
-              <span className={`size-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />
-              {STAGES.find((s) => s.stage === stage)?.label}
-              <span className="sr-only">
-                {" "}
-                ({status || "Applied"}): view {job.title} in your Spreadsheet
-              </span>
-            </Link>
-          ) : null}
-          {pitch ? (
-            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300" title="You've written why they should hire you">
-              Pitch<span aria-hidden="true"> ✓</span>
-              <span className="sr-only"> written</span>
+      {/* Row 2: where the application stands, as a band in the status color, with the actions. */}
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1.5 px-4 py-2 ${tone ? tone.band : "bg-neutral-50 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400"}`}>
+        {stage && tone ? (
+          <Link
+            href="/dashboard/spreadsheet"
+            title={`Spreadsheet status: ${status || "Applied"}. Change it in your Spreadsheet.`}
+            className="inline-flex items-center gap-1.5 rounded text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
+          >
+            <span className={`size-2 rounded-full ${tone.dot}`} aria-hidden="true" />
+            {STAGES.find((s) => s.stage === stage)?.label}
+            <span className="sr-only">
+              {" "}
+              ({status || "Applied"}): view {job.title} in your Spreadsheet
             </span>
-          ) : null}
-          {!applied && !pitch && <span className="hidden text-xs text-neutral-400 md:inline dark:text-neutral-500">—</span>}
-        </span>
-
-        <span className="col-span-2 flex items-center gap-1.5 md:col-span-1 md:justify-end">
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span className="size-2 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
+            Not applied
+          </span>
+        )}
+        {pitch ? (
+          <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-300" title="You've written why they should hire you">
+            Pitch<span aria-hidden="true"> ✓</span>
+            <span className="sr-only"> written</span>
+          </span>
+        ) : null}
+        <span className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
             onClick={onTailor}
             disabled={disabled || opening}
             aria-busy={opening || undefined}
             aria-describedby={titleId}
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2.5 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
+            className="inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2.5 text-xs font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white/10 dark:text-brand-300 dark:hover:bg-white/15"
           >
             {opening ? (
               <svg className="size-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -194,7 +187,7 @@ export function JobCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={onApply}
-              className="inline-flex h-7 w-[4.5rem] items-center justify-center rounded-md border border-neutral-200 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-7 items-center rounded-lg bg-white px-2.5 text-xs font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:bg-white/10 dark:text-neutral-200 dark:hover:bg-white/15"
             >
               {applied ? "Re-apply" : "Apply"}
               <span className="sr-only"> to {job.title} (opens in a new tab)</span>
@@ -204,7 +197,7 @@ export function JobCard({
       </div>
 
       {expanded && (
-        <div id={detailsId} className="grid gap-4 px-4 pt-1 pb-4 md:grid-cols-2 md:pl-15">
+        <div id={detailsId} className="grid gap-4 border-t border-neutral-100 px-4 pt-3 pb-4 md:grid-cols-2 dark:border-neutral-800">
           <div>
             <h4 className="pb-1 text-xs font-bold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">Job description</h4>
             <p className="max-h-60 overflow-y-auto pr-1 text-[13px] leading-relaxed whitespace-pre-line text-neutral-600 dark:text-neutral-300">{job.description}</p>
@@ -217,32 +210,37 @@ export function JobCard({
 }
 
 /** Colors per stage. Kept apart in lightness as well as hue, and always paired with a text label. */
-export const STAGE_TONE: Record<ApplicationStage, { bar: string; tint: string; chip: string; dot: string }> = {
+export const STAGE_TONE: Record<ApplicationStage, { bar: string; tint: string; chip: string; dot: string; band: string }> = {
   applied: {
+    band: "bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-200",
     bar: "border-l-blue-500",
     tint: "bg-blue-50/60 dark:bg-blue-500/[0.07]",
     chip: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
     dot: "bg-blue-500",
   },
   review: {
+    band: "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200",
     bar: "border-l-amber-400",
     tint: "bg-amber-50/70 dark:bg-amber-500/[0.07]",
     chip: "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200",
     dot: "bg-amber-500",
   },
   approved: {
+    band: "bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200",
     bar: "border-l-emerald-500",
     tint: "bg-emerald-50/70 dark:bg-emerald-500/[0.07]",
     chip: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
     dot: "bg-emerald-500",
   },
   rejected: {
+    band: "bg-red-50 text-red-900 dark:bg-red-500/10 dark:text-red-200",
     bar: "border-l-red-500",
     tint: "bg-red-50/70 dark:bg-red-500/[0.07]",
     chip: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
     dot: "bg-red-500",
   },
   withdrawn: {
+    band: "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300",
     bar: "border-l-neutral-400",
     tint: "bg-neutral-100/60 dark:bg-neutral-800/40",
     chip: "bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300",
