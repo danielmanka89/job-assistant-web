@@ -52,6 +52,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     keywords: "home stats today this week this month open jobs tailored count quote clocks",
     body: [
       "The dashboard shows your numbers at a glance: resumes tailored, jobs applied today, this week (since Monday) and this month, and how many jobs are open on the board.",
+      "Below them are My Resumes (each tailored resume with its match score and Word / PDF downloads) and Recent chats: your three latest conversations, with unread counts. Click a chat to open it.",
       "The sidebar shows Pacific, Central and Eastern time, and a motivational quote runs along the bottom of the screen.",
     ],
     href: "/dashboard",

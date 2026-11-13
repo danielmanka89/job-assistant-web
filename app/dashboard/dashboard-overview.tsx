@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ApiError, DashboardStats, GeneratedFile, Submission, TailoredResumeWithFiles } from "@/lib/types";
-import { getDashboardStats, listSubmissions, listTailoredResumes, logout } from "@/lib/client/api";
+import type { ApiError, ChatConversation, DashboardStats, GeneratedFile, Submission, TailoredResumeWithFiles } from "@/lib/types";
+import { getDashboardStats, listChats, listSubmissions, listTailoredResumes, logout } from "@/lib/client/api";
+import { Avatar } from "@/components/ui/avatar";
 import { appliedCounts } from "@/lib/deadlines";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { ErrorAlert } from "@/components/ui/alert";
@@ -85,15 +86,19 @@ export function DashboardOverview() {
 
       <StatCards stats={stats} applications={applications} />
 
-      <section aria-labelledby="my-resumes">
-        <h2 id="my-resumes" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-          My Resumes
-        </h2>
-        <div className="mt-3">
-          {resumes.status === "loading" && <ResumeListSkeleton />}
-          {resumes.status === "ready" && (resumes.data.length ? <ResumeList items={resumes.data} /> : <EmptyState />)}
-        </div>
-      </section>
+      {/* My Resumes and Recent chats side by side on wide screens; stacked on phones. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <section aria-labelledby="my-resumes">
+          <h2 id="my-resumes" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+            My Resumes
+          </h2>
+          <div className="mt-3">
+            {resumes.status === "loading" && <ResumeListSkeleton />}
+            {resumes.status === "ready" && (resumes.data.length ? <ResumeList items={resumes.data} /> : <EmptyState />)}
+          </div>
+        </section>
+        <RecentChats />
+      </div>
     </div>
   );
 }
@@ -149,6 +154,100 @@ function StatCards({ stats, applications }: { stats: Load<DashboardStats>; appli
           </div>
         </div>
       ))}
+    </section>
+  );
+}
+
+/* ---------- Recent chats ---------- */
+
+const RECENT_CHATS = 3;
+const chatTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+const chatDay = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+
+/** "3:42 PM" for today, otherwise "Nov 9". */
+function shortTime(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toDateString() === new Date().toDateString() ? chatTime.format(d) : chatDay.format(d);
+}
+
+/** The three most recent conversations; each opens straight into that chat. */
+function RecentChats() {
+  const [chats, setChats] = useState<ChatConversation[] | null | "error">(null);
+
+  useEffect(() => {
+    let active = true;
+    listChats().then((result) => {
+      if (!active) return;
+      setChats(result.ok ? [...result.data].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt)).slice(0, RECENT_CHATS) : "error");
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return (
+    <section aria-labelledby="recent-chats">
+      <div className="flex items-baseline justify-between">
+        <h2 id="recent-chats" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+          Recent chats
+        </h2>
+        <Link href="/dashboard/chat" className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
+          Open Chat
+        </Link>
+      </div>
+      <div className="mt-3 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+        {chats === null ? (
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-800" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5">
+                <span className="size-8 animate-pulse rounded-full bg-neutral-100 dark:bg-neutral-800" />
+                <span className="block h-3.5 flex-1 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
+              </div>
+            ))}
+          </div>
+        ) : chats === "error" ? (
+          <p className="px-4 py-5 text-sm text-neutral-500 dark:text-neutral-400">Chats couldn&apos;t be loaded right now.</p>
+        ) : chats.length === 0 ? (
+          <p className="px-4 py-5 text-sm text-neutral-500 dark:text-neutral-400">
+            No chats yet.{" "}
+            <Link href="/dashboard/chat" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+              Connect with someone
+            </Link>{" "}
+            to start one.
+          </p>
+        ) : (
+          <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+            {chats.map((chat) => (
+              <li key={chat.id}>
+                <Link
+                  href={`/dashboard/chat?c=${encodeURIComponent(chat.id)}`}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 transition hover:bg-neutral-50 focus-visible:bg-neutral-50 focus-visible:outline-none dark:hover:bg-neutral-800/60 dark:focus-visible:bg-neutral-800/60"
+                >
+                  <Avatar name={chat.person.name} className="size-8 text-xs" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline gap-2">
+                      <span className={`truncate text-[13px] text-neutral-900 dark:text-white ${chat.unread ? "font-bold" : "font-semibold"}`}>{chat.person.name}</span>
+                      <span className="ml-auto shrink-0 text-[11px] text-neutral-400 tabular-nums dark:text-neutral-500">{shortTime(chat.lastMessageAt)}</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className={`truncate text-xs ${chat.unread ? "text-neutral-800 dark:text-neutral-200" : "text-neutral-500 dark:text-neutral-400"}`}>
+                        {chat.lastMessage ?? "No messages yet"}
+                      </span>
+                      {chat.unread > 0 && (
+                        <span className="ml-auto shrink-0 rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-semibold text-white tabular-nums">
+                          {chat.unread > 99 ? "99+" : chat.unread}
+                          <span className="sr-only"> unread</span>
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

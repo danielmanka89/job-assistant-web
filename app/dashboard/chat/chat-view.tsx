@@ -52,13 +52,13 @@ type Tab = "chats" | "people";
 const TABS: readonly Tab[] = ["chats", "people"];
 
 /** Chats on one side, the open conversation on the other. On phones one of the two shows at a time. */
-export function ChatView() {
+export function ChatView({ initialOpenId = null }: { initialOpenId?: string | null }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("chats");
   const [chats, setChats] = useState<ChatConversation[] | null>(null);
   const [connections, setConnections] = useState<ConnectionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
   // The chat that was open before Back, so focus can return to it in the list (phones hide the list while a chat is open).
   const backTo = useRef<string | null>(null);
 
