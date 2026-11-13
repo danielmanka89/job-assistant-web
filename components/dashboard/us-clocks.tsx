@@ -86,5 +86,6 @@ export function SidebarClocks() {
   const user = useCurrentUser();
   // Users stored before templates or theme colors existed have neither (or the older clockColor).
   const color = user?.themeColor ?? (user as { clockColor?: ThemeColor } | null | undefined)?.clockColor ?? "RED";
-  return <UsClocks template={user?.clockTemplate ?? "MINIMALIST"} color={color} />;
+  // Compact in the sidebar: smaller time and zone labels, tighter cells.
+  return <UsClocks template={user?.clockTemplate ?? "MINIMALIST"} color={color} className="[&_li]:py-1.5 [&_p]:text-[9px] [&_time]:text-[13px]" />;
 }

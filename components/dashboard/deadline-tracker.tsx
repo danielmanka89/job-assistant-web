@@ -152,7 +152,7 @@ export function DeadlineTracker() {
   const added = (item: DeadlineItem) => setItems((list) => [...(list ?? []), item]);
 
   return (
-    <div className="mt-auto shrink-0 pt-6 short:pt-3" onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+    <div className="mt-auto shrink-0 pt-3" onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
       <button
         ref={buttonRef}
         type="button"
@@ -160,31 +160,31 @@ export function DeadlineTracker() {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         aria-label={widgetLabel(next, pending.length, today)}
-        className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none ${
+        className={`group flex w-full items-center gap-2.5 rounded-xl border p-2.5 text-left transition focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none ${
           open
-            ? "border-brand-200 bg-brand-50 shadow-lg shadow-brand-600/10 dark:border-brand-500/30 dark:bg-brand-500/10"
+            ? "border-brand-200 bg-brand-50 shadow-md shadow-brand-600/10 dark:border-brand-500/30 dark:bg-brand-500/10"
             : "border-neutral-200/80 bg-white hover:border-brand-200 hover:bg-brand-50/60 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-brand-500/30"
         }`}
       >
         <CountdownRing next={next} today={today} />
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold tracking-widest text-brand-700 uppercase dark:text-brand-300">
+            <span className="text-[10px] font-bold tracking-widest text-brand-700 uppercase dark:text-brand-300">
               {next ? "Next up" : "Deadlines"}
             </span>
             {pending.length > 0 && (
-              <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-semibold text-white">{pending.length} pending</span>
+              <span className="rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-semibold text-white">{pending.length} pending</span>
             )}
           </span>
           {visible === null ? (
             <span className="mt-1.5 block h-3 w-3/4 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" aria-hidden="true" />
           ) : next && today ? (
             <>
-              <span className="mt-0.5 block truncate text-sm font-semibold text-neutral-900 dark:text-white">{next.title}</span>
+              <span className="mt-0.5 block truncate text-[13px] leading-tight font-semibold text-neutral-900 dark:text-white">{next.title}</span>
               <Countdown dueOn={next.dueOn!} now={now!} today={today} />
             </>
           ) : (
-            <span className="mt-0.5 block text-sm text-neutral-500 dark:text-neutral-400">{loadError ? "Couldn't load" : "Nothing due"}</span>
+            <span className="mt-0.5 block text-[13px] text-neutral-500 dark:text-neutral-400">{loadError ? "Couldn't load" : "Nothing due"}</span>
           )}
         </span>
       </button>
@@ -234,7 +234,7 @@ function CountdownRing({ next, today }: { next: DeadlineItem | null; today: stri
   const fill = days === null ? 0 : days <= 0 ? 1 : Math.max(0.08, 1 - days / 7);
   const C = 2 * Math.PI * 19;
   return (
-    <svg viewBox="0 0 48 48" className={`size-11 shrink-0 ${days !== null && days <= 0 ? "motion-safe:animate-pulse" : ""}`} aria-hidden="true">
+    <svg viewBox="0 0 48 48" className={`size-9 shrink-0 ${days !== null && days <= 0 ? "motion-safe:animate-pulse" : ""}`} aria-hidden="true">
       <circle cx="24" cy="24" r="19" fill="none" strokeWidth="4" className="stroke-brand-100 dark:stroke-brand-500/20" />
       <circle
         cx="24"
@@ -266,7 +266,7 @@ function Countdown({ dueOn, now, today }: { dueOn: string; now: Date; today: str
     const pad = (n: number) => String(n).padStart(2, "0");
     text = `${Math.floor(mins / 1440)}d ${pad(Math.floor(mins / 60) % 24)}h ${pad(mins % 60)}m`;
   }
-  return <span className={`block font-mono text-[13px] font-semibold ${days < 0 ? "text-red-600 dark:text-red-400" : "text-brand-700 dark:text-brand-300"}`}>{text}</span>;
+  return <span className={`block font-mono text-[11px] font-semibold ${days < 0 ? "text-red-600 dark:text-red-400" : "text-brand-700 dark:text-brand-300"}`}>{text}</span>;
 }
 
 function PanelHeader({
