@@ -202,7 +202,7 @@ export function DeadlineTracker() {
             } max-w-[calc(100vw-1rem)]`}
           >
             <PanelHeader today={today} visible={visible} view={view} onView={chooseView} onClose={hide} />
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-4">
+            <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none px-3 pt-2 pb-4">
               {loadError && !items ? (
                 <p className="px-3 py-6 text-sm text-neutral-600 dark:text-neutral-300">{loadError}</p>
               ) : !visible || !today ? (

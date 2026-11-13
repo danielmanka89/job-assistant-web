@@ -87,8 +87,8 @@ export function QuoteBanner() {
       data-quote-banner
       aria-label="Motivational quote"
       // A frosted-glass strip flush with the bottom of the window: no gap at the bottom, left or right
-      // (from lg up it runs from the menu to the frame; the frame's rounded corner trims its end).
-      className="fixed inset-x-0 bottom-0 z-30 h-(--quote-banner-h) overflow-hidden border-t border-white/70 bg-white/70 backdrop-blur-xl backdrop-saturate-150 lg:right-(--edge) lg:bottom-(--edge) lg:left-[calc(var(--edge)+18rem)] dark:border-white/10 dark:bg-neutral-900/70"
+      // (from lg up it runs from the menu to the frame, its last corner rounded to fit the frame's).
+      className="fixed inset-x-0 bottom-0 z-30 h-(--quote-banner-h) overflow-hidden border-t border-white/70 bg-white/70 backdrop-blur-xl backdrop-saturate-150 lg:right-(--edge) lg:bottom-(--edge) lg:left-[calc(var(--edge)+18rem)] lg:rounded-br-[26px] dark:border-white/10 dark:bg-neutral-900/70"
     >
       {/* The top edge doubles as the progress line: it fills in red until the next quote. */}
       <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-white/50 dark:bg-white/10" aria-hidden="true">
