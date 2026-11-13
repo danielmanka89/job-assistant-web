@@ -79,21 +79,23 @@ export function JobCard({
   return (
     <article aria-labelledby={titleId} className={expanded ? "bg-neutral-50/80 dark:bg-neutral-900/80" : "transition hover:bg-neutral-50/70 dark:hover:bg-neutral-900/50"}>
       <div className={`grid grid-cols-[minmax(0,1fr)_1.5rem] items-center gap-x-4 gap-y-2 px-4 py-2.5 ${ROW_COLUMNS}`}>
-        {/* Role: opens the description and the "Why should I hire you?" answer. */}
+        {/* Role: opens the description and the "Why should I hire you?" answer. The heading wraps the
+            button (a heading can't sit inside one), so it still shows up in the page's list of headings. */}
+        <h3 className="min-w-0 font-sans text-sm tracking-normal">
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-controls={detailsId}
-          className="flex min-w-0 items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
+          className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
         >
           <span className={`mono-grayscale grid size-8 shrink-0 place-items-center rounded-lg text-xs font-bold ${avatarColor(job.company)}`} aria-hidden="true">
             {job.company.trim().charAt(0).toUpperCase() || "?"}
           </span>
           <span className="min-w-0 flex-1">
-            <h3 id={titleId} className="truncate font-sans text-sm font-semibold tracking-normal text-neutral-900 dark:text-white">
+            <span id={titleId} className="block truncate text-sm font-semibold text-neutral-900 dark:text-white">
               {job.title}
-            </h3>
+            </span>
             <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">
               {company}
               {badge && job.source !== "native" && <span className="text-neutral-400 dark:text-neutral-500"> · {badge.label}</span>}
@@ -106,6 +108,7 @@ export function JobCard({
             </span>
           </span>
         </button>
+        </h3>
 
         {/* Chevron: the same toggle for the mouse; the role button above is the keyboard one. */}
         <button
@@ -140,8 +143,9 @@ export function JobCard({
             </Link>
           ) : null}
           {pitch ? (
-            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" title="You've written why they should hire you">
-              Pitch ✓
+            <span className="mono-grayscale rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" title="You've written why they should hire you">
+              Pitch<span aria-hidden="true"> ✓</span>
+              <span className="sr-only"> written</span>
             </span>
           ) : null}
           {!applied && !pitch && <span className="hidden text-xs text-neutral-400 md:inline dark:text-neutral-500">—</span>}
