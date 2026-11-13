@@ -558,8 +558,9 @@ function ItemRow({ item, today, onToggle, onRemove, onNavigate, compact = false 
           type="button"
           onClick={() => onRemove(item)}
           aria-label={`Delete "${item.title}"`}
-          // Always shown on touch screens (no hover there); elsewhere it appears on row hover or focus.
-          className="grid size-7 shrink-0 place-items-center rounded-lg text-neutral-500 transition group-hover/row:opacity-100 hover:bg-neutral-100 hover:text-red-600 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none [@media(hover:hover)]:opacity-0 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          // Hidden until row hover or focus; always shown on touch screens, which can't hover. (A hover:hover
+          // variant to hide it would be emitted after group-hover and win, so it would never appear.)
+          className="grid size-7 shrink-0 place-items-center rounded-lg text-neutral-500 opacity-0 transition group-hover/row:opacity-100 hover:bg-neutral-100 hover:text-red-600 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none [@media(hover:none)]:opacity-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-4" aria-hidden="true">
             <path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" strokeLinecap="round" strokeLinejoin="round" />
