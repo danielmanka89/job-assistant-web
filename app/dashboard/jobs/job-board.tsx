@@ -234,7 +234,7 @@ export function JobBoard() {
         />
       ) : (
         <>
-          <ul className="mb-20 space-y-2.5">
+          <ul className="mb-20 divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
             {filtered.map((job) => (
               <li key={job.id}>
                 <JobCard

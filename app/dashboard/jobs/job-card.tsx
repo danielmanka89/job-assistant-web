@@ -68,9 +68,9 @@ export function JobCard({
   return (
     <article
       aria-labelledby={titleId}
-      className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
+      className={expanded ? "bg-neutral-50/70 dark:bg-neutral-900/70" : undefined}
     >
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-2.5">
         {/* Where the application stands, as an icon only (the words are in the tooltip and for screen readers). */}
         <span
           title={tile.label}
