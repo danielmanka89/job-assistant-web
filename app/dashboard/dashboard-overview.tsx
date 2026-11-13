@@ -124,32 +124,29 @@ function StatCards({ stats, applications }: { stats: Load<DashboardStats>; appli
   ];
 
   return (
-    <section aria-label="Your stats" aria-busy={!s} className="-m-1 flex gap-3 overflow-x-auto p-1">
+    <section aria-label="Your stats" aria-busy={!s} className="-m-1 flex gap-2 overflow-x-auto p-1">
       {cards.map((card) => (
-        // One strip at every width: the five share the row equally, and when they can't all fit
-        // (phones) the strip scrolls sideways. Compact, so the icon shares the number's row.
+        // One compact strip: icon, number and label on a single row of small cards. The hint is a
+        // tooltip (and read by screen readers) instead of a third line. Phones scroll sideways.
         <div
           key={card.label}
-          className="group relative min-w-34 flex-1 overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-3 shadow-sm xl:p-4 transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60"
+          title={card.hint}
+          className="flex min-w-32 flex-1 items-center gap-2.5 rounded-2xl border border-neutral-200/80 bg-white px-3 py-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
         >
-          <span
-            className="pointer-events-none absolute -right-10 -bottom-10 size-28 rounded-full bg-brand-500/5 transition group-hover:bg-brand-500/10"
-            aria-hidden="true"
-          />
-          <p className="text-[13px] font-medium whitespace-nowrap text-neutral-500 xl:text-sm dark:text-neutral-400">{card.label}</p>
-          <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300 [&_svg]:size-4">
+            {card.icon}
+          </span>
+          <div className="min-w-0">
             {card.value === null ? (
-              <span className="block h-9 w-16 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
+              <span className="block h-6 w-10 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
             ) : (
-              <p className="font-display text-4xl leading-9 font-semibold tracking-tight text-neutral-900 tabular-nums dark:text-white">
-                {card.value}
-              </p>
+              <p className="font-display text-2xl leading-6 font-semibold tracking-tight text-neutral-900 tabular-nums dark:text-white">{card.value}</p>
             )}
-            <span className="grid size-9 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
-              {card.icon}
-            </span>
+            <p className="mt-0.5 truncate text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              {card.label}
+              <span className="sr-only">: {card.hint}</span>
+            </p>
           </div>
-          <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">{card.hint}</p>
         </div>
       ))}
     </section>
