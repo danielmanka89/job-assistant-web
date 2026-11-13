@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 
 export default function DashboardPage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-10">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
       <Suspense fallback={null}>
         <ResumeSyncNotice />
       </Suspense>

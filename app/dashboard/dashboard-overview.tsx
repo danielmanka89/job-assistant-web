@@ -54,18 +54,19 @@ export function DashboardOverview() {
   const hasResumes = resumes.status === "ready" && resumes.data.length > 0;
 
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl dark:text-white">
             {firstName ? `Welcome back, ${firstName}` : "Dashboard"}
           </h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-            Your tailored resumes and how well they match the jobs you&apos;re going for.
-          </p>
+          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your resumes and how well they match your jobs.</p>
         </div>
         {hasResumes && (
-          <Link href="/dashboard/upload" className={`${primaryLink} shrink-0`}>
+          <Link
+            href="/dashboard/upload"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none"
+          >
             <PlusIcon />
             Tailor a resume
           </Link>
@@ -89,7 +90,7 @@ export function DashboardOverview() {
         <h2 id="my-resumes" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
           My Resumes
         </h2>
-        <div className="mt-4">
+        <div className="mt-3">
           {resumes.status === "loading" && <ResumeListSkeleton />}
           {resumes.status === "ready" && (resumes.data.length ? <ResumeList items={resumes.data} /> : <EmptyState />)}
         </div>
@@ -111,7 +112,7 @@ function StatCards({ stats, applications }: { stats: Load<DashboardStats>; appli
   // null shows the loading bar; a dash means the applications couldn't be loaded.
   const appliedText = (n: number | undefined) => (n === undefined ? (applications.status === "error" ? "—" : null) : String(n));
   const cards = [
-    { label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
+    { label: "Tailored", value: s && String(s.tailoredResumeCount), hint: "Resumes tailored, ready to download", icon: <SparkIcon /> },
     { label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
     { label: "This Week", value: appliedText(applied?.week), hint: "Applied since Monday", icon: <CalendarIcon /> },
     { label: "This Month", value: appliedText(applied?.month), hint: `Applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
@@ -131,7 +132,7 @@ function StatCards({ stats, applications }: { stats: Load<DashboardStats>; appli
         <div
           key={card.label}
           title={card.hint}
-          className="flex min-w-32 flex-1 items-center gap-2.5 rounded-2xl border border-neutral-200/80 bg-white px-3 py-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
+          className="flex min-w-30 flex-1 items-center gap-2.5 rounded-2xl border border-neutral-200/80 bg-white px-3 py-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
         >
           <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300 [&_svg]:size-4">
             {card.icon}
