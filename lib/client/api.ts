@@ -700,3 +700,58 @@ function sendForm<T>(url: string, form: FormData, onProgress?: (percent: number)
     xhr.send(form);
   });
 }
+
+/** One message in a help-assistant conversation. */
+export type HelpTurn = { role: "user" | "assistant"; content: string };
+
+const MOCK_HELP_ANSWER =
+  "The help assistant needs the live server to answer. In the meantime, the Help Center in Settings has a guide for every part of the app.";
+
+/**
+ * Asks the help assistant (POST /api/help/chat). The answer streams in: `onText` gets each new piece
+ * as it arrives, and the whole answer is returned at the end.
+ */
+export async function askHelp(
+  messages: HelpTurn[],
+  page: string,
+  onText: (piece: string) => void,
+  signal?: AbortSignal,
+): Promise<ApiResult<string>> {
+  if (USE_MOCK_API) {
+    for (const word of MOCK_HELP_ANSWER.split(/(?<= )/)) {
+      if (signal?.aborted) break;
+      await new Promise((r) => setTimeout(r, 30));
+      onText(word);
+    }
+    return { ok: true, data: MOCK_HELP_ANSWER };
+  }
+  let res: Response;
+  try {
+    res = await fetch("/api/help/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ messages, page }),
+      signal,
+    });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (!res.ok || !res.body) return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let answer = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const piece = decoder.decode(value, { stream: true });
+      answer += piece;
+      onText(piece);
+    }
+  } catch {
+    if (!answer) return { ok: false, error: NETWORK_ERROR };
+  }
+  return { ok: true, data: answer };
+}
