@@ -110,15 +110,12 @@ function StatCards({ stats, applications }: { stats: Load<DashboardStats>; appli
   const applied = applications.status === "ready" ? appliedCounts(applications.data, now) : null;
   // null shows the loading bar; a dash means the applications couldn't be loaded.
   const appliedText = (n: number | undefined) => (n === undefined ? (applications.status === "error" ? "—" : null) : String(n));
-  // Layout: all five in one row on wide screens. On narrower ones (two columns) Resumes Tailored
-  // spans the row, so no card is left on its own.
   const cards = [
-    { layout: "min-[420px]:col-span-2 xl:col-span-1", label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
-    { layout: "", label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
-    { layout: "", label: "This Week", value: appliedText(applied?.week), hint: "Applied since Monday", icon: <CalendarIcon /> },
-    { layout: "", label: "This Month", value: appliedText(applied?.month), hint: `Applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
+    { label: "Resumes Tailored", value: s && String(s.tailoredResumeCount), hint: "Ready to download", icon: <SparkIcon /> },
+    { label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
+    { label: "This Week", value: appliedText(applied?.week), hint: "Applied since Monday", icon: <CalendarIcon /> },
+    { label: "This Month", value: appliedText(applied?.month), hint: `Applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
     {
-      layout: "",
       label: "Open Jobs",
       value: s && String(s.jobs.total),
       hint: s ? `${s.jobs.native} on JobAssistant` : "On the job board",
@@ -127,18 +124,19 @@ function StatCards({ stats, applications }: { stats: Load<DashboardStats>; appli
   ];
 
   return (
-    <section aria-label="Your stats" aria-busy={!s} className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-5 xl:gap-3">
+    <section aria-label="Your stats" aria-busy={!s} className="-m-1 flex gap-3 overflow-x-auto p-1">
       {cards.map((card) => (
-        // Compact: five have to fit side by side, so the icon shares the number's row and the label keeps the full width.
+        // One strip at every width: the five share the row equally, and when they can't all fit
+        // (phones) the strip scrolls sideways. Compact, so the icon shares the number's row.
         <div
           key={card.label}
-          className={`${card.layout} group relative overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60`}
+          className="group relative min-w-34 flex-1 overflow-hidden rounded-3xl border border-neutral-200/80 bg-white p-3 shadow-sm xl:p-4 transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60"
         >
           <span
             className="pointer-events-none absolute -right-10 -bottom-10 size-28 rounded-full bg-brand-500/5 transition group-hover:bg-brand-500/10"
             aria-hidden="true"
           />
-          <p className="text-sm font-medium whitespace-nowrap text-neutral-500 dark:text-neutral-400">{card.label}</p>
+          <p className="text-[13px] font-medium whitespace-nowrap text-neutral-500 xl:text-sm dark:text-neutral-400">{card.label}</p>
           <div className="mt-2 flex items-center justify-between gap-2">
             {card.value === null ? (
               <span className="block h-9 w-16 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
