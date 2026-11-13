@@ -288,7 +288,7 @@ function SheetTable({
   }, []);
 
   return (
-    <div ref={scroller} className="scrollbar-slim max-h-[70vh] overflow-auto">
+    <div ref={scroller} data-scrollbar className="scrollbar-slim max-h-[70vh] overflow-auto">
       <table className="min-w-full border-separate border-spacing-0 text-sm">
         <caption className="sr-only">{sheet.title}</caption>
         <thead className="sticky top-0 z-20 bg-neutral-50 dark:bg-neutral-800">

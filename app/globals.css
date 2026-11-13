@@ -415,6 +415,18 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
 .glass-shell::-webkit-scrollbar {
   display: none;
 }
+/*
+ * Except panels marked data-scrollbar (the Spreadsheet table): they scroll sideways too, and with a
+ * plain mouse wheel a visible bar is the only way to reach the hidden columns. A thin bar shows there.
+ */
+.glass-shell [data-scrollbar] {
+  scrollbar-width: thin;
+}
+.glass-shell [data-scrollbar]::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+  height: 6px;
+}
 
 /* The app's window: the light surface the pages sit on. */
 .app-window {
