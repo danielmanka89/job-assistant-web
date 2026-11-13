@@ -7,9 +7,9 @@ import { Logo } from "@/components/brand";
 import { Avatar } from "@/components/ui/avatar";
 import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { DeadlineTracker } from "@/components/dashboard/deadline-tracker";
-import { logout } from "@/lib/client/api";
+import { CHAT_CHANGED_EVENT, getChatSummary, logout } from "@/lib/client/api";
 import { useCurrentUser } from "@/lib/client/current-user";
-import type { User } from "@/lib/types";
+import type { ChatSummary, User } from "@/lib/types";
 
 type NavItem = {
   href: string;
@@ -78,6 +78,17 @@ const NAV: NavItem[] = [
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
         <rect x="3.5" y="4" width="17" height="16" rx="2" />
         <path d="M3.5 9.5h17M3.5 14.75h17M9.5 9.5V20" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    href: "/dashboard/chat",
+    label: "Chat",
+    match: (p) => under(p, "/dashboard/chat"),
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
+        <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H11l-4.5 4v-4h-1A1.5 1.5 0 0 1 4 14.5v-9Z" strokeLinejoin="round" />
+        <path d="M8.5 9h7M8.5 12h4.5" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -154,7 +165,7 @@ export function Sidebar() {
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-20 items-center justify-between px-6">
+        <div className="flex h-20 shrink-0 items-center justify-between px-6 short:h-16">
           <Logo />
           <button
             type="button"
@@ -178,6 +189,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
   const user = useCurrentUser();
   const [signingOut, setSigningOut] = useState(false);
   const items = NAV.filter((item) => !item.employerOnly || user?.role === "EMPLOYER");
+  const chat = useChatSummary(Boolean(user));
 
   async function signOut() {
     setSigningOut(true);
@@ -185,22 +197,25 @@ function SidebarContent({ pathname }: { pathname: string }) {
     router.replace("/"); // back to the landing page
   }
 
-  const itemClass = "flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] font-medium transition";
+  // Items share the free height: 44px each when there is room, down to 32px on short screens, so the
+  // whole menu (and the deadline tracker under it) fits without scrolling.
+  const itemClass = "flex w-full items-center gap-3 rounded-xl px-3.5 text-[15px] font-medium transition";
+  const itemSlot = "flex min-h-8 max-h-11 flex-1 basis-0";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6 short:pb-3">
       <SidebarClocks />
-      <UserCard user={user} className="mt-4" />
+      <UserCard user={user} chat={chat} className="mt-4 short:mt-3" />
 
-      <nav aria-label="Main" className="mt-6">
-        <p className="px-3.5 pb-2 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
+      <nav aria-label="Main" className="mt-6 flex min-h-0 flex-1 flex-col short:mt-3">
+        <p className="px-3.5 pb-2 short:pb-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
           Menu
         </p>
-        <ul className="space-y-1">
+        <ul className="flex min-h-0 flex-1 flex-col gap-1">
           {items.map((item) => {
             const active = item.match(pathname);
             return (
-              <li key={item.href}>
+              <li key={item.href} className={itemSlot}>
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
@@ -212,11 +227,17 @@ function SidebarContent({ pathname }: { pathname: string }) {
                 >
                   {item.icon}
                   {item.label}
+                  {item.href === "/dashboard/chat" && chat && chat.unread > 0 && (
+                    <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${active ? "bg-white text-brand-700" : "bg-brand-600 text-white"}`}>
+                      {chat.unread > 99 ? "99+" : chat.unread}
+                      <span className="sr-only"> unread messages</span>
+                    </span>
+                  )}
                 </Link>
               </li>
             );
           })}
-          <li>
+          <li className={itemSlot}>
             <button
               type="button"
               onClick={signOut}
@@ -237,24 +258,67 @@ function SidebarContent({ pathname }: { pathname: string }) {
   );
 }
 
-function UserCard({ user, className = "" }: { user: User | null | undefined; className?: string }) {
+const SUMMARY_POLL_MS = 30000;
+
+/** Unread messages and connection counts for the menu; refreshed every 30 seconds and whenever chat changes. */
+function useChatSummary(enabled: boolean): ChatSummary | null {
+  const [summary, setSummary] = useState<ChatSummary | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    const load = () =>
+      void getChatSummary().then((result) => {
+        if (live && result.ok) setSummary(result.data);
+      });
+    load();
+    const timer = setInterval(load, SUMMARY_POLL_MS);
+    window.addEventListener(CHAT_CHANGED_EVENT, load);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      window.removeEventListener(CHAT_CHANGED_EVENT, load);
+    };
+  }, [enabled]);
+  return summary;
+}
+
+function UserCard({ user, chat, className = "" }: { user: User | null | undefined; chat: ChatSummary | null; className?: string }) {
   // undefined while rendering on the server: keep the space so the layout doesn't jump.
   if (user === undefined) {
     return <div className={`h-[76px] animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-900 ${className}`} aria-hidden="true" />;
   }
   const name = user?.name || "Your account";
   return (
-    <div className={`flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
-      {/* The menu photo, or the portfolio photo until one is set. */}
-      <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} />
-      <div className="min-w-0">
-        <p className="truncate font-semibold text-neutral-900 dark:text-white">{name}</p>
-        {user && (
-          <p className="mt-0.5 inline-flex rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
-            {ROLE_LABEL[user.role]}
-          </p>
-        )}
+    <div className={`rounded-2xl border border-neutral-200/80 bg-neutral-50 p-3.5 short:p-3 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
+      <div className="flex items-center gap-3">
+        {/* The menu photo, or the portfolio photo until one is set. */}
+        <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} />
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-neutral-900 dark:text-white">{name}</p>
+          {user && (
+            <p className="mt-0.5 inline-flex rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+              {ROLE_LABEL[user.role]}
+            </p>
+          )}
+        </div>
       </div>
+      {/* The account's connections: people you're connected to, and people connected to you. */}
+      {user && chat && (
+        <Link
+          href="/dashboard/chat"
+          className="mt-3 grid grid-cols-2 gap-2 rounded-xl text-center outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
+        >
+          {[
+            { label: "Connected to", value: chat.connectedTo },
+            { label: "Connected to you", value: chat.connectedToMe },
+          ].map((item) => (
+            <span key={item.label} className="rounded-xl bg-white px-2 py-1.5 dark:bg-neutral-950/60">
+              <span className="block font-display text-lg leading-tight font-semibold text-neutral-900 tabular-nums dark:text-white">{item.value}</span>
+              <span className="block text-[11px] font-medium text-neutral-500 dark:text-neutral-400">{item.label}</span>
+            </span>
+          ))}
+        </Link>
+      )}
     </div>
   );
 }

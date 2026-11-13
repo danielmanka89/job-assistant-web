@@ -28,6 +28,13 @@ import type {
   LoginRequest,
   ProfileResponse,
   IntroductionResponse,
+  ChatConversation,
+  ChatMessage,
+  ChatSummary,
+  ChatThreadResponse,
+  ConnectRequest,
+  ConnectionsResponse,
+  Person,
   MockCallPrepResponse,
   PrepQuestion,
   WriteMockCallPrepRequest,
@@ -867,6 +874,101 @@ async function updateSubmission(id: string, changes: UpdateSubmissionRequest): P
   return { ok: true, data: next };
 }
 
+// Connections and chat, kept in memory for this page load. A few sample people; "Priya" is
+// already connected to you, and anyone you message replies once.
+const MOCK_ME = "user_mock_me";
+const mockPeople: Person[] = [
+  { id: "person_1", name: "Priya Raman", role: "EMPLOYER", connection: null, connectedToMe: true },
+  { id: "person_2", name: "Marcus Lee", role: "SEEKER", connection: "friend", connectedToMe: false },
+  { id: "person_3", name: "Northwind Staffing", role: "EMPLOYER", connection: "vendor", connectedToMe: true },
+  { id: "person_4", name: "Elena Petrova", role: "SEEKER", connection: null, connectedToMe: false },
+];
+const mockChats = new Map<string, { personId: string; messages: ChatMessage[]; readAt: string }>();
+
+const mockUnread = (chat: { messages: ChatMessage[]; readAt: string }) => chat.messages.filter((m) => m.senderId !== MOCK_ME && m.createdAt > chat.readAt).length;
+
+async function getChatSummary(): Promise<ApiResult<ChatSummary>> {
+  await delay(150);
+  return {
+    ok: true,
+    data: {
+      unread: [...mockChats.values()].reduce((n, c) => n + mockUnread(c), 0),
+      connectedTo: mockPeople.filter((p) => p.connection).length,
+      connectedToMe: mockPeople.filter((p) => p.connectedToMe).length,
+    },
+  };
+}
+
+async function listConnections(): Promise<ApiResult<ConnectionsResponse>> {
+  await delay(250);
+  return { ok: true, data: { connectedTo: mockPeople.filter((p) => p.connection), connectedToMe: mockPeople.filter((p) => p.connectedToMe) } };
+}
+
+async function searchPeople(q: string): Promise<ApiResult<Person[]>> {
+  await delay(250);
+  const needle = q.trim().toLowerCase();
+  return { ok: true, data: needle.length < 2 ? [] : mockPeople.filter((p) => p.name.toLowerCase().includes(needle)) };
+}
+
+async function connectTo(request: ConnectRequest): Promise<ApiResult<Person>> {
+  await delay(250);
+  const person = mockPeople.find((p) => p.id === request.userId);
+  if (!person) return fail({ code: "USER_NOT_FOUND", message: "That person's account no longer exists" });
+  person.connection = request.kind;
+  return { ok: true, data: { ...person } };
+}
+
+async function disconnectFrom(userId: string): Promise<ApiResult<null>> {
+  await delay(250);
+  const person = mockPeople.find((p) => p.id === userId);
+  if (person) person.connection = null;
+  return { ok: true, data: null };
+}
+
+async function listChats(): Promise<ApiResult<ChatConversation[]>> {
+  await delay(200);
+  const conversations = [...mockChats.entries()].flatMap(([id, chat]) => {
+    const person = mockPeople.find((p) => p.id === chat.personId);
+    const last = chat.messages[chat.messages.length - 1];
+    return person ? [{ id, person: { ...person }, lastMessage: last?.body ?? null, lastMessageAt: last?.createdAt ?? chat.readAt, unread: mockUnread(chat) }] : [];
+  });
+  return { ok: true, data: conversations.sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt)) };
+}
+
+async function openChat(userId: string): Promise<ApiResult<{ id: string }>> {
+  await delay(200);
+  const person = mockPeople.find((p) => p.id === userId);
+  if (!person) return fail({ code: "USER_NOT_FOUND", message: "That person's account no longer exists" });
+  if (!person.connection && !person.connectedToMe) return fail({ code: "NOT_CONNECTED", message: "Connect with this person first to start a chat" });
+  const id = `chat_${userId}`;
+  if (!mockChats.has(id)) mockChats.set(id, { personId: userId, messages: [], readAt: new Date().toISOString() });
+  return { ok: true, data: { id } };
+}
+
+async function getChat(id: string, after?: string): Promise<ApiResult<ChatThreadResponse>> {
+  await delay(150);
+  const chat = mockChats.get(id);
+  const person = chat && mockPeople.find((p) => p.id === chat.personId);
+  if (!chat || !person) return fail({ code: "CHAT_NOT_FOUND", message: "That chat doesn't exist" });
+  chat.readAt = new Date().toISOString();
+  return {
+    ok: true,
+    data: { id, person: { ...person }, canSend: Boolean(person.connection || person.connectedToMe), messages: chat.messages.filter((m) => !after || m.createdAt > after) },
+  };
+}
+
+async function sendChatMessage(id: string, body: string): Promise<ApiResult<ChatMessage>> {
+  await delay(200);
+  const chat = mockChats.get(id);
+  if (!chat) return fail({ code: "CHAT_NOT_FOUND", message: "That chat doesn't exist" });
+  const message: ChatMessage = { id: `message_${Date.now()}`, senderId: MOCK_ME, body: body.trim(), createdAt: new Date().toISOString() };
+  chat.messages.push(message);
+  if (chat.messages.length === 1) {
+    setTimeout(() => chat.messages.push({ id: `message_${Date.now()}`, senderId: chat.personId, body: "Thanks for reaching out! Good to connect.", createdAt: new Date().toISOString() }), 2500);
+  }
+  return { ok: true, data: message };
+}
+
 // A stand-in for the AI: 50 questions stitched together from the sample resume and the row's job.
 const mockPreps = new Map<string, NonNullable<MockCallPrepResponse["prep"]>>();
 const mockPrepDescriptions = new Set<string>(); // hand-added rows that have had a job description pasted
@@ -1018,6 +1120,15 @@ export const mockApi = {
   deleteSubmission,
   exportSubmissions,
   getMockCallPrep,
+  getChatSummary,
+  listConnections,
+  searchPeople,
+  connectTo,
+  disconnectFrom,
+  listChats,
+  openChat,
+  getChat,
+  sendChatMessage,
   writeMockCallPrep,
   listDeadlines,
   createDeadline,

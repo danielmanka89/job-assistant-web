@@ -16,6 +16,13 @@ import type {
   LearningPath,
   LoginRequest,
   IntroductionResponse,
+  ChatConversation,
+  ChatMessage,
+  ChatSummary,
+  ChatThreadResponse,
+  ConnectRequest,
+  ConnectionsResponse,
+  Person,
   MockCallPrepResponse,
   WriteMockCallPrepRequest,
   PortfolioStatusResponse,
@@ -370,6 +377,90 @@ export async function updateSubmission(id: string, changes: UpdateSubmissionRequ
   if (!result.ok) return result;
   const data = toSubmission(result.data);
   return data ? { ok: true, data } : { ok: false, error: toApiError(null, 500) };
+}
+
+/* ---------- Connections and chat ---------- */
+
+/** Fired after anything that changes the menu's chat numbers, so the sidebar refreshes at once. */
+export const CHAT_CHANGED_EVENT = "job-assistant:chat-changed";
+const chatChanged = () => window.dispatchEvent(new Event(CHAT_CHANGED_EVENT));
+
+const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
+/** Unread messages and the account's connection counts, from GET /api/chat/summary. */
+export async function getChatSummary(): Promise<ApiResult<ChatSummary>> {
+  if (USE_MOCK_API) return mockApi.getChatSummary();
+  const result = await getJson("/api/chat/summary");
+  return result.ok ? { ok: true, data: result.data as ChatSummary } : result;
+}
+
+/** The people you're connected to and the people connected to you, from GET /api/connections. */
+export async function listConnections(): Promise<ApiResult<ConnectionsResponse>> {
+  if (USE_MOCK_API) return mockApi.listConnections();
+  const result = await getJson("/api/connections");
+  if (!result.ok) return result;
+  const body = (result.data ?? {}) as Partial<ConnectionsResponse>;
+  return { ok: true, data: { connectedTo: asArray<Person>(body.connectedTo), connectedToMe: asArray<Person>(body.connectedToMe) } };
+}
+
+/** Finds people by name (2+ characters) or exact email, from GET /api/people. */
+export async function searchPeople(q: string): Promise<ApiResult<Person[]>> {
+  if (USE_MOCK_API) return mockApi.searchPeople(q);
+  const result = await getJson(`/api/people?q=${encodeURIComponent(q)}`);
+  return result.ok ? { ok: true, data: asArray<Person>((result.data as { people?: unknown } | null)?.people) } : result;
+}
+
+/** Connects you to someone, or changes what they are to you, with POST /api/connections. */
+export async function connectTo(request: ConnectRequest): Promise<ApiResult<Person>> {
+  const result = USE_MOCK_API ? await mockApi.connectTo(request) : await postJson<ConnectRequest, Person>("/api/connections", request);
+  if (result.ok) chatChanged();
+  return result;
+}
+
+/** Removes your connection to someone with DELETE /api/connections/:userId. */
+export async function disconnectFrom(userId: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) {
+    const result = await mockApi.disconnectFrom(userId);
+    chatChanged();
+    return result;
+  }
+  let res: Response;
+  try {
+    res = await fetch(`/api/connections/${encodeURIComponent(userId)}`, { method: "DELETE", credentials: "same-origin" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (!res.ok) return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
+  chatChanged();
+  return { ok: true, data: null };
+}
+
+/** Your chats, most recent first, from GET /api/chat. */
+export async function listChats(): Promise<ApiResult<ChatConversation[]>> {
+  if (USE_MOCK_API) return mockApi.listChats();
+  const result = await getJson("/api/chat");
+  return result.ok ? { ok: true, data: asArray<ChatConversation>((result.data as { conversations?: unknown } | null)?.conversations) } : result;
+}
+
+/** Opens (or starts) your chat with someone and returns its id, with POST /api/chat. */
+export async function openChat(userId: string): Promise<ApiResult<{ id: string }>> {
+  if (USE_MOCK_API) return mockApi.openChat(userId);
+  return postJson<{ userId: string }, { id: string }>("/api/chat", { userId });
+}
+
+/** A chat's messages from GET /api/chat/:id (only those after `after`, when given). Marks the chat read. */
+export async function getChat(id: string, after?: string): Promise<ApiResult<ChatThreadResponse>> {
+  if (USE_MOCK_API) return mockApi.getChat(id, after);
+  const result = await getJson(`/api/chat/${encodeURIComponent(id)}${after ? `?after=${encodeURIComponent(after)}` : ""}`);
+  if (!result.ok) return result;
+  const body = result.data as ChatThreadResponse;
+  return { ok: true, data: { ...body, messages: asArray<ChatMessage>(body?.messages) } };
+}
+
+/** Sends a message with POST /api/chat/:id. */
+export async function sendChatMessage(id: string, body: string): Promise<ApiResult<ChatMessage>> {
+  if (USE_MOCK_API) return mockApi.sendChatMessage(id, body);
+  return postJson<{ body: string }, ChatMessage>(`/api/chat/${encodeURIComponent(id)}`, { body });
 }
 
 /** The saved mock call preparation for a submission, from GET /api/submissions/:id/prep. */

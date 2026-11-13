@@ -368,6 +368,81 @@ export interface IntroductionResponse {
   hasResume: boolean;
 }
 
+/** What someone is to you when you connect with them. */
+export const CONNECTION_KINDS = ["friend", "vendor", "employer", "recruiter", "colleague", "other"] as const;
+export type ConnectionKind = (typeof CONNECTION_KINDS)[number];
+export const CONNECTION_KIND_LABEL: Record<ConnectionKind, string> = {
+  friend: "Friend",
+  vendor: "Vendor",
+  employer: "Employer",
+  recruiter: "Recruiter",
+  colleague: "Colleague",
+  other: "Other",
+};
+
+/** Another user, as shown in Chat. Connections are one-way, so the two directions are separate. */
+export interface Person {
+  id: string;
+  name: string;
+  role: UserRole;
+  connection: ConnectionKind | null; // how you're connected to them; null when you aren't
+  connectedToMe: boolean; // whether they're connected to you
+}
+
+/** GET /api/connections: the people you're connected to, and the people connected to you. */
+export interface ConnectionsResponse {
+  connectedTo: Person[];
+  connectedToMe: Person[];
+}
+
+/** GET /api/people?q=: users whose name matches, or whose email is exactly q. */
+export interface PeopleSearchResponse {
+  people: Person[];
+}
+
+/** POST /api/connections: connect to someone, or change what they are to you. */
+export interface ConnectRequest {
+  userId: string;
+  kind: ConnectionKind;
+}
+
+/** GET /api/chat/summary: the numbers shown in the menu. */
+export interface ChatSummary {
+  unread: number; // unread messages across all chats
+  connectedTo: number;
+  connectedToMe: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  body: string;
+  createdAt: string; // ISO 8601
+}
+
+export interface ChatConversation {
+  id: string;
+  person: Person;
+  lastMessage: string | null;
+  lastMessageAt: string; // ISO 8601
+  unread: number;
+}
+
+/** GET /api/chat: your chats, most recent first. */
+export interface ChatListResponse {
+  conversations: ChatConversation[];
+}
+
+/** GET /api/chat/:id. With ?after=<ISO time> only newer messages are returned. */
+export interface ChatThreadResponse {
+  id: string;
+  person: Person;
+  canSend: boolean; // false once neither of you is connected to the other
+  messages: ChatMessage[];
+}
+
+export const MAX_MESSAGE_CHARS = 2000;
+
 /** What a mock call question is about. */
 export const PREP_CATEGORIES = ["job", "experience", "projects", "skills", "summary"] as const;
 export type PrepCategory = (typeof PREP_CATEGORIES)[number];
