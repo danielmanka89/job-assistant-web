@@ -1,5 +1,6 @@
 import { QuoteBanner } from "@/components/dashboard/quote-banner";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { HelpAssistant } from "@/components/help/help-assistant";
 
 /**
  * Shared shell for every /dashboard page: sidebar on the left, page content on the right, and the
@@ -14,6 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="pb-(--quote-banner-space) lg:pl-72">{children}</div>
       <QuoteBanner />
+      <HelpAssistant />
     </div>
   );
 }
