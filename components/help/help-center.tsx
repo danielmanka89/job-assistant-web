@@ -81,6 +81,11 @@ export function HelpCenter() {
           </div>
         </div>
 
+        {/* Says how many guides match as you type or change topic. */}
+        <p role="status" className="sr-only">
+          {query.trim() || category !== "All" ? `${results.length} ${results.length === 1 ? "guide" : "guides"} found` : ""}
+        </p>
+
         {results.length === 0 ? (
           <div className="rounded-2xl bg-neutral-50 px-4 py-6 text-center dark:bg-neutral-900">
             <p className="text-sm text-neutral-600 dark:text-neutral-300">No guide matches that.</p>
@@ -117,7 +122,8 @@ export function HelpCenter() {
                             href={article.href}
                             className="inline-block pt-1 text-sm font-semibold text-brand-700 hover:underline focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:text-brand-300"
                           >
-                            Go there →
+                            Go there<span aria-hidden="true"> →</span>
+                            <span className="sr-only">: {article.title}</span>
                           </Link>
                         )}
                       </div>
