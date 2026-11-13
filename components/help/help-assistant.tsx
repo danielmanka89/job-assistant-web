@@ -245,10 +245,11 @@ export function HelpAssistant() {
                   <p key={i} className="mr-6 rounded-2xl rounded-bl-md bg-neutral-100 px-3 py-2 text-sm whitespace-pre-wrap text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200">
                     <span className="sr-only">Assistant: </span>
                     {turn.content || (
-                      <span className="inline-flex gap-1 py-1" aria-label="Thinking">
-                        <span className="size-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.2s]" />
-                        <span className="size-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.1s]" />
-                        <span className="size-1.5 animate-bounce rounded-full bg-neutral-400" />
+                      <span className="inline-flex gap-1 py-1">
+                        <span className="sr-only">Thinking…</span>
+                        <span className="size-1.5 rounded-full bg-neutral-400 motion-safe:animate-bounce [animation-delay:-0.2s]" aria-hidden="true" />
+                        <span className="size-1.5 rounded-full bg-neutral-400 motion-safe:animate-bounce [animation-delay:-0.1s]" aria-hidden="true" />
+                        <span className="size-1.5 rounded-full bg-neutral-400 motion-safe:animate-bounce" aria-hidden="true" />
                       </span>
                     )}
                   </p>
