@@ -12,11 +12,11 @@ import { JOB_TYPES, JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 
 // The Posted filter: how recently a job was put on the board.
 const POSTED_RANGES = [
-  { key: "any", label: "Any time", hours: null },
-  { key: "24h", label: "Last 24 hours", hours: 24 },
-  { key: "48h", label: "Last 48 hours", hours: 48 },
-  { key: "week", label: "Last week", hours: 24 * 7 },
-  { key: "month", label: "Last month", hours: 24 * 30 },
+  { key: "any", label: "Any time", short: "Any time", hours: null },
+  { key: "24h", label: "Last 24 hours", short: "24 hours", hours: 24 },
+  { key: "48h", label: "Last 48 hours", short: "48 hours", hours: 48 },
+  { key: "week", label: "Last week", short: "Week", hours: 24 * 7 },
+  { key: "month", label: "Last month", short: "Month", hours: 24 * 30 },
 ] as const;
 type PostedRange = (typeof POSTED_RANGES)[number]["key"];
 
@@ -168,59 +168,40 @@ export function JobBoard() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-neutral-400" aria-hidden="true">
-            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
-          </svg>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title, company, location or skill"
-            aria-label="Search jobs"
-            className="block w-full rounded-xl border border-neutral-200 bg-white py-2.5 pr-3.5 pl-10 text-[15px] text-neutral-900 shadow-sm outline-none transition placeholder:text-neutral-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500"
-          />
+      {/* Filters: search, position type and how recently it was posted. They all combine. */}
+      <div className="space-y-3 rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-sm sm:p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-0 flex-[999_1_16rem]">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-neutral-400" aria-hidden="true">
+              <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+            </svg>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search title, company, location or skill"
+              aria-label="Search jobs"
+              className="block w-full rounded-xl border border-neutral-200 bg-white py-2 pr-3.5 pl-10 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+            />
+          </div>
+          <p className="flex-[1_0_auto] text-right text-sm text-neutral-500 dark:text-neutral-400" aria-live="polite">
+            {filtered.length === jobs.length
+              ? `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}`
+              : `${filtered.length} of ${jobs.length} jobs`}
+          </p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-neutral-600 sm:ml-auto dark:text-neutral-300">
-          <span className="font-medium">Posted</span>
-          <select
-            value={postedFilter}
-            onChange={(e) => setPostedFilter(e.target.value as PostedRange)}
-            className="rounded-xl border border-neutral-200 bg-white py-2 pr-8 pl-3 text-sm text-neutral-900 shadow-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-          >
-            {POSTED_RANGES.map((r, i) => (
-              <option key={r.key} value={r.key}>
-                {r.label} ({postedCounts[i]})
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400" aria-live="polite">
-          {filtered.length === jobs.length
-            ? `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"}`
-            : `${filtered.length} of ${jobs.length} jobs`}
-        </p>
-      </div>
-
-      <div role="group" aria-label="Position type" className="flex flex-wrap gap-1 rounded-xl bg-neutral-100 p-1 sm:inline-flex dark:bg-neutral-900">
-        {typeTabs.map((tab) => {
-          const active = typeFilter === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setTypeFilter(tab.key)}
-              aria-pressed={active}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none ${
-                active ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-white" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-              }`}
-            >
-              {tab.label}
-              <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${active ? "bg-brand-600 text-white" : "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"}`}>{tab.count}</span>
-            </button>
-          );
-        })}
+        <FilterTabs
+          label="Type"
+          value={typeFilter}
+          onChange={(v) => setTypeFilter(v as JobType | "All")}
+          options={typeTabs.map((t) => ({ value: t.key, label: t.label, count: t.count }))}
+        />
+        <FilterTabs
+          label="Posted"
+          value={postedFilter}
+          onChange={(v) => setPostedFilter(v as PostedRange)}
+          options={POSTED_RANGES.map((r, i) => ({ value: r.key, label: r.short, count: postedCounts[i] }))}
+        />
       </div>
 
       {jobs.some((job) => job.source === "mock") && (
@@ -296,6 +277,53 @@ export function JobBoard() {
             {notice.text}
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** One row of the filter bar: a label and a set of options, each with how many jobs it would show. */
+function FilterTabs({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string; count: number }[];
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <span className="w-14 shrink-0 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400" aria-hidden="true">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-900">
+        {options.map((option) => {
+          const active = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              aria-pressed={active}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13px] font-semibold transition focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none ${
+                active ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-white" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+              }`}
+            >
+              {option.label}
+              <span
+                className={`rounded-full px-1.5 text-[11px] tabular-nums ${
+                  active ? "bg-brand-600 text-white" : "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+                }`}
+              >
+                {option.count}
+                <span className="sr-only"> jobs</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

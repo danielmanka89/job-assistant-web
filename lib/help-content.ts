@@ -106,8 +106,8 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "Jobs & applying",
     keywords: "job board search find roles apply tailor one click listing why should i hire you pitch answer 300 words full time c2c w2 contract corp to corp type filter tabs posted recent new last 24 hours 48 hours week month date",
     body: [
-      "The Posted menu next to the search box shows only jobs posted in the last 24 hours, 48 hours, week or month (each choice shows how many jobs it has). It works together with the search and the type tabs.",
-      "Use the tabs at the top to split positions by type: All, Full Time, C2C (corp-to-corp contract) and W2 (contract on the employer's or vendor's payroll). A job open to more than one type shows under each, and its types are shown in the Type column.",
+      "The filter bar at the top has a search box and two rows of buttons. Type splits positions into All, Full Time, C2C and W2; Posted shows only jobs posted in the last 24 hours, 48 hours, week or month. Each button shows how many jobs it would show, and all the filters work together.",
+      "C2C means a corp-to-corp contract and W2 a contract on the employer's or vendor's payroll. A job open to more than one type shows under each, and its types are shown in the Type column.",
       "The Job Board lists open roles as a compact list. Click a job to open its full description. Tailor tailors your resume to it in one click: the job description comes with you, so you skip pasting it.",
       "Each job has a \"Why should I hire you?\" box under its description. Write your answer there (up to 300 words; the counter shows how many you've used) and press Save. It's kept for that job, and the job shows \"Pitch ✓\" once it's saved. Save it empty to remove it.",
       "Applying to a job adds it to your Spreadsheet automatically, filled in from the job, your profile and your latest resume.",
