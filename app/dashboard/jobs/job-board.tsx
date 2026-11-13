@@ -7,8 +7,7 @@ import type { JobPosting } from "@/lib/types";
 import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
-import { JobCard, STAGE_TONE } from "./job-card";
-import { STAGES } from "@/lib/application-stage";
+import { JobCard } from "./job-card";
 import { JOB_TYPES, JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 
 // The Posted filter: how recently a job was put on the board.
@@ -235,15 +234,6 @@ export function JobBoard() {
         />
       ) : (
         <>
-          {/* What the row colors mean (applied jobs only). */}
-          <ul aria-label="Application colors" className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-neutral-600 dark:text-neutral-300">
-            {STAGES.filter((s) => s.stage !== "withdrawn").map((s) => (
-              <li key={s.stage} className="inline-flex items-center gap-1.5" title={s.hint}>
-                <span className={`size-2.5 rounded-sm ${STAGE_TONE[s.stage].dot}`} aria-hidden="true" />
-                {s.label}
-              </li>
-            ))}
-          </ul>
           <ul className="mb-20 space-y-2.5">
             {filtered.map((job) => (
               <li key={job.id}>

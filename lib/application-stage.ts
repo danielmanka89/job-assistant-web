@@ -20,12 +20,3 @@ const STAGE_OF_STATUS: Record<string, ApplicationStage> = {
 export function stageOf(status: string | null | undefined): ApplicationStage {
   return STAGE_OF_STATUS[(status ?? "").trim()] ?? "applied";
 }
-
-/** Order and wording for the legend and the status chips. */
-export const STAGES: { stage: ApplicationStage; label: string; hint: string }[] = [
-  { stage: "applied", label: "Applied", hint: "You applied" },
-  { stage: "review", label: "Under review", hint: "Submitted to the vendor, or on hold" },
-  { stage: "approved", label: "Approved", hint: "The vendor submitted your profile, or you're interviewing" },
-  { stage: "rejected", label: "Not selected", hint: "Rejected" },
-  { stage: "withdrawn", label: "Withdrawn", hint: "You withdrew" },
-];

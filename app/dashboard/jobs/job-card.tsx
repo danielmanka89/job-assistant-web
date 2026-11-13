@@ -1,25 +1,16 @@
 "use client";
 
 import { useId, useState } from "react";
-import Link from "next/link";
 import type { JobPosting, JobSource } from "@/lib/types";
 import { safeApplyUrl } from "@/lib/client/jobs";
 import { saveJobPitch } from "@/lib/client/api";
 import { MAX_PITCH_WORDS, countWords, limitWords } from "@/lib/pitch";
-import { STAGES, stageOf, type ApplicationStage } from "@/lib/application-stage";
+import { stageOf, type ApplicationStage } from "@/lib/application-stage";
 
 
 // One job on the Job Board, as a compact list row. Clicking the row opens its description and the
 // "Why should I hire you?" answer (up to 300 words, saved per job).
 
-const AVATAR_COLORS = [
-  "bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300",
-  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-  "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
-  "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
-  "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
-  "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200",
-];
 
 const SOURCE_BADGES: Record<JobSource, { label: string; className: string }> = {
   native: { label: "Posted here", className: "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300" },
@@ -27,11 +18,6 @@ const SOURCE_BADGES: Record<JobSource, { label: string; className: string }> = {
   mock: { label: "Demo", className: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" },
 };
 
-function avatarColor(name: string) {
-  let hash = 0;
-  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
 
 function postedLabel(iso?: string) {
   if (!iso) return null;
@@ -77,108 +63,84 @@ export function JobCard({
 
   const applied = status !== null;
   const stage = applied ? stageOf(status) : null;
-  const tone = stage ? STAGE_TONE[stage] : null;
+  const tile = STATUS_TILE[stage ?? "new"];
 
   return (
     <article
       aria-labelledby={titleId}
       className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
     >
-      {/* Row 1: the job. The heading wraps the button (a heading can't sit inside one), so it still
-          shows up in the page's list of headings. Clicking opens the description and the pitch. */}
-      <div className="flex items-center gap-2 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Where the application stands, as an icon only (the words are in the tooltip and for screen readers). */}
+        <span
+          title={tile.label}
+          className={`grid size-10 shrink-0 place-items-center rounded-xl ${tile.box}`}
+        >
+          {tile.icon}
+          <span className="sr-only">Status: {tile.label}.</span>
+        </span>
+
+        {/* The role. The heading wraps the button (a heading can't sit inside one); clicking opens the
+            description and the "Why should I hire you?" answer. */}
         <h3 className="min-w-0 flex-1 font-sans text-sm tracking-normal">
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
             aria-controls={detailsId}
-            className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
+            className="block w-full min-w-0 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
           >
-            <span className={`mono-grayscale grid size-9 shrink-0 place-items-center rounded-xl text-sm font-bold ${avatarColor(job.company)}`} aria-hidden="true">
-              {job.company.trim().charAt(0).toUpperCase() || "?"}
+            <span id={titleId} className="block truncate text-[15px] font-semibold text-neutral-900 dark:text-white">
+              {job.title}
             </span>
-            <span className="min-w-0 flex-1">
-              <span id={titleId} className="block truncate text-[15px] font-semibold text-neutral-900 dark:text-white">
-                {job.title}
-              </span>
-              <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">
-                {company}
-                {badge && job.source !== "native" && <span className="text-neutral-400 dark:text-neutral-500"> · {badge.label}</span>}
-                {" · "}
-                <span className="sr-only">Location: </span>
-                {job.location}
-                {posted && (
-                  <>
-                    {" · "}
-                    <span className="sr-only">Posted </span>
-                    {posted}
-                  </>
-                )}
-              </span>
+            <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">
+              {company}
+              {badge && job.source !== "native" && <span className="text-neutral-400 dark:text-neutral-500"> · {badge.label}</span>}
+              {" · "}
+              <span className="sr-only">Location: </span>
+              {job.location}
+              {posted && (
+                <>
+                  {" · "}
+                  <span className="sr-only">Posted </span>
+                  {posted}
+                </>
+              )}
+              {pitch && (
+                <>
+                  {" · "}
+                  Pitch<span aria-hidden="true"> ✓</span>
+                  <span className="sr-only"> written</span>
+                </>
+              )}
             </span>
           </button>
         </h3>
-        {/* The same toggle for the mouse; the title button above is the keyboard one. */}
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-hidden="true"
-          onClick={() => setExpanded((v) => !v)}
-          className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className={`size-4 transition ${expanded ? "rotate-180" : ""}`}>
-            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-          </svg>
-        </button>
-      </div>
 
-      {/* Row 2: where the application stands, as a band in the status color, with the actions. */}
-      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1.5 px-4 py-2 ${tone ? tone.band : "bg-neutral-50 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400"}`}>
-        {stage && tone ? (
-          <Link
-            href="/dashboard/spreadsheet"
-            title={`Spreadsheet status: ${status || "Applied"}. Change it in your Spreadsheet.`}
-            className="inline-flex items-center gap-1.5 rounded text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
-          >
-            <span className={`size-2 rounded-full ${tone.dot}`} aria-hidden="true" />
-            {STAGES.find((s) => s.stage === stage)?.label}
-            <span className="sr-only">
-              {" "}
-              ({status || "Applied"}): view {job.title} in your Spreadsheet
-            </span>
-          </Link>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
-            <span className="size-2 rounded-full bg-neutral-300 dark:bg-neutral-600" aria-hidden="true" />
-            Not applied
-          </span>
-        )}
-        {pitch ? (
-          <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-300" title="You've written why they should hire you">
-            Pitch<span aria-hidden="true"> ✓</span>
-            <span className="sr-only"> written</span>
-          </span>
-        ) : null}
-        <span className="ml-auto flex items-center gap-1.5">
+        <span className="w-px self-stretch bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
+
+        {/* Actions, stacked. */}
+        <span className="flex shrink-0 flex-col gap-1">
           <button
             type="button"
             onClick={onTailor}
             disabled={disabled || opening}
             aria-busy={opening || undefined}
             aria-describedby={titleId}
-            className="inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2.5 text-xs font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white/10 dark:text-brand-300 dark:hover:bg-white/15"
+            className="group inline-flex items-center gap-2 rounded-lg py-0.5 pr-1 text-xs font-semibold text-brand-700 transition hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:text-brand-300"
           >
-            {opening ? (
-              <svg className="size-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-                <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="size-3" aria-hidden="true">
-                <path d="M6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684Z" />
-              </svg>
-            )}
+            <span className="grid size-6 place-items-center rounded-md bg-brand-50 transition group-hover:bg-brand-100 dark:bg-brand-500/15">
+              {opening ? (
+                <svg className="size-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+                  <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 20 20" fill="currentColor" className="size-3" aria-hidden="true">
+                  <path d="M6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684Z" />
+                </svg>
+              )}
+            </span>
             {opening ? "Opening…" : "Tailor"}
           </button>
           {applyUrl && (
@@ -187,8 +149,13 @@ export function JobCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={onApply}
-              className="inline-flex h-7 items-center rounded-lg bg-white px-2.5 text-xs font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:bg-white/10 dark:text-neutral-200 dark:hover:bg-white/15"
+              className="group inline-flex items-center gap-2 rounded-lg py-0.5 pr-1 text-xs font-semibold text-neutral-700 transition hover:text-neutral-950 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:text-neutral-200 dark:hover:text-white"
             >
+              <span className="grid size-6 place-items-center rounded-md bg-neutral-100 transition group-hover:bg-neutral-200 dark:bg-neutral-800 dark:group-hover:bg-neutral-700">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="size-3" aria-hidden="true">
+                  <path fillRule="evenodd" d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z" clipRule="evenodd" />
+                </svg>
+              </span>
               {applied ? "Re-apply" : "Apply"}
               <span className="sr-only"> to {job.title} (opens in a new tab)</span>
             </a>
@@ -209,42 +176,69 @@ export function JobCard({
   );
 }
 
-/** Colors per stage. Kept apart in lightness as well as hue, and always paired with a text label. */
-export const STAGE_TONE: Record<ApplicationStage, { bar: string; tint: string; chip: string; dot: string; band: string }> = {
+const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", className: "size-[18px]", "aria-hidden": true } as const;
+
+/**
+ * The status tile on each job: an icon in a soft tint, never a word on screen. Wording is gentle
+ * ("Closed", not "Rejected"): a long list of rejections shouldn't wear the candidate down, so those
+ * jobs get a quiet grey archive tile instead of red. Colors differ in lightness too, not hue alone.
+ */
+const STATUS_TILE: Record<ApplicationStage | "new", { label: string; box: string; icon: React.ReactNode }> = {
+  new: {
+    label: "Not applied yet",
+    box: "border-[1.5px] border-dashed border-neutral-300 text-neutral-400 dark:border-neutral-600 dark:text-neutral-500",
+    icon: (
+      <svg {...iconProps} strokeWidth="1.8">
+        <rect x="3.5" y="7" width="17" height="12" rx="2" />
+        <path d="M9 7V5.5h6V7" />
+      </svg>
+    ),
+  },
   applied: {
-    band: "bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-200",
-    bar: "border-l-blue-500",
-    tint: "bg-blue-50/60 dark:bg-blue-500/[0.07]",
-    chip: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
-    dot: "bg-blue-500",
+    label: "Sent: you applied",
+    box: "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300",
+    icon: (
+      <svg {...iconProps} strokeWidth="2">
+        <path d="M4 12 20 4l-6 16-3-7z" strokeLinejoin="round" />
+      </svg>
+    ),
   },
   review: {
-    band: "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200",
-    bar: "border-l-amber-400",
-    tint: "bg-amber-50/70 dark:bg-amber-500/[0.07]",
-    chip: "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200",
-    dot: "bg-amber-500",
+    label: "Waiting: under review",
+    box: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
+    icon: (
+      <svg {...iconProps} strokeWidth="2">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v4l3 2" strokeLinecap="round" />
+      </svg>
+    ),
   },
   approved: {
-    band: "bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200",
-    bar: "border-l-emerald-500",
-    tint: "bg-emerald-50/70 dark:bg-emerald-500/[0.07]",
-    chip: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
-    dot: "bg-emerald-500",
+    label: "Moving ahead: approved",
+    box: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+    icon: (
+      <svg {...iconProps} strokeWidth="2.4">
+        <path d="m5 12 4 4 10-10" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
   },
   rejected: {
-    band: "bg-red-50 text-red-900 dark:bg-red-500/10 dark:text-red-200",
-    bar: "border-l-red-500",
-    tint: "bg-red-50/70 dark:bg-red-500/[0.07]",
-    chip: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
-    dot: "bg-red-500",
+    label: "Closed",
+    box: "bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500",
+    icon: (
+      <svg {...iconProps} strokeWidth="2">
+        <path d="M4 7h16v3H4zM6 10v8h12v-8M10 14h4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
   },
   withdrawn: {
-    band: "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300",
-    bar: "border-l-neutral-400",
-    tint: "bg-neutral-100/60 dark:bg-neutral-800/40",
-    chip: "bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300",
-    dot: "bg-neutral-400",
+    label: "Closed: you withdrew",
+    box: "bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500",
+    icon: (
+      <svg {...iconProps} strokeWidth="2">
+        <path d="M4 7h16v3H4zM6 10v8h12v-8M10 14h4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
   },
 };
 
