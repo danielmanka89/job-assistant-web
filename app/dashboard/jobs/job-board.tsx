@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createSubmission, listJobs, listSubmissions, logout } from "@/lib/client/api";
+import { createSubmission, listJobPitches, listJobs, listSubmissions, logout } from "@/lib/client/api";
 import type { JobPosting } from "@/lib/types";
 import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,18 @@ export function JobBoard() {
   const [appliedIds, setAppliedIds] = useState<ReadonlySet<string>>(new Set());
   const [notice, setNotice] = useState<{ id: number; text: string; error?: boolean } | null>(null);
   const noticeCount = useRef(0);
+  // Your "Why should I hire you?" answers, by job id.
+  const [pitches, setPitches] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let active = true;
+    listJobPitches().then((result) => {
+      if (active && result.ok) setPitches(result.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -113,7 +125,7 @@ export function JobBoard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-neutral-400" aria-hidden="true">
@@ -147,11 +159,20 @@ export function JobBoard() {
       ) : filtered.length === 0 ? (
         <EmptyBoard title="No matching jobs" body={`Nothing matches "${query.trim()}". Try a different search.`} />
       ) : (
-        <ul className="grid gap-5 md:grid-cols-2">
+        <ul className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
           {filtered.map((job) => (
-            <li key={job.id} className="flex">
+            <li key={job.id}>
               <JobCard
                 job={job}
+                pitch={pitches[job.id] ?? ""}
+                onPitchSaved={(text) =>
+                  setPitches((prev) => {
+                    const next = { ...prev };
+                    if (text) next[job.id] = text;
+                    else delete next[job.id];
+                    return next;
+                  })
+                }
                 onTailor={() => tailorFor(job)}
                 onApply={() => void recordApplication(job)}
                 applied={appliedIds.has(job.id)}
@@ -193,9 +214,9 @@ function BoardSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Loading jobs">
       <div className="h-11 w-full max-w-sm animate-pulse rounded-xl bg-neutral-200/70 dark:bg-neutral-800/60" />
-      <div className="grid gap-5 md:grid-cols-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-72 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" />
+      <div className="space-y-px overflow-hidden rounded-2xl">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-16 animate-pulse bg-neutral-200/60 dark:bg-neutral-800/60" />
         ))}
       </div>
     </div>

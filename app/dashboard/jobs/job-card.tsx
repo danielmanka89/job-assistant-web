@@ -1,6 +1,14 @@
+"use client";
+
+import { useId, useState } from "react";
 import Link from "next/link";
 import type { JobPosting, JobSource } from "@/lib/types";
-import { descriptionSnippet as snippet, safeApplyUrl } from "@/lib/client/jobs";
+import { safeApplyUrl } from "@/lib/client/jobs";
+import { saveJobPitch } from "@/lib/client/api";
+import { MAX_PITCH_WORDS, countWords, limitWords } from "@/lib/pitch";
+
+// One job on the Job Board, as a compact list row. Clicking the row opens its description and the
+// "Why should I hire you?" answer (up to 300 words, saved per job).
 
 const AVATAR_COLORS = [
   "bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300",
@@ -27,14 +35,16 @@ function postedLabel(iso?: string) {
   if (!iso) return null;
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
   if (Number.isNaN(days)) return null;
-  if (days <= 0) return "Posted today";
-  if (days === 1) return "Posted yesterday";
-  if (days < 30) return `Posted ${days} days ago`;
-  return `Posted ${new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`;
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
 export function JobCard({
   job,
+  pitch,
+  onPitchSaved,
   onTailor,
   onApply,
   applied = false,
@@ -42,103 +52,185 @@ export function JobCard({
   disabled = false,
 }: {
   job: JobPosting;
+  /** Your saved "Why should I hire you?" answer for this job ("" when none). */
+  pitch: string;
+  onPitchSaved: (text: string) => void;
   onTailor: () => void;
   /** Called when the Apply link is clicked; the link still opens the job's page in a new tab. */
   onApply: () => void;
   /** The job already has a row in the user's Spreadsheet. */
   applied?: boolean;
-  /** This card's job is being opened on the job match page. */
+  /** This row's job is being opened on the job match page. */
   opening?: boolean;
   disabled?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const posted = postedLabel(job.createdAt);
   const applyUrl = safeApplyUrl(job.applyUrl);
   const badge = SOURCE_BADGES[job.source];
   const titleId = `job-${job.id}-title`;
+  const detailsId = `job-${job.id}-details`;
 
   return (
-    <article
-      aria-labelledby={titleId}
-      className="flex w-full flex-col rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-brand-500/40"
-    >
-      <div className="flex items-start gap-4">
-        <span
-          className={`mono-grayscale grid size-12 shrink-0 place-items-center rounded-2xl text-lg font-bold ${avatarColor(job.company)}`}
-          aria-hidden="true"
+    <article aria-labelledby={titleId} className={`transition ${expanded ? "bg-neutral-50/80 dark:bg-neutral-900/80" : "hover:bg-neutral-50 dark:hover:bg-neutral-900/50"}`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-controls={detailsId}
+          className="flex min-w-0 flex-[999_1_18rem] items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
         >
-          {job.company.trim().charAt(0).toUpperCase() || "?"}
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 id={titleId} className="text-lg leading-snug font-semibold text-neutral-900 dark:text-white">
-            {job.title}
-          </h2>
-          <p className="mt-0.5 text-[15px] font-medium text-neutral-600 dark:text-neutral-300">{job.company}</p>
+          <span className={`mono-grayscale grid size-9 shrink-0 place-items-center rounded-xl text-sm font-bold ${avatarColor(job.company)}`} aria-hidden="true">
+            {job.company.trim().charAt(0).toUpperCase() || "?"}
+          </span>
+          <span className="min-w-0 flex-1">
+            <h3 id={titleId} className="truncate font-sans text-sm font-semibold tracking-normal text-neutral-900 dark:text-white">
+              {job.title}
+            </h3>
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+              <span className="font-medium text-neutral-700 dark:text-neutral-300">{job.company}</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                <span className="sr-only">Location: </span>
+                {job.location}
+              </span>
+              {posted && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    <span className="sr-only">Posted </span>
+                    {posted}
+                  </span>
+                </>
+              )}
+            </span>
+          </span>
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`size-4 shrink-0 text-neutral-400 transition ${expanded ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          >
+            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+          </svg>
+        </button>
+
+        <div className="flex flex-[1_0_auto] items-center justify-end gap-1.5">
+          {badge && <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.className}`}>{badge.label}</span>}
+          {pitch && (
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" title="You've written why they should hire you">
+              Pitch ✓
+            </span>
+          )}
+          {applied && (
+            <Link
+              href="/dashboard/spreadsheet"
+              className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:underline dark:bg-emerald-500/15 dark:text-emerald-300"
+            >
+              Applied
+              <span className="sr-only">: view {job.title} in your Spreadsheet</span>
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={onTailor}
+            disabled={disabled || opening}
+            aria-busy={opening || undefined}
+            aria-describedby={titleId}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {opening ? (
+              <svg className="size-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+                <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
+                <path d="M6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684Z" />
+              </svg>
+            )}
+            {opening ? "Opening…" : "Tailor"}
+          </button>
+          {applyUrl && (
+            <a
+              href={applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onApply}
+              className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            >
+              {applied ? "Apply again" : "Apply"}
+              <span className="sr-only"> to {job.title} (opens in a new tab)</span>
+            </a>
+          )}
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-500 dark:text-neutral-400">
-        <span className="inline-flex items-center gap-1.5">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4 text-neutral-400" aria-hidden="true">
-            <path fillRule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 0 0 2.273 1.765 11.842 11.842 0 0 0 .976.544l.062.029.018.008.006.003ZM10 11.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" clipRule="evenodd" />
-          </svg>
-          <span className="sr-only">Location: </span>
-          {job.location}
-        </span>
-        {badge && (
-          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}>{badge.label}</span>
-        )}
-        {posted && <span className="text-xs">{posted}</span>}
-      </div>
-
-      <p className="mt-4 line-clamp-4 flex-1 text-[14px] leading-relaxed text-neutral-600 dark:text-neutral-400">
-        {snippet(job.description)}
-      </p>
-
-      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          onClick={onTailor}
-          disabled={disabled || opening}
-          aria-busy={opening || undefined}
-          aria-describedby={titleId}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 font-display text-[15px] font-medium uppercase tracking-wider text-white shadow-sm shadow-brand-600/30 transition outline-none hover:bg-brand-500 focus-visible:ring-4 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-500 dark:hover:bg-brand-400"
-        >
-          {opening ? (
-            <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-              <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
-              <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684Z" />
-            </svg>
-          )}
-          {opening ? "Opening…" : "Tailor Resume for this Job"}
-        </button>
-        {applyUrl && (
-          <a
-            href={applyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={onApply}
-            className="inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
-          >
-            {applied ? "Apply again" : "Apply"}
-            <span className="sr-only"> to {job.title} (opens in a new tab)</span>
-          </a>
-        )}
-      </div>
-      {applied && (
-        <p className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
-            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
-          </svg>
-          Applied ·
-          <Link href="/dashboard/spreadsheet" className="underline-offset-2 hover:underline">
-            View in Spreadsheet
-          </Link>
-        </p>
+      {expanded && (
+        <div id={detailsId} className="grid gap-4 px-4 pb-4 md:grid-cols-2 md:pl-16">
+          <div>
+            <h4 className="pb-1 text-xs font-bold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">Job description</h4>
+            <p className="max-h-60 overflow-y-auto pr-1 text-[13px] leading-relaxed whitespace-pre-line text-neutral-600 dark:text-neutral-300">{job.description}</p>
+          </div>
+          <PitchEditor jobId={job.id} jobTitle={job.title} saved={pitch} onSaved={onPitchSaved} />
+        </div>
       )}
     </article>
+  );
+}
+
+/** "Why should I hire you?" for one job: up to 300 words, saved to your account. */
+function PitchEditor({ jobId, jobTitle, saved, onSaved }: { jobId: string; jobTitle: string; saved: string; onSaved: (text: string) => void }) {
+  const [text, setText] = useState(saved);
+  const [status, setStatus] = useState<{ kind: "idle" | "saving" | "saved" | "error"; message?: string }>({ kind: "idle" });
+  const fieldId = useId();
+  const countId = useId();
+  const words = countWords(text);
+  const changed = text.trim() !== saved.trim();
+  const atLimit = words >= MAX_PITCH_WORDS;
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus({ kind: "saving" });
+    const result = await saveJobPitch(jobId, text);
+    if (!result.ok) return setStatus({ kind: "error", message: Object.values(result.error.fieldErrors ?? {})[0] ?? result.error.message });
+    onSaved(text.trim());
+    setStatus({ kind: "saved", message: text.trim() ? "Saved" : "Removed" });
+  }
+
+  return (
+    <form onSubmit={save} className="flex flex-col">
+      <label htmlFor={fieldId} className="pb-1 text-xs font-bold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+        Why should I hire you?
+      </label>
+      <textarea
+        id={fieldId}
+        value={text}
+        onChange={(e) => {
+          setText(limitWords(e.target.value));
+          if (status.kind !== "saving") setStatus({ kind: "idle" });
+        }}
+        aria-describedby={countId}
+        rows={6}
+        placeholder={`In your own words, why you're a great fit for ${jobTitle}. Up to ${MAX_PITCH_WORDS} words.`}
+        className="min-h-32 w-full flex-1 resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[13px] leading-relaxed text-neutral-900 placeholder:text-neutral-400 focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15 focus:outline-none dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
+      />
+      <div className="mt-2 flex items-center gap-3">
+        <p id={countId} className={`text-xs tabular-nums ${atLimit ? "font-semibold text-amber-700 dark:text-amber-300" : "text-neutral-500 dark:text-neutral-400"}`}>
+          {words} / {MAX_PITCH_WORDS} words{atLimit ? " · limit reached" : ""}
+        </p>
+        <span role="status" className={`text-xs font-medium ${status.kind === "error" ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+          {status.kind === "saved" || status.kind === "error" ? status.message : ""}
+        </span>
+        <button
+          type="submit"
+          disabled={!changed || status.kind === "saving"}
+          className="ml-auto rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none disabled:opacity-50"
+        >
+          {status.kind === "saving" ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </form>
   );
 }

@@ -104,9 +104,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
     id: "job-board",
     title: "Finding jobs on the Job Board",
     category: "Jobs & applying",
-    keywords: "job board search find roles apply tailor one click listing",
+    keywords: "job board search find roles apply tailor one click listing why should i hire you pitch answer 300 words",
     body: [
-      "The Job Board lists open roles. Pick one and tailor your resume to it in one click: the job description comes with you, so you skip pasting it.",
+      "The Job Board lists open roles as a compact list. Click a job to open its full description. Tailor tailors your resume to it in one click: the job description comes with you, so you skip pasting it.",
+      "Each job has a \"Why should I hire you?\" box under its description. Write your answer there (up to 300 words; the counter shows how many you've used) and press Save. It's kept for that job, and the job shows \"Pitch ✓\" once it's saved. Save it empty to remove it.",
       "Applying to a job adds it to your Spreadsheet automatically, filled in from the job, your profile and your latest resume.",
     ],
     href: "/dashboard/jobs",

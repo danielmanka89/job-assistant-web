@@ -36,6 +36,7 @@ model User {
   profile         CandidateProfile?
   learningPaths   LearningPath[]
   deadlines       Deadline[]
+  jobPitches      JobPitch[]
   profilePhoto    ProfilePhoto?
   avatarPhoto     AvatarPhoto?
   introduction    Introduction?
@@ -246,6 +247,7 @@ model JobPosting {
   postedBy    User?        @relation(fields: [postedById], references: [id], onDelete: SetNull)
   createdAt   DateTime     @default(now())
   submissions Submission[]
+  pitches     JobPitch[]
 
   @@unique([source, externalId])
   @@index([createdAt])
@@ -294,6 +296,21 @@ model CandidateProfile {
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+// A job seeker's answer to "Why should I hire you?" for one job on the Job Board (at most 300 words,
+// lib/pitch.ts). One per person per job; saving again replaces it.
+model JobPitch {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobPostingId String
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  text         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, jobPostingId])
 }
 
 // A deadline the user added themselves in the sidebar's deadline tracker. Interviews, follow-ups and
