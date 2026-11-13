@@ -470,6 +470,7 @@ export function sampleJobs(): JobPosting[] {
     {
       id: "job_1",
       applyUrl: "https://example.com/jobs/1",
+      employmentTypes: ["Full-time"],
       title: "Senior Frontend Engineer",
       company: "Lumen Health",
       location: "Berlin, Germany (Hybrid)",
@@ -481,6 +482,7 @@ export function sampleJobs(): JobPosting[] {
     {
       id: "job_2",
       applyUrl: "https://example.com/jobs/2",
+      employmentTypes: ["C2C", "W2"],
       title: "Full-Stack Developer (Node.js / React)",
       company: "Northwind Logistics",
       location: "Remote (EU)",
@@ -492,6 +494,7 @@ export function sampleJobs(): JobPosting[] {
     {
       id: "job_3",
       applyUrl: "https://example.com/jobs/3",
+      employmentTypes: ["Full-time"],
       title: "UI Engineer, Design Systems",
       company: "Atlas Bank",
       location: "Munich, Germany",
@@ -503,6 +506,7 @@ export function sampleJobs(): JobPosting[] {
     {
       id: "job_4",
       applyUrl: "https://example.com/jobs/4",
+      employmentTypes: ["W2"],
       title: "Frontend Developer",
       company: "Kite Travel",
       location: "Hamburg, Germany",
@@ -514,6 +518,7 @@ export function sampleJobs(): JobPosting[] {
     {
       id: "job_5",
       applyUrl: "https://example.com/jobs/5",
+      employmentTypes: ["C2C"],
       title: "Software Engineer, Web Platform",
       company: "Orbit Analytics",
       location: "Amsterdam, Netherlands",
@@ -525,6 +530,7 @@ export function sampleJobs(): JobPosting[] {
     {
       id: "job_6",
       applyUrl: "https://example.com/jobs/6",
+      employmentTypes: ["Full-time", "W2"],
       title: "Junior React Developer",
       company: "Greenleaf Studio",
       location: "Remote (Germany)",
@@ -551,6 +557,7 @@ const employerJobs: JobPosting[] = [
     description:
       "We're a small product studio looking for a frontend engineer to build web apps for our clients with React and TypeScript. You'll work directly with designers and clients, own features end to end, and help shape how we build.",
     applyUrl: "https://example.com/careers/frontend-engineer",
+    employmentTypes: ["Full-time"],
     source: "native",
     createdAt: daysAgo(4),
   },

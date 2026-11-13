@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AiError } from "@/lib/ai";
+import { jobTypesOf } from "@/lib/job-types";
 import type {
   GeneratedFile as GeneratedFileRow,
   JobPosting as JobPostingRow,
@@ -133,6 +134,7 @@ export function toJobPosting(row: JobPostingRow): JobPosting {
     location: row.location,
     description: row.description,
     applyUrl: row.applyUrl,
+    employmentTypes: jobTypesOf(row.employmentTypes, row.description),
     source: row.source as JobSource,
     createdAt: row.createdAt.toISOString(),
   };

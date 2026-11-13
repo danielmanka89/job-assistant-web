@@ -1,12 +1,13 @@
 import type { JobListResponse, JobPosting } from "@/lib/types";
+import { jobTypesOf } from "@/lib/job-types";
 
 /** Jobs from a GET /api/jobs body, skipping any malformed entries. */
 export function toJobList(body: unknown): JobPosting[] {
   const jobs = (body as Partial<JobListResponse> | null)?.jobs;
   if (!Array.isArray(jobs)) return [];
-  return jobs.filter(
-    (j): j is JobPosting => !!j && typeof j.id === "string" && typeof j.title === "string" && typeof j.description === "string",
-  );
+  return jobs
+    .filter((j): j is JobPosting => !!j && typeof j.id === "string" && typeof j.title === "string" && typeof j.description === "string")
+    .map((j) => ({ ...j, employmentTypes: jobTypesOf(Array.isArray(j.employmentTypes) ? j.employmentTypes : [], j.description) }));
 }
 
 /** Only web links are rendered as "Apply"; anything else (e.g. javascript:) is dropped. */

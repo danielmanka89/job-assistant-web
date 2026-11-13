@@ -1,3 +1,4 @@
+import type { JobType } from "@/lib/job-types";
 // Shared contract for the whole app. Every API response must conform to these types.
 // Only Daniel edits this file.
 //
@@ -259,6 +260,7 @@ export interface JobPosting {
   location: string; // e.g. "Berlin, Germany" or "Remote"
   description: string; // full job description; can be used directly for gap analysis
   applyUrl: string; // http(s) link to the application page
+  employmentTypes: JobType[]; // Full-time, C2C and/or W2; at least one
   source: JobSource;
   createdAt: string; // ISO 8601
 }
@@ -270,6 +272,7 @@ export interface CreateJobPostingRequest {
   location: string;
   description: string; // 50-20,000 characters, same limits as gap analysis
   applyUrl: string; // must start with http:// or https://
+  employmentTypes: JobType[]; // at least one of Full-time, C2C, W2
 }
 
 /** Returned by GET /api/jobs: native and external jobs, newest first. */

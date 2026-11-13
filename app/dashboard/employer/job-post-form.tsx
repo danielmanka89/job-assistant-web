@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
+import { JOB_TYPES, JOB_TYPE_HINT, JOB_TYPE_LABEL, type JobType } from "@/lib/job-types";
 import {
   DESCRIPTION_MAX,
   EMPTY_JOB,
@@ -47,7 +48,16 @@ export function JobPostForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest]);
 
-  function update(field: JobField, value: string) {
+  function toggleType(type: JobType) {
+    setValues((v) => ({
+      ...v,
+      employmentTypes: JOB_TYPES.filter((t) => (t === type ? !v.employmentTypes.includes(t) : v.employmentTypes.includes(t))),
+    }));
+    if (errors.employmentTypes) setErrors((e) => ({ ...e, employmentTypes: undefined }));
+    if (success) setSuccess(null);
+  }
+
+  function update(field: Exclude<JobField, "employmentTypes">, value: string) {
     setValues((v) => ({ ...v, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
     if (success) setSuccess(null);
@@ -169,6 +179,44 @@ export function JobPostForm({
               error={errors.location}
             />
           </div>
+          <fieldset aria-describedby={errors.employmentTypes ? "employment-types-error" : undefined}>
+            <legend className="text-sm font-medium text-neutral-800 dark:text-neutral-200">Position type</legend>
+            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">Choose every type you&apos;d accept. Candidates filter the Job Board by these.</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {JOB_TYPES.map((type) => {
+                const checked = values.employmentTypes.includes(type);
+                return (
+                  <label
+                    key={type}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/20 ${
+                      checked
+                        ? "border-brand-400 bg-brand-50 dark:border-brand-500/50 dark:bg-brand-500/10"
+                        : "border-neutral-200 hover:border-neutral-300 dark:border-neutral-700 dark:hover:border-neutral-600"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="employmentTypes"
+                      value={type}
+                      checked={checked}
+                      onChange={() => toggleType(type)}
+                      aria-invalid={errors.employmentTypes ? true : undefined}
+                      className="mt-0.5 size-4 shrink-0 accent-brand-600"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{JOB_TYPE_LABEL[type]}</span>
+                      <span className="block text-xs text-neutral-500 dark:text-neutral-400">{JOB_TYPE_HINT[type]}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {errors.employmentTypes && (
+              <p id="employment-types-error" className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                {errors.employmentTypes}
+              </p>
+            )}
+          </fieldset>
           <TextField
             label="Apply URL"
             name="applyUrl"

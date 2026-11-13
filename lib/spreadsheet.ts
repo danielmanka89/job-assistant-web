@@ -203,7 +203,7 @@ function workMode(location: string): string {
  * gap analysis of this job, if any. Vendor details aren't known yet and start blank.
  */
 export function prefillSubmission(
-  job: Pick<JobPosting, "title" | "company" | "location" | "description" | "applyUrl">,
+  job: Pick<JobPosting, "title" | "company" | "location" | "description" | "applyUrl"> & Partial<Pick<JobPosting, "employmentTypes">>,
   resume: Pick<Resume, "contact" | "skills" | "workExperience" | "education" | "certifications"> | null,
   analysis: { matchedKeywords: string[]; missingKeywords: string[] } | null,
   profile: ProfileValues = {},
@@ -246,6 +246,8 @@ export function prefillSubmission(
     jobTitle: job.title,
     jobLocation: job.location,
     workMode: workMode(job.location),
+    // A job open to one type only says what the position is; with several, the candidate picks.
+    employmentType: job.employmentTypes?.length === 1 ? job.employmentTypes[0] : "",
     workAuthorization: profile.workAuthorization || (contact.workAuthorization ?? ""),
     rate: profile.desiredPay || (contact.desiredPay ?? ""),
     applyUrl: job.applyUrl,
