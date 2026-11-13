@@ -14,6 +14,7 @@ import {
   searchPeople,
   sendChatMessage,
 } from "@/lib/client/api";
+import { focusFirst, focusLost, tabListKeyDown } from "@/lib/client/a11y";
 import {
   CONNECTION_KINDS,
   CONNECTION_KIND_LABEL,
@@ -48,6 +49,7 @@ function shortTime(iso: string) {
 }
 
 type Tab = "chats" | "people";
+const TABS: readonly Tab[] = ["chats", "people"];
 
 /** Chats on one side, the open conversation on the other. On phones one of the two shows at a time. */
 export function ChatView() {
@@ -57,6 +59,19 @@ export function ChatView() {
   const [connections, setConnections] = useState<ConnectionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  // The chat that was open before Back, so focus can return to it in the list (phones hide the list while a chat is open).
+  const backTo = useRef<string | null>(null);
+
+  useEffect(() => {
+    const id = backTo.current;
+    backTo.current = null;
+    if (id && focusLost()) focusFirst(`chat-item-${id}`, "chat-tab-chats");
+  }, [openId]);
+
+  function closeChat() {
+    backTo.current = openId;
+    setOpenId(null);
+  }
 
   const fail = useCallback(
     async (e: ApiError) => {
@@ -113,15 +128,17 @@ export function ChatView() {
         <section aria-label="Chats and people" className={`${panel} flex min-h-0 flex-col ${openId ? "hidden lg:flex" : "flex"}`}>
           <ConnectionCounts connections={connections} />
           <div role="tablist" aria-label="Chats or people" className="mx-4 mb-3 grid grid-cols-2 gap-1 rounded-2xl bg-neutral-100 p-1 dark:bg-neutral-800/70">
-            {(["chats", "people"] as const).map((t) => (
+            {TABS.map((t) => (
               <button
                 key={t}
                 type="button"
                 role="tab"
                 id={`chat-tab-${t}`}
                 aria-selected={tab === t}
-                aria-controls={`chat-panel-${t}`}
+                aria-controls="chat-panel"
+                tabIndex={tab === t ? 0 : -1}
                 onClick={() => setTab(t)}
+                onKeyDown={(e) => tabListKeyDown(e, TABS, tab, setTab, (k) => `chat-tab-${k}`)}
                 className={`rounded-xl px-3 py-2 text-sm font-semibold transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 ${
                   tab === t ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-white" : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
                 }`}
@@ -130,7 +147,7 @@ export function ChatView() {
               </button>
             ))}
           </div>
-          <div role="tabpanel" id={`chat-panel-${tab}`} aria-labelledby={`chat-tab-${tab}`} className="scrollbar-slim min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+          <div role="tabpanel" id="chat-panel" aria-labelledby={`chat-tab-${tab}`} className="scrollbar-slim min-h-0 flex-1 overflow-y-auto px-2 pb-3">
             {tab === "chats" ? (
               <ChatList chats={chats} openId={openId} onOpen={setOpenId} onFindPeople={() => setTab("people")} />
             ) : (
@@ -141,7 +158,7 @@ export function ChatView() {
 
         <section aria-label="Conversation" className={`${panel} min-h-[28rem] flex-col lg:min-h-0 ${openId ? "flex" : "hidden lg:flex"}`}>
           {openId ? (
-            <Thread key={openId} id={openId} onBack={() => setOpenId(null)} onActivity={refresh} onError={fail} />
+            <Thread key={openId} id={openId} onBack={closeChat} onActivity={refresh} onError={fail} />
           ) : (
             <div className="grid flex-1 place-items-center p-8 text-center">
               <div>
@@ -205,6 +222,7 @@ function ChatList({
         <li key={chat.id}>
           <button
             type="button"
+            id={`chat-item-${chat.id}`}
             onClick={() => onOpen(chat.id)}
             aria-current={chat.id === openId ? "true" : undefined}
             className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 ${
@@ -395,7 +413,10 @@ function Thread({ id, onBack, onActivity, onError }: { id: string; onBack: () =>
   const [sendError, setSendError] = useState<string | null>(null);
   const lastSeen = useRef<string | undefined>(undefined);
   const loadedOnce = useRef(false);
+  // The message list only becomes a live region after the first load, so opening a chat doesn't read out its whole history.
+  const [announce, setAnnounce] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
 
   /** Adds messages that aren't on screen yet, keeping time order. */
   const merge = useCallback((incoming: ChatMessage[]) => {
@@ -417,6 +438,7 @@ function Thread({ id, onBack, onActivity, onError }: { id: string; onBack: () =>
     if (newest && (!lastSeen.current || newest > lastSeen.current)) lastSeen.current = newest;
     // Opening the chat marks it read, and new messages change the menu's unread number.
     if (incoming.length || !loadedOnce.current) window.dispatchEvent(new Event(CHAT_CHANGED_EVENT));
+    if (!loadedOnce.current) setTimeout(() => setAnnounce(true), 0);
     loadedOnce.current = true;
   }, [id, merge, onError]);
 
@@ -462,6 +484,13 @@ function Thread({ id, onBack, onActivity, onError }: { id: string; onBack: () =>
   }
 
   const person = thread?.person;
+  const hasPerson = Boolean(person);
+
+  // On phones the chat list (and the button that opened this chat) is hidden now, so focus moves to the chat's name.
+  useEffect(() => {
+    if (hasPerson && focusLost()) heading.current?.focus();
+  }, [hasPerson]);
+
   return (
     <>
       <header className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
@@ -479,7 +508,9 @@ function Thread({ id, onBack, onActivity, onError }: { id: string; onBack: () =>
           <>
             <Avatar name={person.name} className="size-10 text-sm" />
             <div className="min-w-0">
-              <h2 className="truncate font-semibold text-neutral-900 dark:text-white">{person.name}</h2>
+              <h2 ref={heading} tabIndex={-1} className="truncate font-semibold text-neutral-900 outline-none dark:text-white">
+                {person.name}
+              </h2>
               <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
                 {ROLE_LABEL[person.role]}
                 {person.connection && ` · ${CONNECTION_KIND_LABEL[person.connection]}`}
@@ -491,7 +522,7 @@ function Thread({ id, onBack, onActivity, onError }: { id: string; onBack: () =>
         )}
       </header>
 
-      <div ref={scroller} className="scrollbar-slim min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4" role="log" aria-label="Messages" aria-live="polite">
+      <div ref={scroller} className="scrollbar-slim min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4" role="log" aria-label="Messages" aria-live={announce ? "polite" : "off"}>
         {thread && !messages.length && <p className="py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">No messages yet. Say hello.</p>}
         {messages.map((m) => {
           const mine = m.senderId !== person?.id;
