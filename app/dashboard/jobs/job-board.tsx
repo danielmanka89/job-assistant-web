@@ -7,7 +7,7 @@ import type { JobPosting } from "@/lib/types";
 import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
-import { JobCard } from "./job-card";
+import { JobCard, ROW_COLUMNS } from "./job-card";
 
 type State =
   | { status: "loading" }
@@ -159,29 +159,43 @@ export function JobBoard() {
       ) : filtered.length === 0 ? (
         <EmptyBoard title="No matching jobs" body={`Nothing matches "${query.trim()}". Try a different search.`} />
       ) : (
-        <ul className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
-          {filtered.map((job) => (
-            <li key={job.id}>
-              <JobCard
-                job={job}
-                pitch={pitches[job.id] ?? ""}
-                onPitchSaved={(text) =>
-                  setPitches((prev) => {
-                    const next = { ...prev };
-                    if (text) next[job.id] = text;
-                    else delete next[job.id];
-                    return next;
-                  })
-                }
-                onTailor={() => tailorFor(job)}
-                onApply={() => void recordApplication(job)}
-                applied={appliedIds.has(job.id)}
-                opening={navigating && openingId === job.id}
-                disabled={navigating}
-              />
-            </li>
-          ))}
-        </ul>
+        <div className="mb-20 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+          {/* Column headings (md and up); the rows use the same grid. */}
+          <div
+            aria-hidden="true"
+            className={`hidden items-center gap-x-4 border-b border-neutral-200/80 bg-neutral-50 px-4 py-2 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase md:grid dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 ${ROW_COLUMNS}`}
+          >
+            <span className="pl-11">Role</span>
+            <span>Location</span>
+            <span>Posted</span>
+            <span>Status</span>
+            <span className="text-right">Actions</span>
+            <span />
+          </div>
+          <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+            {filtered.map((job) => (
+              <li key={job.id}>
+                <JobCard
+                  job={job}
+                  pitch={pitches[job.id] ?? ""}
+                  onPitchSaved={(text) =>
+                    setPitches((prev) => {
+                      const next = { ...prev };
+                      if (text) next[job.id] = text;
+                      else delete next[job.id];
+                      return next;
+                    })
+                  }
+                  onTailor={() => tailorFor(job)}
+                  onApply={() => void recordApplication(job)}
+                  applied={appliedIds.has(job.id)}
+                  opening={navigating && openingId === job.id}
+                  disabled={navigating}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-16 z-50 flex justify-center lg:left-72">

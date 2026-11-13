@@ -7,6 +7,9 @@ import { safeApplyUrl } from "@/lib/client/jobs";
 import { saveJobPitch } from "@/lib/client/api";
 import { MAX_PITCH_WORDS, countWords, limitWords } from "@/lib/pitch";
 
+/** The table's columns from md up: Role · Location · Posted · Status · Actions · toggle. Shared with the header row. */
+export const ROW_COLUMNS = "md:grid-cols-[minmax(0,1fr)_9rem_4.5rem_6.5rem_8.75rem_1.5rem]";
+
 // One job on the Job Board, as a compact list row. Clicking the row opens its description and the
 // "Why should I hire you?" answer (up to 300 words, saved per job).
 
@@ -70,83 +73,96 @@ export function JobCard({
   const badge = SOURCE_BADGES[job.source];
   const titleId = `job-${job.id}-title`;
   const detailsId = `job-${job.id}-details`;
+  // Demo companies end in "(demo)"; the badge text says it once instead.
+  const company = job.source === "mock" ? job.company.replace(/\s*\(demo\)\s*$/i, "") : job.company;
 
   return (
-    <article aria-labelledby={titleId} className={`transition ${expanded ? "bg-neutral-50/80 dark:bg-neutral-900/80" : "hover:bg-neutral-50 dark:hover:bg-neutral-900/50"}`}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+    <article aria-labelledby={titleId} className={expanded ? "bg-neutral-50/80 dark:bg-neutral-900/80" : "transition hover:bg-neutral-50/70 dark:hover:bg-neutral-900/50"}>
+      <div className={`grid grid-cols-[minmax(0,1fr)_1.5rem] items-center gap-x-4 gap-y-2 px-4 py-2.5 ${ROW_COLUMNS}`}>
+        {/* Role: opens the description and the "Why should I hire you?" answer. */}
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-controls={detailsId}
-          className="flex min-w-0 flex-[999_1_18rem] items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
+          className="flex min-w-0 items-center gap-3 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none"
         >
-          <span className={`mono-grayscale grid size-9 shrink-0 place-items-center rounded-xl text-sm font-bold ${avatarColor(job.company)}`} aria-hidden="true">
+          <span className={`mono-grayscale grid size-8 shrink-0 place-items-center rounded-lg text-xs font-bold ${avatarColor(job.company)}`} aria-hidden="true">
             {job.company.trim().charAt(0).toUpperCase() || "?"}
           </span>
           <span className="min-w-0 flex-1">
             <h3 id={titleId} className="truncate font-sans text-sm font-semibold tracking-normal text-neutral-900 dark:text-white">
               {job.title}
             </h3>
-            <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-              <span className="font-medium text-neutral-700 dark:text-neutral-300">{job.company}</span>
-              <span aria-hidden="true">·</span>
-              <span>
-                <span className="sr-only">Location: </span>
-                {job.location}
+            <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">
+              {company}
+              {badge && job.source !== "native" && <span className="text-neutral-400 dark:text-neutral-500"> · {badge.label}</span>}
+              {/* On phones, where there are no Location and Posted columns. */}
+              <span className="md:hidden">
+                {" "}
+                · {job.location}
+                {posted ? ` · ${posted}` : ""}
               </span>
-              {posted && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>
-                    <span className="sr-only">Posted </span>
-                    {posted}
-                  </span>
-                </>
-              )}
             </span>
           </span>
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className={`size-4 shrink-0 text-neutral-400 transition ${expanded ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          >
+        </button>
+
+        {/* Chevron: the same toggle for the mouse; the role button above is the keyboard one. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          onClick={() => setExpanded((v) => !v)}
+          className="grid size-6 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 md:order-last dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" className={`size-4 transition ${expanded ? "rotate-180" : ""}`}>
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </button>
 
-        <div className="flex flex-[1_0_auto] items-center justify-end gap-1.5">
-          {badge && <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.className}`}>{badge.label}</span>}
-          {pitch && (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" title="You've written why they should hire you">
-              Pitch ✓
-            </span>
-          )}
-          {applied && (
+        <span className="hidden truncate text-xs text-neutral-600 md:block dark:text-neutral-300">
+          <span className="sr-only">Location: </span>
+          {job.location}
+        </span>
+        <span className="hidden text-xs text-neutral-500 tabular-nums md:block dark:text-neutral-400">
+          {posted && <span className="sr-only">Posted </span>}
+          {posted ?? "—"}
+        </span>
+
+        <span className="col-span-2 flex flex-wrap items-center gap-1 md:col-span-1">
+          {applied ? (
             <Link
               href="/dashboard/spreadsheet"
-              className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:underline dark:bg-emerald-500/15 dark:text-emerald-300"
+              className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:underline focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:outline-none dark:bg-emerald-500/15 dark:text-emerald-300"
             >
               Applied
               <span className="sr-only">: view {job.title} in your Spreadsheet</span>
             </Link>
-          )}
+          ) : null}
+          {pitch ? (
+            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" title="You've written why they should hire you">
+              Pitch ✓
+            </span>
+          ) : null}
+          {!applied && !pitch && <span className="hidden text-xs text-neutral-400 md:inline dark:text-neutral-500">—</span>}
+        </span>
+
+        <span className="col-span-2 flex items-center gap-1.5 md:col-span-1 md:justify-end">
           <button
             type="button"
             onClick={onTailor}
             disabled={disabled || opening}
             aria-busy={opening || undefined}
             aria-describedby={titleId}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2.5 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
           >
             {opening ? (
-              <svg className="size-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <svg className="size-3 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
                 <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
               </svg>
             ) : (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="size-3" aria-hidden="true">
                 <path d="M6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684Z" />
               </svg>
             )}
@@ -158,17 +174,17 @@ export function JobCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={onApply}
-              className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-7 w-[4.5rem] items-center justify-center rounded-md border border-neutral-200 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
             >
-              {applied ? "Apply again" : "Apply"}
+              {applied ? "Re-apply" : "Apply"}
               <span className="sr-only"> to {job.title} (opens in a new tab)</span>
             </a>
           )}
-        </div>
+        </span>
       </div>
 
       {expanded && (
-        <div id={detailsId} className="grid gap-4 px-4 pb-4 md:grid-cols-2 md:pl-16">
+        <div id={detailsId} className="grid gap-4 px-4 pt-1 pb-4 md:grid-cols-2 md:pl-15">
           <div>
             <h4 className="pb-1 text-xs font-bold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">Job description</h4>
             <p className="max-h-60 overflow-y-auto pr-1 text-[13px] leading-relaxed whitespace-pre-line text-neutral-600 dark:text-neutral-300">{job.description}</p>
