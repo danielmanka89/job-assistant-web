@@ -18,7 +18,7 @@ model User {
   clockTemplate   String            @default("MINIMALIST") // dashboard clock style: "MINIMALIST" | "NEON" | "GLASS"
   // The candidate's color theme for the whole app (buttons, links, clocks…): "BLUE" | "GREEN" | "RED".
   // Stored in the column first added for clock colors.
-  themeColor      String            @default("RED") @map("clockColor")
+  themeColor      String            @default("BLUE") @map("clockColor")
   // Link to the profile photo ("/api/profile/photo/<id>?v=<saved at>"); null shows initials instead.
   // The image itself is in ProfilePhoto, so loading a user never loads the picture.
   profilePictureUrl String?

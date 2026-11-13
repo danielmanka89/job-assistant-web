@@ -14,8 +14,8 @@ export function ThemeAccent() {
   useEffect(() => {
     if (user === undefined) return; // still on the server's first render: keep what the init script set
     const accent = accentFor(color);
-    if (accent !== "red") document.documentElement.dataset.accent = accent;
-    else delete document.documentElement.dataset.accent; // red is the default
+    if (accent !== "blue") document.documentElement.dataset.accent = accent;
+    else delete document.documentElement.dataset.accent; // blue is the default
   }, [user, color]);
   return null;
 }

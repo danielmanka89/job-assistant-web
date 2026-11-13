@@ -208,7 +208,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "Account",
     keywords: "settings theme dark light black white color photo avatar name email password clocks",
     body: [
-      "In Settings you can choose Light, Dark or Black & White appearance, a theme color, and the style of the dashboard clocks.",
+      "In Settings you can choose Light, Dark or Black & White appearance, a theme color (Blue, the default, Green or Red), and the style of the dashboard clocks. The theme color sets the background gradient, the menu and every button, around the app's framed window.",
       "You can also set your portfolio photo and a separate menu photo, and change your name, the email you sign in with, and your password.",
     ],
     href: "/dashboard/settings",

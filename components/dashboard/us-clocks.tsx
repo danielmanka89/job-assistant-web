@@ -64,7 +64,7 @@ const STYLES: Record<ClockTemplate, Record<ThemeColor, ClockStyle>> = {
 };
 
 /** Live Pacific / Central / Eastern clocks in one of the three templates and colors. */
-export function UsClocks({ template, color = "RED", className = "" }: { template: ClockTemplate; color?: ThemeColor; className?: string }) {
+export function UsClocks({ template, color = "BLUE", className = "" }: { template: ClockTemplate; color?: ThemeColor; className?: string }) {
   const now = useNow();
   const style = STYLES[template][color];
   return (
@@ -85,7 +85,7 @@ export function UsClocks({ template, color = "RED", className = "" }: { template
 export function SidebarClocks() {
   const user = useCurrentUser();
   // Users stored before templates or theme colors existed have neither (or the older clockColor).
-  const color = user?.themeColor ?? (user as { clockColor?: ThemeColor } | null | undefined)?.clockColor ?? "RED";
+  const color = user?.themeColor ?? (user as { clockColor?: ThemeColor } | null | undefined)?.clockColor ?? "BLUE";
   // Compact in the sidebar: smaller time and zone labels, tighter cells.
   return <UsClocks template={user?.clockTemplate ?? "MINIMALIST"} color={color} className="[&_li]:py-1.5 [&_p]:text-[9px] [&_time]:text-[13px]" />;
 }
