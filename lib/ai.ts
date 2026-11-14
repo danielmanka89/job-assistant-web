@@ -429,8 +429,8 @@ export const PREP_QUESTION_COUNTS: Record<PrepCategory, number> = { job: 14, exp
 const PREP_ORDER: readonly PrepCategory[] = ["summary", "job", "experience", "projects", "skills"];
 
 const QuestionAnswer = z.object({
-  question: z.string().describe("The question as the interviewer would ask it aloud"),
-  answer: z.string().describe("The candidate's spoken answer in the first person, 60-130 words, plain text"),
+  question: z.string().describe("The question in the interviewer's own casual spoken words"),
+  answer: z.string().describe("What the candidate would actually say out loud, first person, 60-130 words, plain text, sounding like a real person and not like writing"),
 });
 
 // One named list per area rather than a single array, so every area gets its share of the 50.
@@ -453,8 +453,17 @@ Write 55 questions, split into five areas, best first within each area (the app 
 
 Tie the two documents together: wherever you can, a question should connect something the job asks for with something in the resume. Mix question types (walk-me-through, behavioral "tell me about a time", technical, situational). No two questions should ask the same thing.
 
-Answers:
-- First person, as the candidate speaking: natural, confident, conversational English with contractions. 60 to 130 words. Plain text, no bullets, headings or markdown.
+Questions sound like a real recruiter or hiring manager talking, not a form: "So what drew you to this one?", "Walk me through how you'd handle…", "What was the hardest part of that?". Vary how they start.
+
+Answers must sound human: the way a real, prepared candidate talks on a call, not polished writing and not an AI.
+- First person, plain spoken English with contractions. 60 to 130 words. Plain text, no bullets, headings or markdown.
+- Get to the point in the first sentence. Never open by praising or repeating the question ("Great question", "That's a great question", "Absolutely", "Certainly", "When it comes to…").
+- Everyday words. Avoid résumé and AI words: leverage, spearheaded, utilize, robust, seamless, synergy, dynamic, passionate about, fast-paced environment, results-driven, cutting-edge, delve, foster, navigate, journey, tapestry, testament, "wear many hats".
+- Vary rhythm and length: mix short sentences with longer ones, and let some answers be shorter than others. Don't list things in threes by habit.
+- Talk like a person: an occasional "So", "Honestly", "The way I see it", "What I'd do first is", a small aside, a moment of real reflection about what was hard or what they learned. Use these lightly, never in every answer.
+- Say numbers the way people speak them ("about 30 percent", "a team of five").
+- Don't end with a tidy summary or a pitch line ("…which makes me a great fit for this role", "I'm excited to bring this to your team"). End when the point is made, at most once in a while with a short natural link back to this job.
+- No two answers should open or close the same way.
 - Use only facts from the resume: employers, titles, dates, tools, numbers and results exactly as given. Never invent a project, metric, employer, certification or tool.
 - Behavioral answers follow situation, action, result, built from a real bullet in the resume.
 - When the job asks for something the resume doesn't show, still ask the question, and write an honest answer: say plainly that they haven't used it directly, name the closest thing they have done, and how they'd get up to speed. Never claim the missing skill.

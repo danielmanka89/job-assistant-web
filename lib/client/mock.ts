@@ -1098,26 +1098,41 @@ async function writeMockCallPrep(id: string, request: WriteMockCallPrepRequest):
       const [question, answer] = build(i);
       return { category, question, answer };
     });
+  const lower = (text: string | undefined) => (text ? text.charAt(0).toLowerCase() + text.slice(1).replace(/\.$/, "") : "");
   const questions: PrepQuestion[] = [
     ...make("summary", 4, (i) => [
-      ["Tell me about yourself.", `Why are you interested in the ${role} role?`, "What are you looking for in your next position?", "How would you describe your strengths?"][i],
-      `${r.summary ?? `I'm ${r.contact.fullName}.`} Most recently I've been at ${jobs[0]?.company ?? "my current company"} as a ${jobs[0]?.jobTitle ?? "team member"}, and this role lines up closely with the work I enjoy most.`,
+      ["So, tell me a bit about yourself.", `What drew you to this ${role} role?`, "What are you hoping to find in your next job?", "What would your last manager say you're best at?"][i],
+      [
+        `Sure. ${r.summary ?? `I'm ${r.contact.fullName}.`} Right now I'm at ${jobs[0]?.company ?? "my current company"} as a ${jobs[0]?.jobTitle ?? "team member"}, and honestly, the parts of that job I enjoy most are a big part of what this role is about.`,
+        `Mostly the work itself. I read the description and kept nodding, because a lot of it is what I already do day to day at ${jobs[0]?.company ?? "my current job"}. It feels like a natural next step rather than a jump.`,
+        `A team where I can own something from start to finish. At ${jobs[0]?.company ?? "my current job"} I've had a taste of that, and it's where I do my best work. I'd also like to keep learning, so people I can learn from matter to me.`,
+        `Probably that I follow through. If I say I'll get something done, it gets done, and I'll tell you early if something's slipping. ${bullets[0] ? `A good example is when I ${lower(bullets[0].text)}.` : ""}`,
+      ][i],
     ]),
     ...make("job", 14, (i) => [
-      `This ${role} role needs strong ${pick(r.skills, i) ?? "communication"} skills. How does your background fit?`,
-      `I've used ${pick(r.skills, i) ?? "that"} in my day-to-day work. For example, at ${pick(bullets, i)?.company ?? "my last job"}: ${pick(bullets, i)?.text ?? "I owned work from start to finish."} That's the experience I'd bring to this role.`,
+      [`This role leans a lot on ${pick(r.skills, i) ?? "communication"}. Where have you used that?`, `How comfortable are you with ${pick(r.skills, i) ?? "that side of the work"}?`][i % 2],
+      [
+        `Quite a bit, actually. At ${pick(bullets, i)?.company ?? "my last job"} I ${lower(pick(bullets, i)?.text) || "owned that work end to end"}. ${pick(r.skills, i) ?? "It"} was a big part of how that got done.`,
+        `Pretty comfortable. It's something I use most weeks. The clearest example is at ${pick(bullets, i)?.company ?? "my last job"}, where I ${lower(pick(bullets, i)?.text) || "used it on real work"}. Happy to go deeper on that if it helps.`,
+      ][i % 2],
     ]),
     ...make("experience", 12, (i) => [
-      `Walk me through your time at ${pick(jobs, i)?.company ?? "your last company"} (part ${Math.floor(i / Math.max(jobs.length, 1)) + 1}).`,
-      `I worked there as a ${pick(jobs, i)?.jobTitle ?? "team member"}. ${pick(pick(jobs, i)?.bullets ?? [], i)?.text ?? ""} I worked closely with the people around me and owned my part from start to finish.`,
+      [`Walk me through what you did at ${pick(jobs, i)?.company ?? "your last company"}.`, `What did a normal week look like at ${pick(jobs, i)?.company ?? "your last company"}?`, `What are you proudest of from ${pick(jobs, i)?.company ?? "your last company"}?`][i % 3],
+      `So I was a ${pick(jobs, i)?.jobTitle ?? "team member"} there. ${pick(pick(jobs, i)?.bullets ?? [], i)?.text ?? ""} ${["That one took some back and forth with the team, but it was worth it.", "It's the part of that job I still talk about.", "Looking back, I learned a lot from how that went."][i % 3]}`,
     ]),
     ...make("projects", 10, (i) => [
-      `Tell me more about this piece of work: "${pick(bullets, i)?.text ?? "a recent project"}"`,
-      `That was at ${pick(bullets, i)?.company ?? "my last job"}. The goal was clear, I broke it into small steps, checked in often with the team, and kept the solution simple. ${pick(bullets, i)?.text ?? ""}`,
+      [`Tell me more about this one: "${pick(bullets, i)?.text ?? "a recent project"}"`, `What was the hardest part of "${pick(bullets, i)?.text ?? "that project"}"?`][i % 2],
+      [
+        `Yeah, that was at ${pick(bullets, i)?.company ?? "my last job"}. The goal was clear enough, but there were a few ways to get there. I split it into small pieces, checked in with the team often, and kept it as simple as I could.`,
+        `Honestly, getting everyone to agree on what "done" looked like. Once we had that, the work itself moved quickly. If I did it again, I'd have that conversation on day one.`,
+      ][i % 2],
     ]),
     ...make("skills", 10, (i) => [
-      `How have you used ${pick(r.skills, i + 3) ?? "your core tools"} in practice?`,
-      `I've used ${pick(r.skills, i + 3) ?? "them"} on real work, alongside ${pick(r.skills, i + 4) ?? "other tools"}. I'm comfortable picking up whatever the project needs and I'm happy to go deeper on any of it.`,
+      [`How have you used ${pick(r.skills, i + 3) ?? "your core tools"} on real work?`, `If I gave you a problem in ${pick(r.skills, i + 3) ?? "that area"} on day one, how would you start?`][i % 2],
+      [
+        `Mostly alongside ${pick(r.skills, i + 4) ?? "other tools"}, on everyday work rather than side projects. I wouldn't call myself an expert in every corner of it, but I'm comfortable and I pick things up fast.`,
+        `First I'd ask a few questions to make sure I understood what you actually need. Then I'd get something small working and show it to you early, rather than disappearing for a week.`,
+      ][i % 2],
     ]),
   ];
   mockPreps.set(id, { questions, createdAt: new Date().toISOString(), upToDate: true });
