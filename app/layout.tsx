@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Oswald } from "next/font/google";
 import { ThemeAccent } from "@/components/theme-accent";
 import { ACCENT_INIT_SCRIPT } from "@/lib/theme-color";
@@ -24,6 +24,17 @@ const oswald = Oswald({
 export const metadata: Metadata = {
   title: { default: "Job Assistant", template: "%s · Job Assistant" },
   description: "Tailor your resume to any job description and download it as .docx or .pdf.",
+  applicationName: "Job Assistant",
+  // Installed from the Home Screen on iPhone and iPad, the site opens full screen like an app.
+  appleWebApp: { capable: true, title: "Job Assistant", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
