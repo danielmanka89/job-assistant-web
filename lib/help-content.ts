@@ -32,6 +32,18 @@ export const HELP_ARTICLES: HelpArticle[] = [
     href: "/dashboard",
   },
   {
+    id: "install-app",
+    title: "Install JobAssistant on your phone or iPad",
+    category: "Getting started",
+    keywords: "app install home screen phone mobile iphone ipad android tablet download icon",
+    body: [
+      "You can put JobAssistant on your Home Screen and open it like an app: its own icon, full screen, no browser bar. It updates itself, so there's nothing to download again.",
+      "iPhone or iPad: open the site in Safari, tap the Share button, then \"Add to Home Screen\" and \"Add\".",
+      "Android: open the site in Chrome, tap the ⋮ menu, then \"Install app\" (or \"Add to Home screen\").",
+      "On a laptop in Chrome or Edge, click the install icon at the right end of the address bar.",
+    ],
+  },
+  {
     id: "first-steps",
     title: "Your first tailored resume, step by step",
     category: "Getting started",
