@@ -4,6 +4,7 @@ import { emailError, nameError, normalizeEmail, passwordError } from "@/lib/acco
 import { apiError, readJsonObject, toUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { normalizePhone, phoneError } from "@/lib/phone";
 import { createSession } from "@/lib/session";
 import type { AuthResponse, RegisterRequest, UserRole } from "@/lib/types";
 
@@ -12,16 +13,17 @@ function validate(body: Record<string, unknown>): { fieldErrors: Record<string, 
   const email = typeof body.email === "string" ? normalizeEmail(body.email) : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
+  const phoneInput = typeof body.phone === "string" ? body.phone : "";
   const role = body.role === undefined ? "SEEKER" : body.role;
   const fieldErrors: Record<string, string> = {};
 
-  const errors = { email: emailError(email), name: nameError(name), password: passwordError(password) };
+  const errors = { email: emailError(email), name: nameError(name), phone: phoneError(phoneInput), password: passwordError(password) };
   for (const [field, message] of Object.entries(errors)) if (message) fieldErrors[field] = message;
   if (role !== "SEEKER" && role !== "EMPLOYER") fieldErrors.role = 'Choose "SEEKER" or "EMPLOYER"';
 
   return Object.keys(fieldErrors).length
     ? { fieldErrors }
-    : { data: { email, name, password, role: role as UserRole } };
+    : { data: { email, name, password, phone: normalizePhone(phoneInput) ?? "", role: role as UserRole } };
 }
 
 export async function POST(request: Request) {
@@ -32,11 +34,11 @@ export async function POST(request: Request) {
   if ("fieldErrors" in result) {
     return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", result.fieldErrors);
   }
-  const { email, name, password, role } = result.data;
+  const { email, name, password, phone, role } = result.data;
 
   try {
     const user = await prisma.user.create({
-      data: { email, name, role, passwordHash: await hashPassword(password) },
+      data: { email, name, role, phone, passwordHash: await hashPassword(password) },
     });
     const response = NextResponse.json<AuthResponse>({ user: toUser(user) }, { status: 201 });
     await createSession(response, user.id);

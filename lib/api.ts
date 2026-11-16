@@ -86,6 +86,8 @@ export function toUser(row: UserRow): User {
     themeColor: THEME_COLORS.includes(row.themeColor as ThemeColor) ? (row.themeColor as ThemeColor) : "BLUE",
     profilePictureUrl: row.profilePictureUrl ?? null,
     avatarUrl: row.avatarUrl ?? null,
+    phone: row.phone ?? null,
+    phoneVerified: Boolean(row.phoneVerifiedAt),
     createdAt: row.createdAt.toISOString(),
   };
 }

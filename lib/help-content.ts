@@ -44,6 +44,18 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
   },
   {
+    id: "forgot-password",
+    title: "Forgot your password?",
+    category: "Getting started",
+    keywords: "forgot password reset locked out code sms text phone mobile email verify security",
+    body: [
+      "On the sign-in page, tap \"Forgot password?\" and enter your account email. We email you a 6-digit code; enter it, and we then text a second code to your mobile number. With both codes right, you choose a new password.",
+      "Asking for two codes means nobody can take over your account with just your email or just your phone. Codes expire after 15 minutes and allow 5 tries. Resetting signs you out on every device and emails you to confirm.",
+      "Keep your mobile number current in Settings → Mobile number. Changing it needs your password and a code texted to the new number.",
+    ],
+    href: "/forgot-password",
+  },
+  {
     id: "first-steps",
     title: "Your first tailored resume, step by step",
     category: "Getting started",
