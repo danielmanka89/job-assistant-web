@@ -88,21 +88,21 @@ export function QuoteBanner() {
       aria-label="Motivational quote"
       // A frosted-glass strip flush with the bottom of the window: no gap at the bottom, left or right
       // (from lg up it runs from the menu to the frame, its last corner rounded to fit the frame's).
-      className="fixed inset-x-0 bottom-0 z-30 h-(--quote-banner-h) overflow-hidden border-t border-white/70 bg-white/70 backdrop-blur-xl backdrop-saturate-150 lg:right-(--edge) lg:bottom-(--edge) lg:left-[calc(var(--edge)+18rem)] lg:rounded-br-[26px] dark:border-white/10 dark:bg-neutral-900/70"
+      className="fixed inset-x-0 bottom-0 z-30 h-(--quote-banner-h) overflow-hidden bg-(--menu-top) pb-(--safe-bottom) text-white lg:left-72"
     >
       {/* The top edge doubles as the progress line: it fills in red until the next quote. */}
-      <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-white/50 dark:bg-white/10" aria-hidden="true">
+      <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-white/15" aria-hidden="true">
         {quote && !paused && (
           <span
             key={progress.key}
             style={{ animationDelay: `-${progress.elapsedMs}ms` }}
-            className="block h-full origin-left animate-quote-progress bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 shadow-[0_0_6px_rgb(var(--brand-glow)/0.6)] motion-reduce:hidden"
+            className="block h-full origin-left animate-quote-progress bg-(--menu-pill) motion-reduce:hidden"
           />
         )}
       </div>
 
       <div className="mx-auto flex h-full max-w-6xl items-center gap-2.5 px-4 sm:px-6">
-        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-sm shadow-brand-600/30" aria-hidden="true">
+        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-white/15 text-(--menu-pill)" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor" className="size-3.5">
             <path d="M9.6 6C6.5 7.4 4.5 10.2 4.5 13.6V18h5.3v-5.3H7.2c.1-2 1.3-3.6 3.3-4.6L9.6 6Zm9 0c-3.1 1.4-5.1 4.2-5.1 7.6V18h5.3v-5.3h-2.6c.1-2 1.3-3.6 3.3-4.6L18.6 6Z" />
           </svg>
@@ -118,17 +118,17 @@ export function QuoteBanner() {
           {quote ? (
             <>
               {/* One line; the full quote is in the tooltip when a long one is cut off. */}
-              <blockquote title={quote.text} className="min-w-0 truncate text-xs font-medium text-neutral-800 sm:text-[13px] dark:text-neutral-100">
+              <blockquote title={quote.text} className="min-w-0 truncate text-xs font-medium text-white sm:text-[13px]">
                 &ldquo;{quote.text}&rdquo;
               </blockquote>
               {quote.author && (
-                <figcaption className="shrink-0 truncate text-[10px] font-semibold tracking-wider text-brand-600 uppercase sm:text-[11px] dark:text-brand-400">
+                <figcaption className="shrink-0 truncate text-[10px] font-semibold tracking-wider text-(--menu-pill) uppercase sm:text-[11px]">
                   {quote.author}
                 </figcaption>
               )}
             </>
           ) : (
-            <div className="h-3 w-2/3 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-white/15" aria-hidden="true" />
           )}
         </figure>
 
@@ -138,7 +138,7 @@ export function QuoteBanner() {
           aria-pressed={paused}
           aria-label={paused ? "Resume quotes" : "Pause quotes"}
           title={paused ? "Resume quotes" : "Pause quotes"}
-          className="grid size-7 shrink-0 place-items-center rounded-full text-neutral-500 transition hover:bg-white/60 hover:text-brand-600 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
+          className="grid size-7 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:ring-4 focus-visible:ring-white/30 focus-visible:outline-none"
         >
           {paused ? (
             <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">

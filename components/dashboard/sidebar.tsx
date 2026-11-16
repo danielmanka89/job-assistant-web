@@ -150,15 +150,16 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 pr-16 pl-4 backdrop-blur sm:pl-6 lg:hidden dark:border-neutral-800 dark:bg-neutral-950/90">
-        <Logo />
+      {/* Phones: a bar in the theme's deep color that runs up under the status bar (--safe-top). */}
+      <div id="mobile-topbar" className="sticky top-0 z-30 flex h-[calc(4rem+var(--safe-top))] items-center justify-between pt-(--safe-top) pr-16 pl-4 sm:pl-6 lg:hidden">
+        <Logo light />
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open menu"
           aria-expanded={open}
           aria-controls="dashboard-sidebar"
-          className="grid size-10 place-items-center rounded-xl text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          className="grid size-10 place-items-center rounded-xl text-white transition hover:bg-white/10"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
@@ -172,17 +173,17 @@ export function Sidebar() {
 
       <aside
         id="dashboard-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-neutral-200/80 bg-white transition-transform duration-200 lg:inset-y-(--edge) lg:left-(--edge) lg:translate-x-0 lg:rounded-l-[26px] dark:border-neutral-800 dark:bg-neutral-950 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col pt-(--safe-top) pb-(--safe-bottom) text-white transition-transform duration-200 lg:translate-x-0 lg:pb-0 ${
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
         <div className="flex h-14 shrink-0 items-center justify-between px-5">
-          <Logo />
+          <Logo light />
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Close menu"
-            className="grid size-9 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100 lg:hidden dark:hover:bg-neutral-800"
+            className="grid size-9 place-items-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5" aria-hidden="true">
               <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
@@ -227,8 +228,8 @@ function SidebarContent({ pathname }: { pathname: string }) {
                   aria-current={active ? "page" : undefined}
                   className={`${itemClass} ${
                     active
-                      ? "bg-white text-brand-700 shadow-md shadow-brand-600/15 dark:bg-white/10 dark:text-white"
-                      : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800/70 dark:hover:text-white"
+                      ? "bg-(--menu-pill) font-semibold text-(--menu-pill-text)"
+                      : "text-white/85 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {item.icon}
@@ -250,7 +251,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
 function UnreadBadge({ count, what }: { count: number | undefined; what: string; active?: boolean }) {
   if (!count || count < 1) return null;
   return (
-    <span className={`ml-auto rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums bg-brand-600 text-white`}>
+    <span className="ml-auto rounded-full bg-(--peach) px-1.5 py-px text-[10px] font-bold text-neutral-900 tabular-nums">
       {count > 99 ? "99+" : count}
       <span className="sr-only"> unread {what}</span>
     </span>

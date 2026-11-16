@@ -6,8 +6,8 @@ import { HelpAssistant } from "@/components/help/help-assistant";
 /**
  * Shared shell for every /dashboard page: sidebar on the left, page content on the right, and the
  * quote banner fixed to the bottom of the window; the content keeps room for it underneath.
- * Blue Glass: a light window inside a thick frame over a gradient in the theme color (see .glass-shell,
- * .app-window and .app-frame in globals.css).
+ * Edge to edge (Calm theme): the menu is a full-height strip in the theme color, pages sit on a cream
+ * background with flat cards, and nothing is framed (see .glass-shell and .app-window in globals.css).
  */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

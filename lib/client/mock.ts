@@ -104,7 +104,7 @@ function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User 
     name,
     role,
     clockTemplate: "MINIMALIST",
-    themeColor: "RED",
+    themeColor: "NAVY",
     profilePictureUrl: null,
     avatarUrl: null,
     phone: "+15551234567",

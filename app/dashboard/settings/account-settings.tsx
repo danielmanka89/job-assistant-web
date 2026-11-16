@@ -412,15 +412,15 @@ function AppearanceCard() {
 
 // Fixed colors, not brand-*: brand follows the current theme, and each swatch must show its own.
 const THEME_COLOR_SWATCH: Record<ThemeColor, { swatch: string; hint: string }> = {
-  RED: { swatch: "bg-gradient-to-br from-[#f87171] via-[#ef4444] to-[#dc2626]", hint: "The JobAssistant classic" },
-  BLUE: { swatch: "bg-gradient-to-br from-[#7aa5ff] via-[#4f86ff] to-[#2f6bff]", hint: "Bright azure, calm and sharp" },
-  GREEN: { swatch: "bg-gradient-to-br from-[#34d399] via-[#10b981] to-[#04875a]", hint: "Fresh emerald" },
+  NAVY: { swatch: "bg-gradient-to-br from-[#465773] via-[#33435e] to-[#27344b]", hint: "Crisp and professional" },
+  TEAL: { swatch: "bg-gradient-to-br from-[#548481] via-[#3f6f6c] to-[#2d524f]", hint: "Fresh and focused" },
+  PLUM: { swatch: "bg-gradient-to-br from-[#806a83] via-[#6e5872] to-[#533d56]", hint: "Warm and gentle" },
 };
-const THEME_COLOR_ORDER: readonly ThemeColor[] = ["RED", "BLUE", "GREEN"];
+const THEME_COLOR_ORDER: readonly ThemeColor[] = ["NAVY", "TEAL", "PLUM"];
 
 /** The candidate's color for the whole app: buttons, links, the menu, the glass background and the clocks. */
 function ThemeColorForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
-  const [color, setColor] = useState<ThemeColor>(user.themeColor ?? "RED");
+  const [color, setColor] = useState<ThemeColor>(user.themeColor ?? "NAVY");
   const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
 
   async function choose(next: ThemeColor) {
@@ -443,7 +443,7 @@ function ThemeColorForm({ user, onSaved, onUnauthorized }: { user: User; onSaved
     <SettingsCard
       id="theme-color-title"
       title="Theme color"
-      description="The color of the whole app for you: buttons, links, the menu, the background and your clocks. Your public portfolio uses it too."
+      description="The color of the whole app for you: the menu, buttons, links and your clocks, on a soft cream background. Your phone's top bar and your public portfolio use it too."
       icon={
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
           <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 0 0 5-5c0-4-4-7-9-7Z" strokeLinejoin="round" />
@@ -506,8 +506,7 @@ function ClockTemplateForm({
 }) {
   const [choice, setChoice] = useState<ClockTemplate>(user.clockTemplate ?? "MINIMALIST");
   const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
-  const color = user.themeColor ?? "RED"; // clocks follow the theme color
-
+  
   async function choose(template: ClockTemplate) {
     if (template === choice) return;
     const previous = choice;
@@ -559,7 +558,7 @@ function ClockTemplateForm({
                   className="sr-only"
                 />
                 {/* A live preview at the sidebar's real width (w-64), so it looks exactly as it will there. */}
-                <UsClocks template={template} color={color} className="pointer-events-none w-full max-w-64 shrink-0" />
+                <UsClocks template={template} className="pointer-events-none w-full max-w-64 shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-neutral-900 dark:text-white">{CLOCK_TEMPLATE_LABEL[template]}</span>
