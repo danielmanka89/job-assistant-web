@@ -6,17 +6,18 @@ import type { RegisterRequest, UserRole } from "@/lib/types";
 import { register } from "@/lib/client/api";
 import { storeUser } from "@/lib/client/current-user";
 import { speakLoginGreeting } from "@/lib/client/voice-greeting";
+import { normalizePhone, phoneError } from "@/lib/phone";
 import { RolePicker } from "./role-picker";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
 import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 
-const FIELDS = ["name", "email", "password", "role"] as const;
+const FIELDS = ["name", "email", "phone", "password", "role"] as const;
 
 export function RegisterForm() {
   const router = useRouter();
-  const [values, setValues] = useState<RegisterRequest>({ name: "", email: "", password: "", role: "SEEKER" });
+  const [values, setValues] = useState<RegisterRequest>({ name: "", email: "", phone: "", password: "", role: "SEEKER" });
   const [errors, setErrors] = useState<FieldErrors<RegisterRequest>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -33,6 +34,7 @@ export function RegisterForm() {
     const clientErrors: FieldErrors<RegisterRequest> = {
       name: values.name.trim() ? undefined : "Enter your name.",
       email: validateEmail(values.email),
+      phone: phoneError(values.phone),
       password: validatePassword(values.password, { strict: true }),
     };
     setErrors(clientErrors);
@@ -42,6 +44,7 @@ export function RegisterForm() {
     const result = await register({
       name: values.name.trim(),
       email: values.email.trim(),
+      phone: normalizePhone(values.phone) ?? values.phone,
       password: values.password,
       role: values.role,
     });
@@ -87,6 +90,18 @@ export function RegisterForm() {
         value={values.email}
         onChange={(e) => update("email", e.target.value)}
         error={errors.email}
+      />
+      <TextField
+        label="Mobile number"
+        type="tel"
+        name="phone"
+        autoComplete="tel"
+        inputMode="tel"
+        placeholder="+1 555 123 4567"
+        hint="With your country code. If you ever forget your password, we text a code here as well as emailing one."
+        value={values.phone}
+        onChange={(e) => update("phone", e.target.value)}
+        error={errors.phone}
       />
       <TextField
         label="Password"

@@ -22,6 +22,8 @@ export interface User {
   themeColor: ThemeColor;
   profilePictureUrl: string | null; // the portfolio photo, or null to show initials
   avatarUrl: string | null; // the menu photo; null falls back to the portfolio photo
+  phone: string | null; // mobile number in international form, for password resets; only ever sent to its owner
+  phoneVerified: boolean; // a texted code has proved the number works
   createdAt: string; // ISO 8601
 }
 
@@ -41,7 +43,17 @@ export interface RegisterRequest {
   email: string;
   password: string; // plain text over HTTPS only; never stored or returned
   name: string;
+  phone: string; // mobile number; password resets text a code to it
   role?: UserRole; // defaults to "SEEKER"
+}
+
+/** Forgot password, step by step. Each step answers with what comes next. */
+export interface ResetStartResponse {
+  token: string; // identifies this reset in the next steps; kept only in the page
+}
+export interface ResetStepResponse {
+  next: "phone" | "password";
+  phoneHint?: string; // "•••• 4567", once the emailed code is right and a text is on its way
 }
 
 /** Input for signing in. */

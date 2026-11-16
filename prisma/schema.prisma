@@ -24,6 +24,10 @@ model User {
   profilePictureUrl String?
   // The small round photo in the menu, uploaded and cropped separately; null uses the portfolio photo.
   avatarUrl       String?
+  // Mobile number in international form ("+15551234567"). Password resets text a code to it, on top
+  // of the emailed code. Set at sign-up; changing it needs the password and a texted code.
+  phone           String?
+  phoneVerifiedAt DateTime?         // when a texted code last proved the number works
   // The code in this user's personal invite link (/invite/<code>); made the first time they open it.
   inviteCode      String?           @unique
   createdAt       DateTime          @default(now())
@@ -34,6 +38,7 @@ model User {
   generatedFiles  GeneratedFile[]
   jobPostings     JobPosting[]
   sessions        Session[]
+  passwordResets  PasswordReset[]
   submissions     Submission[]
   profile         CandidateProfile?
   learningPaths   LearningPath[]
@@ -361,6 +366,26 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// One "Forgot password" attempt. The browser holds a random token (only its HMAC is stored). A new
+// password is allowed only after the emailed code and then the texted code are both right (just the
+// emailed one for older accounts with no phone). Codes expire with the row, after 15 minutes.
+model PasswordReset {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash       String    @unique
+  emailCodeHash   String
+  emailAttempts   Int       @default(0)
+  emailVerifiedAt DateTime?
+  phoneAttempts   Int       @default(0)
+  phoneVerifiedAt DateTime?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // Motivational quotes for the banner at the bottom of the dashboard. Seeded with 250 by the

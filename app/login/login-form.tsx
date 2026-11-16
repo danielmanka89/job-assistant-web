@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { LoginRequest } from "@/lib/types";
 import { login } from "@/lib/client/api";
@@ -74,6 +75,11 @@ export function LoginForm() {
         onChange={(e) => update("password", e.target.value)}
         error={errors.password}
       />
+      <div className="-mt-2 text-right">
+        <Link href="/forgot-password" className="text-sm font-medium text-brand-600 hover:text-brand-500 dark:text-brand-400">
+          Forgot password?
+        </Link>
+      </div>
       <Button type="submit" loading={pending} className="w-full">
         {pending ? "Signing in…" : "Sign in"}
       </Button>

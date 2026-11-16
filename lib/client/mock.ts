@@ -37,6 +37,8 @@ import type {
   SendEmailRequest,
   ConnectRequest,
   ConnectionsResponse,
+  ResetStartResponse,
+  ResetStepResponse,
   InviteLinkResponse,
   Person,
   MockCallPrepResponse,
@@ -105,8 +107,40 @@ function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User 
     themeColor: "RED",
     profilePictureUrl: null,
     avatarUrl: null,
+    phone: "+15551234567",
+    phoneVerified: true,
     createdAt: new Date().toISOString(),
   };
+}
+
+// Forgot password in demo mode: any 6-digit code works except 000000.
+async function startPasswordReset(email: string): Promise<ApiResult<ResetStartResponse>> {
+  await delay(500);
+  if (!/^\S+@\S+\.\S+$/.test(email.trim())) return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { email: "Enter a valid email address" } });
+  return { ok: true, data: { token: "mock-reset-token-0123456789" } };
+}
+
+async function checkResetCode(step: "email" | "phone", code: string): Promise<ApiResult<ResetStepResponse>> {
+  await delay(400);
+  if (!/^\d{6}$/.test(code) || code === "000000") return fail({ code: "VALIDATION_ERROR", message: "That code isn't right", fieldErrors: { code: "That code isn't right, or it has expired." } });
+  return { ok: true, data: step === "email" ? { next: "phone", phoneHint: "•••• 4567" } : { next: "password" } };
+}
+
+async function completePasswordReset(): Promise<ApiResult<null>> {
+  await delay(500);
+  return { ok: true, data: null };
+}
+
+async function startPhoneChange(): Promise<ApiResult<{ ticket: string }>> {
+  await delay(400);
+  return { ok: true, data: { ticket: "mock-ticket" } };
+}
+
+async function confirmPhoneChange(phone: string, code: string): Promise<ApiResult<AccountResponse>> {
+  await delay(400);
+  if (!/^\d{6}$/.test(code)) return fail({ code: "VALIDATION_ERROR", message: "That code isn't right", fieldErrors: { code: "That code isn't right, or it has expired." } });
+  const user = mockUser("you@example.com", "Sam Rivera", "SEEKER");
+  return { ok: true, data: { user: { ...user, phone, phoneVerified: true } } };
 }
 
 async function register(payload: RegisterRequest): Promise<ApiResult<AuthResponse>> {
@@ -1275,6 +1309,11 @@ export const mockApi = {
   searchPeople,
   connectTo,
   disconnectFrom,
+  startPasswordReset,
+  checkResetCode,
+  completePasswordReset,
+  startPhoneChange,
+  confirmPhoneChange,
   answerFollowRequest,
   getInviteLink,
   listChats,

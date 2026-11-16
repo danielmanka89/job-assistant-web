@@ -22,6 +22,8 @@ import type {
   ChatThreadResponse,
   ConnectRequest,
   ConnectionsResponse,
+  ResetStartResponse,
+  ResetStepResponse,
   InviteLinkResponse,
   EmailDetail,
   EmailListResponse,
@@ -593,6 +595,35 @@ export async function exportSubmissions(): Promise<ApiResult<Blob>> {
 export function register(payload: RegisterRequest): Promise<ApiResult<AuthResponse>> {
   if (USE_MOCK_API) return mockApi.register(payload);
   return postJson<RegisterRequest, AuthResponse>("/api/auth/register", payload);
+}
+
+/* ---------- Forgot password (emailed code, then texted code, then a new password) ---------- */
+
+export function startPasswordReset(email: string): Promise<ApiResult<ResetStartResponse>> {
+  if (USE_MOCK_API) return mockApi.startPasswordReset(email);
+  return postJson<{ email: string }, ResetStartResponse>("/api/auth/reset/start", { email });
+}
+
+export function checkResetCode(step: "email" | "phone", token: string, code: string): Promise<ApiResult<ResetStepResponse>> {
+  if (USE_MOCK_API) return mockApi.checkResetCode(step, code);
+  return postJson<{ token: string; code: string }, ResetStepResponse>(`/api/auth/reset/${step}`, { token, code });
+}
+
+export function completePasswordReset(token: string, password: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) return mockApi.completePasswordReset();
+  return postJson<{ token: string; password: string }, null>("/api/auth/reset/complete", { token, password });
+}
+
+/** Adding or changing the mobile number: texts a code to it (needs the current password). */
+export function startPhoneChange(phone: string, currentPassword: string): Promise<ApiResult<{ ticket: string }>> {
+  if (USE_MOCK_API) return mockApi.startPhoneChange();
+  return postJson<{ phone: string; currentPassword: string }, { ticket: string }>("/api/account/phone", { phone, currentPassword });
+}
+
+/** Saves the number once the texted code is right. */
+export function confirmPhoneChange(phone: string, code: string, ticket: string): Promise<ApiResult<AccountResponse>> {
+  if (USE_MOCK_API) return mockApi.confirmPhoneChange(phone, code);
+  return sendJson<{ phone: string; code: string; ticket: string }, AccountResponse>("PUT", "/api/account/phone", { phone, code, ticket });
 }
 
 export function login(payload: LoginRequest): Promise<ApiResult<AuthResponse>> {

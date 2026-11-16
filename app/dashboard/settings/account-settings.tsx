@@ -4,13 +4,14 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CLOCK_TEMPLATES, type ApiError, type ThemeColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
-import { getAccount, logout, removeAvatarPhoto, removeProfilePhoto, updateAccount, uploadAvatarPhoto, uploadProfilePhoto } from "@/lib/client/api";
+import { confirmPhoneChange, getAccount, logout, startPhoneChange, removeAvatarPhoto, removeProfilePhoto, updateAccount, uploadAvatarPhoto, uploadProfilePhoto } from "@/lib/client/api";
 import { loadPhoto, type PreparedPhoto } from "@/lib/client/photo-crop";
 import { PhotoCropDialog } from "./photo-crop-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { storeUser } from "@/lib/client/current-user";
+import { maskPhone, normalizePhone, phoneError } from "@/lib/phone";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
-import { ErrorAlert } from "@/components/ui/alert";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { ThemePicker } from "@/components/theme-toggle";
@@ -88,6 +89,7 @@ export function AccountSettings() {
       <PhotoForm kind="menu" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PhotoForm kind="portfolio" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <ProfileForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
+      <PhoneForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PasswordForm email={state.user.email} onUnauthorized={onUnauthorized} />
       <ClockTemplateForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
     </div>
@@ -696,6 +698,143 @@ function PasswordForm({ email, onUnauthorized }: { email: string; onUnauthorized
   );
 }
 
+/* ---------- Mobile number ---------- */
+
+/**
+ * The mobile number that password resets text a code to. Changing it needs the current password,
+ * then the code texted to the new number, so a stolen login can't swap it.
+ */
+function PhoneForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [ticket, setTicket] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ phone?: string; currentPassword?: string; code?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  function failed(error: ApiError) {
+    if (isUnauthorized(error)) return onUnauthorized();
+    if (error.fieldErrors && Object.keys(error.fieldErrors).length) setErrors(error.fieldErrors);
+    else setFormError(error.message);
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+    setSuccess(null);
+    const normalized = normalizePhone(phone);
+    if (!ticket) {
+      const next = { phone: phoneError(phone), currentPassword: password ? undefined : "Enter your current password." };
+      setErrors(next);
+      if (next.phone || next.currentPassword) return;
+      setPending(true);
+      const result = await startPhoneChange(normalized!, password);
+      setPending(false);
+      if (!result.ok) return failed(result.error);
+      setTicket(result.data.ticket);
+      return;
+    }
+    if (!/^\d{6}$/.test(code.replace(/\s/g, ""))) return setErrors({ code: "Enter the 6-digit code." });
+    setPending(true);
+    const result = await confirmPhoneChange(normalized!, code.replace(/\s/g, ""), ticket);
+    setPending(false);
+    if (!result.ok) {
+      if (result.error.code === "PHONE_CHANGE_EXPIRED") setTicket(null);
+      return failed(result.error);
+    }
+    onSaved(result.data.user);
+    setPhone("");
+    setPassword("");
+    setCode("");
+    setTicket(null);
+    setSuccess("Mobile number saved. Password resets will text this number.");
+  }
+
+  return (
+    <SettingsCard
+      id="phone-title"
+      title="Mobile number"
+      description="If you forget your password, we email you a code and text this number a code. Both are needed."
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+          <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+          <path d="M11 18.5h2" strokeLinecap="round" />
+        </svg>
+      }
+    >
+      <form onSubmit={onSubmit} noValidate>
+        <input type="text" name="username" autoComplete="username" value={user.email} readOnly hidden />
+        <fieldset disabled={pending} className="m-0 min-w-0 space-y-4 border-0 p-0">
+          <p className="text-sm text-neutral-600 dark:text-neutral-300">
+            {user.phone ? (
+              <>
+                Current: <span className="font-semibold tabular-nums">{maskPhone(user.phone)}</span>
+                {user.phoneVerified ? (
+                  <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">Verified</span>
+                ) : (
+                  <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">Not checked yet</span>
+                )}
+              </>
+            ) : (
+              <span className="font-medium text-amber-700 dark:text-amber-400">No number yet: add one so nobody can reset your password with just your email.</span>
+            )}
+          </p>
+          {success && <SuccessAlert>{success}</SuccessAlert>}
+          {formError && <ErrorAlert>{formError}</ErrorAlert>}
+          {!ticket ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                label={user.phone ? "New mobile number" : "Mobile number"}
+                type="tel"
+                name="phone"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+1 555 123 4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                error={errors.phone}
+              />
+              <TextField
+                label="Current password"
+                type="password"
+                name="currentPassword"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={errors.currentPassword}
+              />
+            </div>
+          ) : (
+            <TextField
+              label={`Code texted to ${normalizePhone(phone) ? maskPhone(normalizePhone(phone)!) : "your phone"}`}
+              name="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={7}
+              placeholder="123456"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))}
+              error={errors.code}
+            />
+          )}
+          <div className="flex items-center justify-end gap-3">
+            {ticket && (
+              <button type="button" onClick={() => setTicket(null)} className="text-sm font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
+                Change number
+              </button>
+            )}
+            <Button type="submit" size="sm" loading={pending}>
+              {ticket ? "Verify and save" : "Text me a code"}
+            </Button>
+          </div>
+        </fieldset>
+      </form>
+    </SettingsCard>
+  );
+}
+
 /* ---------- Shared ---------- */
 
 /**
@@ -758,16 +897,3 @@ function SettingsCard({
   );
 }
 
-function SuccessAlert({ children }: { children: ReactNode }) {
-  return (
-    <div
-      role="status"
-      className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
-    >
-      <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 size-4 shrink-0" aria-hidden="true">
-        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
-      </svg>
-      <p className="min-w-0 break-words">{children}</p>
-    </div>
-  );
-}
