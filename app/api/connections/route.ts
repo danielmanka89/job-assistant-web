@@ -9,23 +9,32 @@ const MAX_CONNECTIONS = 2000; // per user, in each direction shown
 
 const person = { select: { id: true, name: true, role: true } };
 
-/** GET /api/connections — the people you're connected to, and the people connected to you, newest first. */
+/**
+ * GET /api/connections — your own lists, newest first: who you follow, your followers, and requests
+ * waiting for your answer. Only you can see these; other people see just the counts.
+ */
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to see your connections");
 
-  const [from, to] = await Promise.all([
-    prisma.connection.findMany({ where: { fromUserId: user.id }, orderBy: { createdAt: "desc" }, take: MAX_CONNECTIONS, select: { toUser: person } }),
-    prisma.connection.findMany({ where: { toUserId: user.id }, orderBy: { createdAt: "desc" }, take: MAX_CONNECTIONS, select: { fromUser: person } }),
+  const newest = { orderBy: { createdAt: "desc" as const }, take: MAX_CONNECTIONS };
+  const [from, to, pending] = await Promise.all([
+    prisma.connection.findMany({ where: { fromUserId: user.id, status: "accepted" }, ...newest, select: { toUser: person } }),
+    prisma.connection.findMany({ where: { toUserId: user.id, status: "accepted" }, ...newest, select: { fromUser: person } }),
+    prisma.connection.findMany({ where: { toUserId: user.id, status: "pending" }, ...newest, select: { fromUser: person } }),
   ]);
-  const [connectedTo, connectedToMe] = await Promise.all([
+  const [connectedTo, connectedToMe, requests] = await Promise.all([
     toPeople(user.id, from.map((c) => c.toUser)),
     toPeople(user.id, to.map((c) => c.fromUser)),
+    toPeople(user.id, pending.map((c) => c.fromUser)),
   ]);
-  return NextResponse.json<ConnectionsResponse>({ connectedTo, connectedToMe });
+  return NextResponse.json<ConnectionsResponse>({ connectedTo, connectedToMe, requests });
 }
 
-/** POST /api/connections { userId, kind } — connects you to someone, or changes what they are to you. */
+/**
+ * POST /api/connections { userId, kind } — asks to follow someone (pending until they accept), or
+ * changes what they are to you. A request that's already waiting stays waiting.
+ */
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to connect with people");
@@ -50,7 +59,7 @@ export async function POST(request: NextRequest) {
   }
   await prisma.connection.upsert({
     where: { fromUserId_toUserId: { fromUserId: user.id, toUserId: userId } },
-    create: { fromUserId: user.id, toUserId: userId, kind },
+    create: { fromUserId: user.id, toUserId: userId, kind, status: "pending" },
     update: { kind },
   });
   const [result] = await toPeople(user.id, [other]);

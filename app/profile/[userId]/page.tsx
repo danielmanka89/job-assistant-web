@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getPublicPortfolio } from "@/lib/public-portfolio";
+import { followCounts } from "@/lib/connections";
 import { SESSION_COOKIE, findSessionUserId } from "@/lib/session";
 import { accentFor } from "@/lib/theme-color";
 import type { PublicPortfolio } from "@/lib/types";
@@ -58,6 +59,10 @@ export default async function PublicPortfolioPage({ params }: Props) {
   // The owner looking at their own portfolio gets a way back to My Profile; recruiters don't.
   const viewerId = await findSessionUserId((await cookies()).get(SESSION_COOKIE)?.value);
   const isOwner = viewerId === p.userId;
+  // Anyone can see how many followers and following; who they are stays private.
+  const counts = await followCounts([p.userId]);
+  const followers = counts.followers.get(p.userId) ?? 0;
+  const following = counts.following.get(p.userId) ?? 0;
   const headline = [p.workExperience[0]?.jobTitle, p.location].filter(Boolean).join(" · ");
   // A whole (rectangular) photo is wider than the circle: nudge the cards less so they don't cover it.
   const whole = isWholePhoto(p);
@@ -93,6 +98,10 @@ export default async function PublicPortfolioPage({ params }: Props) {
           Hello, I&apos;m <span className="text-brand-600 dark:text-brand-500">{p.name}</span>
         </h1>
         {headline && <p className="mt-2 text-sm font-medium text-neutral-500 sm:text-base dark:text-neutral-400">{headline}</p>}
+        <p className="mt-1 text-xs font-medium text-neutral-500 tabular-nums dark:text-neutral-400">
+          <span className="font-semibold text-neutral-800 dark:text-neutral-200">{followers}</span> {followers === 1 ? "follower" : "followers"} ·{" "}
+          <span className="font-semibold text-neutral-800 dark:text-neutral-200">{following}</span> following
+        </p>
       </header>
 
       {/* Large screens: cards around the circle, nudged toward it at the top and bottom to follow its curve. */}

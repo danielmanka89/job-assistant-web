@@ -22,6 +22,7 @@ import type {
   ChatThreadResponse,
   ConnectRequest,
   ConnectionsResponse,
+  InviteLinkResponse,
   EmailDetail,
   EmailListResponse,
   EmailSummary,
@@ -404,7 +405,38 @@ export async function listConnections(): Promise<ApiResult<ConnectionsResponse>>
   const result = await getJson("/api/connections");
   if (!result.ok) return result;
   const body = (result.data ?? {}) as Partial<ConnectionsResponse>;
-  return { ok: true, data: { connectedTo: asArray<Person>(body.connectedTo), connectedToMe: asArray<Person>(body.connectedToMe) } };
+  return {
+    ok: true,
+    data: { connectedTo: asArray<Person>(body.connectedTo), connectedToMe: asArray<Person>(body.connectedToMe), requests: asArray<Person>(body.requests) },
+  };
+}
+
+/** Sends a body-less request and returns ok or the API's error. */
+async function send(method: "POST" | "DELETE", url: string): Promise<ApiResult<null>> {
+  let res: Response;
+  try {
+    res = await fetch(url, { method, credentials: "same-origin" });
+  } catch {
+    return { ok: false, error: NETWORK_ERROR };
+  }
+  if (!res.ok) return { ok: false, error: toApiError(await res.json().catch(() => null), res.status) };
+  return { ok: true, data: null };
+}
+
+/** Accepts (true) or declines (false) someone's request to follow you. Declining a follower removes them. */
+export async function answerFollowRequest(userId: string, accept: boolean): Promise<ApiResult<null>> {
+  const result = USE_MOCK_API
+    ? await mockApi.answerFollowRequest(userId, accept)
+    : await send(accept ? "POST" : "DELETE", `/api/connections/requests/${encodeURIComponent(userId)}`);
+  if (result.ok) chatChanged();
+  return result;
+}
+
+/** Your personal invite link, from GET /api/connections/invite. */
+export async function getInviteLink(): Promise<ApiResult<InviteLinkResponse>> {
+  if (USE_MOCK_API) return mockApi.getInviteLink();
+  const result = await getJson("/api/connections/invite");
+  return result.ok ? { ok: true, data: result.data as InviteLinkResponse } : result;
 }
 
 /** Finds people by name (2+ characters) or exact email, from GET /api/people. */
@@ -414,14 +446,14 @@ export async function searchPeople(q: string): Promise<ApiResult<Person[]>> {
   return result.ok ? { ok: true, data: asArray<Person>((result.data as { people?: unknown } | null)?.people) } : result;
 }
 
-/** Connects you to someone, or changes what they are to you, with POST /api/connections. */
+/** Asks to follow someone (they must accept), or changes what they are to you, with POST /api/connections. */
 export async function connectTo(request: ConnectRequest): Promise<ApiResult<Person>> {
   const result = USE_MOCK_API ? await mockApi.connectTo(request) : await postJson<ConnectRequest, Person>("/api/connections", request);
   if (result.ok) chatChanged();
   return result;
 }
 
-/** Removes your connection to someone with DELETE /api/connections/:userId. */
+/** Unfollows someone, or cancels your request, with DELETE /api/connections/:userId. */
 export async function disconnectFrom(userId: string): Promise<ApiResult<null>> {
   if (USE_MOCK_API) {
     const result = await mockApi.disconnectFrom(userId);

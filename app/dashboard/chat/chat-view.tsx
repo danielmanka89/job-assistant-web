@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import { useRouter } from "next/navigation";
 import {
   CHAT_CHANGED_EVENT,
+  answerFollowRequest,
   connectTo,
   disconnectFrom,
   getChat,
+  getInviteLink,
   listChats,
   listConnections,
   logout,
@@ -52,9 +54,9 @@ type Tab = "chats" | "people";
 const TABS: readonly Tab[] = ["chats", "people"];
 
 /** Chats on one side, the open conversation on the other. On phones one of the two shows at a time. */
-export function ChatView({ initialOpenId = null }: { initialOpenId?: string | null }) {
+export function ChatView({ initialOpenId = null, initialTab = "chats" }: { initialOpenId?: string | null; initialTab?: Tab }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("chats");
+  const [tab, setTab] = useState<Tab>(initialOpenId ? "chats" : initialTab);
   const [chats, setChats] = useState<ChatConversation[] | null>(null);
   const [connections, setConnections] = useState<ConnectionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +121,13 @@ export function ChatView({ initialOpenId = null }: { initialOpenId?: string | nu
     await refresh();
   }
 
+  async function answer(person: Person, accept: boolean) {
+    setError(null);
+    const result = await answerFollowRequest(person.id, accept);
+    if (!result.ok) return void fail(result.error);
+    await refresh();
+  }
+
   const panel = "rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60";
 
   return (
@@ -144,6 +153,12 @@ export function ChatView({ initialOpenId = null }: { initialOpenId?: string | nu
                 }`}
               >
                 {t === "chats" ? "Chats" : "People"}
+                {t === "people" && Boolean(connections?.requests.length) && (
+                  <span className="ml-1.5 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white tabular-nums">
+                    {connections?.requests.length}
+                    <span className="sr-only"> follow requests</span>
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -151,7 +166,7 @@ export function ChatView({ initialOpenId = null }: { initialOpenId?: string | nu
             {tab === "chats" ? (
               <ChatList chats={chats} openId={openId} onOpen={setOpenId} onFindPeople={() => setTab("people")} />
             ) : (
-              <PeoplePanel connections={connections} onMessage={message} onConnection={setConnection} onError={fail} />
+              <PeoplePanel connections={connections} onMessage={message} onConnection={setConnection} onAnswer={answer} onError={fail} />
             )}
           </div>
         </section>
@@ -164,7 +179,7 @@ export function ChatView({ initialOpenId = null }: { initialOpenId?: string | nu
               <div>
                 <p className="font-semibold text-neutral-900 dark:text-white">Pick a chat</p>
                 <p className="mx-auto mt-1 max-w-xs text-sm text-neutral-500 dark:text-neutral-400">
-                  Choose a chat on the left, or find someone under People and connect to start one.
+                  Choose a chat on the left, or find someone under People and follow them to start one.
                 </p>
               </div>
             </div>
@@ -175,18 +190,18 @@ export function ChatView({ initialOpenId = null }: { initialOpenId?: string | nu
   );
 }
 
-/** The account's two numbers: who you're connected to, and who is connected to you. */
+/** The account's two numbers: how many people you follow, and how many follow you. Anyone can see these counts. */
 function ConnectionCounts({ connections }: { connections: ConnectionsResponse | null }) {
   const items = [
-    { label: "You're connected to", value: connections?.connectedTo.length },
-    { label: "Connected to you", value: connections?.connectedToMe.length },
+    { label: "Followers", value: connections?.connectedToMe.length },
+    { label: "Following", value: connections?.connectedTo.length },
   ];
   return (
-    <dl className="grid grid-cols-2 gap-2 p-4">
+    <dl className="grid grid-cols-2 gap-2 p-3">
       {items.map((item) => (
-        <div key={item.label} className="rounded-2xl bg-brand-50 px-3 py-2.5 dark:bg-brand-500/10">
+        <div key={item.label} className="flex items-baseline justify-between rounded-xl bg-brand-50 px-3 py-2 dark:bg-brand-500/10">
           <dt className="text-xs font-medium text-brand-800 dark:text-brand-200">{item.label}</dt>
-          <dd className="font-display text-2xl font-semibold text-neutral-900 tabular-nums dark:text-white">{item.value ?? "–"}</dd>
+          <dd className="font-display text-lg font-semibold text-neutral-900 tabular-nums dark:text-white">{item.value ?? "–"}</dd>
         </div>
       ))}
     </dl>
@@ -209,7 +224,7 @@ function ChatList({
     return (
       <div className="px-3 py-8 text-center">
         <p className="font-semibold text-neutral-900 dark:text-white">No chats yet</p>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Connect with someone, then send them a message.</p>
+        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Follow someone, or invite a friend, then send them a message.</p>
         <button type="button" onClick={onFindPeople} className="mt-3 text-sm font-semibold text-brand-700 underline-offset-2 hover:underline dark:text-brand-300">
           Find people
         </button>
@@ -252,17 +267,13 @@ function ChatList({
   );
 }
 
-function PeoplePanel({
-  connections,
-  onMessage,
-  onConnection,
-  onError,
-}: {
-  connections: ConnectionsResponse | null;
+type PeopleHandlers = {
   onMessage: (person: Person) => void;
   onConnection: (person: Person, kind: ConnectionKind | null) => Promise<void>;
-  onError: (e: ApiError) => void;
-}) {
+  onAnswer: (person: Person, accept: boolean) => Promise<void>;
+};
+
+function PeoplePanel({ connections, onError, ...handlers }: PeopleHandlers & { connections: ConnectionsResponse | null; onError: (e: ApiError) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Person[] | null>(null);
   const trimmed = query.trim();
@@ -286,6 +297,7 @@ function PeoplePanel({
   const searching = trimmed.length >= 2;
   return (
     <div className="space-y-4 px-2">
+      <InviteLink onError={onError} />
       <div>
         <label htmlFor="people-search" className="sr-only">
           Find people by name or email
@@ -301,30 +313,73 @@ function PeoplePanel({
         />
       </div>
       {searching ? (
-        <PeopleSection title="Search results" people={results} empty="No one found. Try their full name, or the exact email they signed up with." onMessage={onMessage} onConnection={onConnection} />
+        <PeopleSection title="Search results" people={results} empty="No one found. Try their full name, or the exact email they signed up with." {...handlers} />
       ) : (
         <>
-          <PeopleSection title="You're connected to" people={connections?.connectedTo ?? null} empty="No one yet. Search above to find people." onMessage={onMessage} onConnection={onConnection} />
-          <PeopleSection title="Connected to you" people={connections?.connectedToMe ?? null} empty="No one has connected to you yet." onMessage={onMessage} onConnection={onConnection} />
+          {Boolean(connections?.requests.length) && <PeopleSection title="Follow requests" people={connections?.requests ?? null} empty="" {...handlers} />}
+          <PeopleSection title="Following" people={connections?.connectedTo ?? null} empty="No one yet. Search above, or send a friend your invite link." {...handlers} />
+          <PeopleSection title="Followers" people={connections?.connectedToMe ?? null} empty="No one follows you yet." {...handlers} />
         </>
       )}
     </div>
   );
 }
 
-function PeopleSection({
-  title,
-  people,
-  empty,
-  onMessage,
-  onConnection,
-}: {
-  title: string;
-  people: Person[] | null;
-  empty: string;
-  onMessage: (person: Person) => void;
-  onConnection: (person: Person, kind: ConnectionKind | null) => Promise<void>;
-}) {
+/** Your personal invite link: share it, and whoever signs up from it is connected with you. */
+function InviteLink({ onError }: { onError: (e: ApiError) => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function link() {
+    if (url) return url;
+    const result = await getInviteLink();
+    if (!result.ok) {
+      onError(result.error);
+      return null;
+    }
+    setUrl(result.data.url);
+    return result.data.url;
+  }
+
+  async function share() {
+    const href = await link();
+    if (!href) return;
+    const text = "Join me on Job Assistant: tailored resumes, job tracking and chat.";
+    // Phones open their own share sheet (WhatsApp, Messages…); elsewhere the link is copied.
+    if (typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches) {
+      try {
+        await navigator.share({ title: "Job Assistant", text, url: href });
+        return;
+      } catch {
+        // Cancelled, or not allowed: copy instead.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy your invite link", href);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-brand-300 bg-brand-50/60 px-3 py-2.5 dark:border-brand-500/40 dark:bg-brand-500/10">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-neutral-900 dark:text-white">Invite a friend</p>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">They sign up from your link and you&apos;re connected.</p>
+      </div>
+      <Button type="button" size="sm" onClick={() => void share()} className="shrink-0">
+        {copied ? "Copied ✓" : "Share link"}
+      </Button>
+      <span role="status" className="sr-only">
+        {copied ? "Invite link copied" : ""}
+      </span>
+    </div>
+  );
+}
+
+function PeopleSection({ title, people, empty, ...handlers }: PeopleHandlers & { title: string; people: Person[] | null; empty: string }) {
   return (
     <section>
       <h2 className="px-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
@@ -338,7 +393,7 @@ function PeopleSection({
       ) : (
         <ul className="mt-2 space-y-2">
           {people.map((person) => (
-            <PersonRow key={person.id} person={person} onMessage={onMessage} onConnection={onConnection} />
+            <PersonRow key={person.id} person={person} {...handlers} />
           ))}
         </ul>
       )}
@@ -346,60 +401,97 @@ function PeopleSection({
   );
 }
 
-function PersonRow({
-  person,
-  onMessage,
-  onConnection,
-}: {
-  person: Person;
-  onMessage: (person: Person) => void;
-  onConnection: (person: Person, kind: ConnectionKind | null) => Promise<void>;
-}) {
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function PersonRow({ person, onMessage, onConnection, onAnswer }: PeopleHandlers & { person: Person }) {
   const [busy, setBusy] = useState(false);
   const canMessage = Boolean(person.connection) || person.connectedToMe;
 
-  async function change(value: string) {
+  async function run(action: () => Promise<void>) {
     setBusy(true);
-    await onConnection(person, value === "remove" ? null : (value as ConnectionKind));
+    await action();
     setBusy(false);
   }
+  const change = (value: string) => run(() => onConnection(person, value === "remove" ? null : (value as ConnectionKind)));
 
+  const small = "shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60";
   return (
     <li className="rounded-2xl border border-neutral-200/80 p-3 dark:border-neutral-800">
       <div className="flex items-center gap-3">
-        <Avatar name={person.name} className="size-10 text-sm" />
+        <Avatar name={person.name} className="size-9 text-sm" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-neutral-900 dark:text-white">{person.name}</p>
+          <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{person.name}</p>
           <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
-            {ROLE_LABEL[person.role]}
-            {person.connectedToMe && " · Connected to you"}
+            {ROLE_LABEL[person.role]} · {plural(person.followers, "follower")} · {person.following} following
+            {person.connectedToMe && " · Follows you"}
           </p>
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <select
-          aria-label={person.connection ? `Your connection to ${person.name}` : `Connect to ${person.name} as`}
-          value={person.connection ?? ""}
-          disabled={busy}
-          onChange={(e) => void change(e.target.value)}
-          className="min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-        >
-          {!person.connection && (
-            <option value="" disabled>
-              Connect as…
-            </option>
+
+      {person.requestedMe ? (
+        <div className="mt-2.5 flex items-center gap-2">
+          <p className="min-w-0 flex-1 text-xs text-neutral-600 dark:text-neutral-300">Wants to follow you</p>
+          <button type="button" disabled={busy} onClick={() => void run(() => onAnswer(person, true))} className={`${small} bg-brand-600 text-white hover:bg-brand-500`}>
+            Accept
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void run(() => onAnswer(person, false))}
+            className={`${small} border border-neutral-300 text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800`}
+          >
+            Decline
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2.5 flex items-center gap-2">
+          {person.requested ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void change("remove")}
+              title="Waiting for them to accept. Click to cancel the request."
+              className={`${small} min-w-0 flex-1 border border-neutral-300 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800`}
+            >
+              Requested · Cancel
+            </button>
+          ) : (
+            <select
+              aria-label={person.connection ? `How you follow ${person.name}` : `Follow ${person.name} as`}
+              value={person.connection ?? ""}
+              disabled={busy}
+              onChange={(e) => void change(e.target.value)}
+              className="min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            >
+              {!person.connection && (
+                <option value="" disabled>
+                  Follow as…
+                </option>
+              )}
+              {CONNECTION_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {CONNECTION_KIND_LABEL[kind]}
+                </option>
+              ))}
+              {person.connection && <option value="remove">Unfollow</option>}
+            </select>
           )}
-          {CONNECTION_KINDS.map((kind) => (
-            <option key={kind} value={kind}>
-              {CONNECTION_KIND_LABEL[kind]}
-            </option>
-          ))}
-          {person.connection && <option value="remove">Remove connection</option>}
-        </select>
-        <Button type="button" variant="secondary" disabled={!canMessage} onClick={() => onMessage(person)} className="shrink-0 px-4 py-2 text-sm" title={canMessage ? undefined : "Connect first to message"}>
-          Message
-        </Button>
-      </div>
+          {person.connectedToMe && !person.connection && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void run(() => onAnswer(person, false))}
+              title="They stop following you. They aren't told."
+              className={`${small} border border-neutral-300 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800`}
+            >
+              Remove
+            </button>
+          )}
+          <Button type="button" variant="secondary" size="sm" disabled={!canMessage} onClick={() => onMessage(person)} className="shrink-0" title={canMessage ? undefined : "You can message once one of you follows the other"}>
+            Message
+          </Button>
+        </div>
+      )}
     </li>
   );
 }
