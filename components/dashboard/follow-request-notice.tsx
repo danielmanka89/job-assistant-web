@@ -70,9 +70,9 @@ export function FollowRequestNotice() {
 
   return (
     <div
-      role="status"
-      aria-live="polite"
-      className="fixed top-[4.75rem] right-3 left-3 z-50 [animation:panel-in_.25s_ease-out] sm:left-auto sm:w-80 lg:top-[calc(var(--edge)+0.75rem)] lg:right-[calc(var(--edge)+0.75rem)]"
+      role="region"
+      aria-label="Follow request"
+      className="fixed top-[4.75rem] right-3 left-3 z-50 motion-safe:animate-panel-in sm:left-auto sm:w-80 lg:top-[calc(var(--edge)+0.75rem)] lg:right-[calc(var(--edge)+0.75rem)]"
     >
       <div className="rounded-2xl border border-neutral-200/80 bg-white/95 p-3 shadow-xl shadow-neutral-900/10 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/95">
         <div className="flex items-start gap-2.5">
@@ -82,7 +82,7 @@ export function FollowRequestNotice() {
               <span className="font-semibold">{first.name}</span> wants to follow you
             </p>
             {others > 0 && (
-              <Link href="/dashboard/chat?tab=people" className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-300">
+              <Link href="/dashboard/chat?tab=people" className="rounded text-xs font-medium text-brand-700 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:text-brand-300">
                 +{others} more request{others === 1 ? "" : "s"}
               </Link>
             )}
@@ -91,7 +91,7 @@ export function FollowRequestNotice() {
             type="button"
             onClick={dismiss}
             aria-label="Close for now"
-            className="grid size-7 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            className="grid size-7 shrink-0 place-items-center rounded-lg text-neutral-400 outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
           >
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="size-4" aria-hidden="true">
               <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />
@@ -103,7 +103,7 @@ export function FollowRequestNotice() {
             type="button"
             disabled={busy}
             onClick={() => void answer(true)}
-            className="flex-1 rounded-xl bg-brand-600 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-60"
+            className="flex-1 rounded-xl bg-brand-600 py-1.5 text-xs font-semibold text-white transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 hover:bg-brand-500 disabled:opacity-60"
           >
             Accept
           </button>
@@ -111,7 +111,7 @@ export function FollowRequestNotice() {
             type="button"
             disabled={busy}
             onClick={() => void answer(false)}
-            className="flex-1 rounded-xl border border-neutral-300 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            className="flex-1 rounded-xl border border-neutral-300 py-1.5 text-xs font-semibold text-neutral-700 transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 hover:bg-neutral-50 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
           >
             Decline
           </button>

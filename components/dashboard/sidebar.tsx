@@ -311,11 +311,11 @@ function UserCard({
           {user && chat && (
             <Link
               href={chat.requests ? "/dashboard/chat?tab=people" : "/dashboard/chat"}
-              title={`${chat.connectedToMe} followers · ${chat.connectedTo} following${chat.requests ? ` · ${chat.requests} waiting for your answer` : ""}`}
+              title={`${chat.connectedToMe} ${chat.connectedToMe === 1 ? "follower" : "followers"} · ${chat.connectedTo} following${chat.requests ? ` · ${chat.requests} waiting for your answer` : ""}`}
               className="truncate rounded tabular-nums hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:hover:text-white"
             >
               <span aria-hidden="true">· </span>
-              {chat.connectedToMe} followers<span aria-hidden="true"> · </span>
+              {chat.connectedToMe} {chat.connectedToMe === 1 ? "follower" : "followers"}<span aria-hidden="true"> · </span>
               <span className="sr-only">, </span>
               {chat.connectedTo} following
               {chat.requests > 0 && (

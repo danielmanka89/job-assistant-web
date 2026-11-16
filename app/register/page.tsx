@@ -17,7 +17,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/registe
       footer={
         <>
           Already have an account?{" "}
-          <Link href={inviter ? `/login?invite=${Array.isArray(invite) ? invite[0] : invite}` : "/login"} className="font-semibold text-brand-600 hover:text-brand-500 dark:text-brand-400">
+          <Link href={inviter ? `/login?invite=${encodeURIComponent((Array.isArray(invite) ? invite[0] : invite) ?? "")}` : "/login"} className="font-semibold text-brand-600 hover:text-brand-500 dark:text-brand-400">
             Sign in
           </Link>
         </>
