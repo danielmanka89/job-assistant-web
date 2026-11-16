@@ -8,6 +8,7 @@ import { confirmPhoneChange, getAccount, logout, startPhoneChange, removeAvatarP
 import { loadPhoto, type PreparedPhoto } from "@/lib/client/photo-crop";
 import { PhotoCropDialog } from "./photo-crop-dialog";
 import { Avatar } from "@/components/ui/avatar";
+import { focusLost } from "@/lib/client/a11y";
 import { storeUser } from "@/lib/client/current-user";
 import { maskPhone, normalizePhone, phoneError } from "@/lib/phone";
 import { hasErrors, splitApiError, validateEmail, validatePassword, type FieldErrors } from "@/lib/client/forms";
@@ -713,6 +714,16 @@ function PhoneForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (us
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+  const used = useRef(false);
+
+  // The fieldset is disabled while a request runs and the fields swap between steps, which drops
+  // keyboard focus: put it on the field with the error, or the first field of the step.
+  useEffect(() => {
+    if (pending || !used.current || !focusLost()) return;
+    const el = form.current;
+    (el?.querySelector<HTMLInputElement>('[aria-invalid="true"]') ?? el?.querySelector<HTMLInputElement>("input:not([hidden])"))?.focus();
+  }, [pending, ticket, errors, formError, success]);
 
   function failed(error: ApiError) {
     if (isUnauthorized(error)) return onUnauthorized();
@@ -722,6 +733,7 @@ function PhoneForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (us
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    used.current = true;
     setFormError(null);
     setSuccess(null);
     const normalized = normalizePhone(phone);
@@ -764,7 +776,7 @@ function PhoneForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (us
         </svg>
       }
     >
-      <form onSubmit={onSubmit} noValidate>
+      <form ref={form} onSubmit={onSubmit} noValidate>
         <input type="text" name="username" autoComplete="username" value={user.email} readOnly hidden />
         <fieldset disabled={pending} className="m-0 min-w-0 space-y-4 border-0 p-0">
           <p className="text-sm text-neutral-600 dark:text-neutral-300">
@@ -821,7 +833,15 @@ function PhoneForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (us
           )}
           <div className="flex items-center justify-end gap-3">
             {ticket && (
-              <button type="button" onClick={() => setTicket(null)} className="text-sm font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
+              <button
+                type="button"
+                onClick={() => {
+                  setTicket(null);
+                  setCode("");
+                  setErrors({});
+                }}
+                className="rounded-lg text-sm font-medium text-neutral-500 outline-none hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:text-neutral-400 dark:hover:text-white"
+              >
                 Change number
               </button>
             )}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { checkResetCode, completePasswordReset, startPasswordReset } from "@/lib/client/api";
+import { focusLost } from "@/lib/client/a11y";
 import { validateEmail, validatePassword } from "@/lib/client/forms";
 import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -29,11 +30,21 @@ export function ResetFlow() {
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const input = useRef<HTMLFormElement>(null);
+  const signIn = useRef<HTMLAnchorElement>(null);
 
   // Each new step starts empty with the cursor in its field.
   useEffect(() => {
+    if (step === "done") return signIn.current?.focus();
     input.current?.querySelector<HTMLInputElement>("input:not([hidden])")?.focus();
   }, [step]);
+
+  // The form is disabled while a request runs, which drops keyboard focus: put it back on the
+  // field with the error, or the first field.
+  useEffect(() => {
+    if (pending || step === "done" || !focusLost()) return;
+    const form = input.current;
+    (form?.querySelector<HTMLInputElement>('[aria-invalid="true"]') ?? form?.querySelector<HTMLInputElement>("input:not([hidden])"))?.focus();
+  }, [pending, step, fieldError, formError]);
 
   function go(next: Step) {
     setValue("");
@@ -96,7 +107,7 @@ export function ResetFlow() {
     return (
       <div className="space-y-5">
         <SuccessAlert>Your password has been reset, and every device was signed out. We&apos;ve emailed you to confirm.</SuccessAlert>
-        <Link href="/login" className="block w-full rounded-2xl bg-brand-600 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-brand-500">
+        <Link ref={signIn} href="/login" className="block w-full rounded-2xl bg-brand-600 px-5 py-3 text-center text-sm font-semibold text-white transition outline-none hover:bg-brand-500 focus-visible:ring-4 focus-visible:ring-brand-500/40">
           Sign in with your new password
         </Link>
       </div>
@@ -132,12 +143,13 @@ export function ResetFlow() {
                 <li key={s.key} aria-current={state === "now" ? "step" : undefined} className="flex flex-1 items-center gap-1.5">
                   <span
                     className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] ${
-                      state === "done" ? "bg-emerald-500 text-white" : state === "now" ? "bg-brand-600 text-white" : "bg-neutral-200 text-neutral-500 dark:bg-neutral-800"
+                      state === "done" ? "bg-emerald-500 text-white" : state === "now" ? "bg-brand-600 text-white" : "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
                     }`}
                   >
-                    {state === "done" ? "✓" : i + 1}
+                    {state === "done" ? <span aria-hidden="true">✓</span> : i + 1}
                   </span>
-                  <span className={state === "now" ? "text-neutral-900 dark:text-white" : "text-neutral-400"}>{skipped ? `${s.label} (no phone)` : s.label}</span>
+                  {state === "done" && <span className="sr-only">Done:</span>}
+                  <span className={state === "now" ? "text-neutral-900 dark:text-white" : "text-neutral-500 dark:text-neutral-400"}>{skipped ? `${s.label} (no phone)` : s.label}</span>
                 </li>
               );
             })}
@@ -189,7 +201,7 @@ export function ResetFlow() {
           {step === "email" ? "Email me a code" : step === "password" ? "Set new password" : "Continue"}
         </Button>
         {step !== "email" && (
-          <button type="button" onClick={() => go("email")} className="block w-full text-center text-sm font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
+          <button type="button" onClick={() => go("email")} className="block w-full rounded-lg text-center text-sm font-medium text-neutral-500 outline-none hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:text-neutral-400 dark:hover:text-white">
             Start again
           </button>
         )}
