@@ -1,10 +1,24 @@
-import type { ThemeColor } from "@/lib/types";
+import { THEME_COLORS, type ThemeColor } from "@/lib/types";
 
-/** The data-accent value for a theme color (globals.css). Blue is the default, so it can be left off. */
-export const accentFor = (color: ThemeColor | null | undefined): "red" | "blue" | "green" =>
-  color === "RED" ? "red" : color === "GREEN" ? "green" : "blue";
+/**
+ * The theme color stored for an account, as one of today's three. Accounts saved with the earlier
+ * colors keep their feel: Blue (and anything unknown) is Midnight Navy, Green is Deep Teal, Red is Dusky Plum.
+ */
+export function themeColorOf(value: unknown): ThemeColor {
+  if (THEME_COLORS.includes(value as ThemeColor)) return value as ThemeColor;
+  return value === "GREEN" ? "TEAL" : value === "RED" ? "PLUM" : "NAVY";
+}
 
-// Read from the user saved at login, so the root layout can set data-accent before the first paint
-// (no flash of the default blue). Lives here, not in a "use client" module, so the server layout gets the string.
+/** The data-accent value for a theme color (globals.css). Navy is the default, so it can be left off. */
+export const accentFor = (color: unknown): "navy" | "teal" | "plum" => {
+  const theme = themeColorOf(color);
+  return theme === "TEAL" ? "teal" : theme === "PLUM" ? "plum" : "navy";
+};
+
+/** The deep menu color of each theme: the phone's status bar and browser toolbar use it (theme-color). */
+export const MENU_COLOR: Record<"navy" | "teal" | "plum", string> = { navy: "#33435e", teal: "#3f6f6c", plum: "#6e5872" };
+
+// Read from the user saved at login, so the root layout can set data-accent (and the phone's bar
+// color) before the first paint. Lives here, not in a "use client" module, so the server layout gets the string.
 const USER_KEY = "job-assistant.user";
-export const ACCENT_INIT_SCRIPT = `try{var u=JSON.parse(localStorage.getItem(${JSON.stringify(USER_KEY)})||"null"),c=u&&(u.themeColor||u.clockColor);if(c==="RED"||c==="GREEN")document.documentElement.dataset.accent=c.toLowerCase()}catch(e){}`;
+export const ACCENT_INIT_SCRIPT = `try{var u=JSON.parse(localStorage.getItem(${JSON.stringify(USER_KEY)})||"null"),c=u&&(u.themeColor||u.clockColor),a=c==="TEAL"||c==="GREEN"?"teal":c==="PLUM"||c==="RED"?"plum":null,bars=${JSON.stringify(MENU_COLOR)};if(a){document.documentElement.dataset.accent=a;var m=document.querySelector('meta[name="theme-color"]');if(m)m.content=bars[a]}}catch(e){}`;

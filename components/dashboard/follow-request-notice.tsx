@@ -72,7 +72,7 @@ export function FollowRequestNotice() {
     <div
       role="region"
       aria-label="Follow request"
-      className="fixed top-[4.75rem] right-3 left-3 z-50 motion-safe:animate-panel-in sm:left-auto sm:w-80 lg:top-[calc(var(--edge)+0.75rem)] lg:right-[calc(var(--edge)+0.75rem)]"
+      className="fixed top-[calc(4.75rem+var(--safe-top))] right-3 left-3 z-50 motion-safe:animate-panel-in sm:left-auto sm:w-80 lg:top-[calc(var(--edge)+0.75rem)] lg:right-[calc(var(--edge)+0.75rem)]"
     >
       <div className="rounded-2xl border border-neutral-200/80 bg-white/95 p-3 shadow-xl shadow-neutral-900/10 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/95">
         <div className="flex items-start gap-2.5">

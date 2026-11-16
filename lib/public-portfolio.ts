@@ -1,7 +1,8 @@
+import { themeColorOf } from "@/lib/theme-color";
 import { prisma } from "@/lib/db";
 import { profileFromResume, splitList } from "@/lib/profile";
 import { toResume } from "@/lib/api";
-import { THEME_COLORS, type ProfileValues, type PublicPortfolio, type ThemeColor } from "@/lib/types";
+import type { ProfileValues, PublicPortfolio } from "@/lib/types";
 
 export const portfolioPath = (userId: string) => `/profile/${userId}`;
 
@@ -41,6 +42,6 @@ export async function getPublicPortfolio(userId: string): Promise<PublicPortfoli
       profile.user.profilePhoto?.width && profile.user.profilePhoto.height
         ? { width: profile.user.profilePhoto.width, height: profile.user.profilePhoto.height }
         : null,
-    themeColor: THEME_COLORS.includes(profile.user.themeColor as ThemeColor) ? (profile.user.themeColor as ThemeColor) : "BLUE",
+    themeColor: themeColorOf(profile.user.themeColor),
   };
 }

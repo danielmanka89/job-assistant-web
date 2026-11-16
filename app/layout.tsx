@@ -26,17 +26,19 @@ export const metadata: Metadata = {
   description: "Tailor your resume to any job description and download it as .docx or .pdf.",
   applicationName: "Job Assistant",
   // Installed from the Home Screen on iPhone and iPad, the site opens full screen like an app.
-  appleWebApp: { capable: true, title: "Job Assistant", statusBarStyle: "default" },
+  // black-translucent: the app runs under the iPhone status bar, so the theme color fills the very top.
+  appleWebApp: { capable: true, title: "Job Assistant", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
   // Older iPhones only open Home Screen sites full screen with the legacy Apple tag.
   other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  // The menu color of the default theme (Midnight Navy): Android's status bar and browser toolbar.
+  // ThemeAccent switches it to the signed-in user's theme.
+  themeColor: "#33435e",
+  // Edge to edge on phones: the page reaches under the notch and home bar; --safe-top/--safe-bottom keep content clear.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

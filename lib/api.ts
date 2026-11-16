@@ -1,3 +1,4 @@
+import { themeColorOf } from "@/lib/theme-color";
 import { NextResponse } from "next/server";
 import { AiError } from "@/lib/ai";
 import { jobTypesOf } from "@/lib/job-types";
@@ -10,10 +11,8 @@ import type {
   User as UserRow,
 } from "@/lib/generated/prisma/client";
 import {
-  THEME_COLORS,
   CLOCK_TEMPLATES,
   type ApiError,
-  type ThemeColor,
   type ClockTemplate,
   type Education,
   type GeneratedFile,
@@ -83,7 +82,7 @@ export function toUser(row: UserRow): User {
     name: row.name,
     role: row.role as UserRole,
     clockTemplate: CLOCK_TEMPLATES.includes(row.clockTemplate as ClockTemplate) ? (row.clockTemplate as ClockTemplate) : "MINIMALIST",
-    themeColor: THEME_COLORS.includes(row.themeColor as ThemeColor) ? (row.themeColor as ThemeColor) : "BLUE",
+    themeColor: themeColorOf(row.themeColor),
     profilePictureUrl: row.profilePictureUrl ?? null,
     avatarUrl: row.avatarUrl ?? null,
     phone: row.phone ?? null,

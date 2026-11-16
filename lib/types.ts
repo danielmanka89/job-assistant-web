@@ -31,9 +31,9 @@ export interface User {
 export type ClockTemplate = "MINIMALIST" | "NEON" | "GLASS";
 export const CLOCK_TEMPLATES: readonly ClockTemplate[] = ["MINIMALIST", "NEON", "GLASS"];
 
-/** The candidate's color theme for the whole app, clocks included; chosen in Settings. Red is the default. */
-export type ThemeColor = "BLUE" | "GREEN" | "RED";
-export const THEME_COLORS: readonly ThemeColor[] = ["BLUE", "GREEN", "RED"];
+/** The candidate's color theme for the whole app, clocks included; chosen in Settings. Navy is the default. Accounts saved with the older Blue, Green or Red are read as Navy, Teal and Plum (themeColorOf). */
+export type ThemeColor = "NAVY" | "TEAL" | "PLUM";
+export const THEME_COLORS: readonly ThemeColor[] = ["NAVY", "TEAL", "PLUM"];
 
 /** Job seekers tailor resumes; employers can also post jobs and see their own postings. */
 export type UserRole = "SEEKER" | "EMPLOYER";
