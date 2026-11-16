@@ -28,6 +28,8 @@ export const metadata: Metadata = {
   // Installed from the Home Screen on iPhone and iPad, the site opens full screen like an app.
   appleWebApp: { capable: true, title: "Job Assistant", statusBarStyle: "default" },
   formatDetection: { telephone: false },
+  // Older iPhones only open Home Screen sites full screen with the legacy Apple tag.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
