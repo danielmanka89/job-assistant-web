@@ -3,7 +3,7 @@ import { apiError } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-/** DELETE /api/connections/:userId — removes your connection to that person. Theirs to you, if any, stays. */
+/** DELETE /api/connections/:userId — unfollows that person, or cancels your request. Theirs to you, if any, stays. */
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to change your connections");

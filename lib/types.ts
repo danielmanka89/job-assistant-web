@@ -395,19 +395,32 @@ export const CONNECTION_KIND_LABEL: Record<ConnectionKind, string> = {
   other: "Other",
 };
 
-/** Another user, as shown in Chat. Connections are one-way, so the two directions are separate. */
+/**
+ * Another user, as shown in Chat. Following is one-way and needs the other person's OK: a request
+ * stays pending until they accept it. Who follows whom is private; anyone can see the two counts.
+ */
 export interface Person {
   id: string;
   name: string;
   role: UserRole;
-  connection: ConnectionKind | null; // how you're connected to them; null when you aren't
-  connectedToMe: boolean; // whether they're connected to you
+  connection: ConnectionKind | null; // you follow them (accepted), as this; null when you don't
+  requested: boolean; // you asked to follow them and they haven't answered yet
+  connectedToMe: boolean; // they follow you (accepted)
+  requestedMe: boolean; // they asked to follow you and you haven't answered yet
+  followers: number; // how many people follow them
+  following: number; // how many people they follow
 }
 
-/** GET /api/connections: the people you're connected to, and the people connected to you. */
+/** GET /api/connections: your own lists, which only you can see. */
 export interface ConnectionsResponse {
-  connectedTo: Person[];
-  connectedToMe: Person[];
+  connectedTo: Person[]; // people you follow
+  connectedToMe: Person[]; // your followers
+  requests: Person[]; // people asking to follow you, newest first
+}
+
+/** GET /api/connections/invite: your personal invite link. */
+export interface InviteLinkResponse {
+  url: string;
 }
 
 /** GET /api/people?q=: users whose name matches, or whose email is exactly q. */
@@ -425,8 +438,10 @@ export interface ConnectRequest {
 export interface ChatSummary {
   unread: number; // unread messages across all chats
   emailUnread: number; // unread emails in the Inbox
-  connectedTo: number;
-  connectedToMe: number;
+  connectedTo: number; // people you follow
+  connectedToMe: number; // your followers
+  requests: number; // follow requests waiting for your answer
+  requesters: { id: string; name: string }[]; // the newest few of them, for the notification
 }
 
 export interface ChatMessage {

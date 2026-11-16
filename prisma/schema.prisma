@@ -28,6 +28,8 @@ model User {
   // of the emailed code. Set at sign-up; changing it needs the password and a texted code.
   phone           String?
   phoneVerifiedAt DateTime?         // when a texted code last proved the number works
+  // The code in this user's personal invite link (/invite/<code>); made the first time they open it.
+  inviteCode      String?           @unique
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   resumes         Resume[]
@@ -66,10 +68,14 @@ model Connection {
   toUserId   String
   toUser     User     @relation("ConnectionTo", fields: [toUserId], references: [id], onDelete: Cascade)
   kind       String   @default("friend") // ConnectionKind: "friend" | "vendor" | "employer" | "recruiter" | "colleague" | "other"
+  // "pending" until the person followed accepts the request, then "accepted". Rows made before
+  // follow requests existed are accepted.
+  status     String   @default("accepted")
   createdAt  DateTime @default(now())
 
   @@unique([fromUserId, toUserId])
   @@index([toUserId])
+  @@index([toUserId, status])
 }
 
 // A one-to-one chat. The two users are stored in id order (userAId < userBId) so a pair has one row.

@@ -5,6 +5,7 @@ import { apiError, readJsonObject, toUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { normalizePhone, phoneError } from "@/lib/phone";
+import { INVITE_COOKIE, acceptInviteFromRequest } from "@/lib/invite";
 import { createSession } from "@/lib/session";
 import type { AuthResponse, RegisterRequest, UserRole } from "@/lib/types";
 
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     });
     const response = NextResponse.json<AuthResponse>({ user: toUser(user) }, { status: 201 });
     await createSession(response, user.id);
+    if (await acceptInviteFromRequest(request, user.id)) response.cookies.delete(INVITE_COOKIE);
     return response;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

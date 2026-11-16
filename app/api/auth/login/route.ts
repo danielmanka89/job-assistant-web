@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { apiError, readJsonObject, toUser } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { INVITE_COOKIE, acceptInviteFromRequest } from "@/lib/invite";
 import { createSession } from "@/lib/session";
 import type { AuthResponse } from "@/lib/types";
 
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json<AuthResponse>({ user: toUser(user) });
     await createSession(response, user.id);
+    if (await acceptInviteFromRequest(request, user.id)) response.cookies.delete(INVITE_COOKIE);
     return response;
   } catch (error) {
     console.error("login failed", error);
