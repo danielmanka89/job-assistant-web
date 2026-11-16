@@ -414,7 +414,7 @@ function PersonRow({ person, onMessage, onConnection, onAnswer }: PeopleHandlers
   }
   const change = (value: string) => run(() => onConnection(person, value === "remove" ? null : (value as ConnectionKind)));
 
-  const small = "shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60";
+  const small = "shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 disabled:opacity-60";
   return (
     <li className="rounded-2xl border border-neutral-200/80 p-3 dark:border-neutral-800">
       <div className="flex items-center gap-3">
