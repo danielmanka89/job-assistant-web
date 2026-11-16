@@ -37,6 +37,7 @@ import type {
   SendEmailRequest,
   ConnectRequest,
   ConnectionsResponse,
+  InviteLinkResponse,
   Person,
   MockCallPrepResponse,
   PrepQuestion,
@@ -884,14 +885,23 @@ async function updateSubmission(id: string, changes: UpdateSubmissionRequest): P
   return { ok: true, data: next };
 }
 
-// Connections and chat, kept in memory for this page load. A few sample people; "Priya" is
-// already connected to you, and anyone you message replies once.
+// Connections and chat, kept in memory for this page load. A few sample people: Priya follows you,
+// Elena has asked to, and anyone you message replies once. Requests you send are accepted after a moment.
 const MOCK_ME = "user_mock_me";
+const person = (p: Pick<Person, "id" | "name" | "role"> & Partial<Person>): Person => ({
+  connection: null,
+  requested: false,
+  connectedToMe: false,
+  requestedMe: false,
+  followers: 12,
+  following: 8,
+  ...p,
+});
 const mockPeople: Person[] = [
-  { id: "person_1", name: "Priya Raman", role: "EMPLOYER", connection: null, connectedToMe: true },
-  { id: "person_2", name: "Marcus Lee", role: "SEEKER", connection: "friend", connectedToMe: false },
-  { id: "person_3", name: "Northwind Staffing", role: "EMPLOYER", connection: "vendor", connectedToMe: true },
-  { id: "person_4", name: "Elena Petrova", role: "SEEKER", connection: null, connectedToMe: false },
+  person({ id: "person_1", name: "Priya Raman", role: "EMPLOYER", connectedToMe: true, followers: 48, following: 30 }),
+  person({ id: "person_2", name: "Marcus Lee", role: "SEEKER", connection: "friend", followers: 9, following: 14 }),
+  person({ id: "person_3", name: "Northwind Staffing", role: "EMPLOYER", connection: "vendor", connectedToMe: true, followers: 210, following: 5 }),
+  person({ id: "person_4", name: "Elena Petrova", role: "SEEKER", requestedMe: true, followers: 3, following: 6 }),
 ];
 const mockChats = new Map<string, { personId: string; messages: ChatMessage[]; readAt: string }>();
 
@@ -983,13 +993,22 @@ async function getChatSummary(): Promise<ApiResult<ChatSummary>> {
       emailUnread: mockEmails.filter((e) => e.unread).length,
       connectedTo: mockPeople.filter((p) => p.connection).length,
       connectedToMe: mockPeople.filter((p) => p.connectedToMe).length,
+      requests: mockPeople.filter((p) => p.requestedMe).length,
+      requesters: mockPeople.filter((p) => p.requestedMe).map(({ id, name }) => ({ id, name })),
     },
   };
 }
 
 async function listConnections(): Promise<ApiResult<ConnectionsResponse>> {
   await delay(250);
-  return { ok: true, data: { connectedTo: mockPeople.filter((p) => p.connection), connectedToMe: mockPeople.filter((p) => p.connectedToMe) } };
+  return {
+    ok: true,
+    data: {
+      connectedTo: mockPeople.filter((p) => p.connection),
+      connectedToMe: mockPeople.filter((p) => p.connectedToMe),
+      requests: mockPeople.filter((p) => p.requestedMe),
+    },
+  };
 }
 
 async function searchPeople(q: string): Promise<ApiResult<Person[]>> {
@@ -1002,14 +1021,42 @@ async function connectTo(request: ConnectRequest): Promise<ApiResult<Person>> {
   await delay(250);
   const person = mockPeople.find((p) => p.id === request.userId);
   if (!person) return fail({ code: "USER_NOT_FOUND", message: "That person's account no longer exists" });
-  person.connection = request.kind;
+  if (person.connection) person.connection = request.kind;
+  else {
+    person.requested = true;
+    setTimeout(() => {
+      if (!person.requested) return;
+      person.requested = false;
+      person.connection = request.kind;
+      person.followers += 1;
+    }, 4000);
+  }
   return { ok: true, data: { ...person } };
+}
+
+async function answerFollowRequest(userId: string, accept: boolean): Promise<ApiResult<null>> {
+  await delay(200);
+  const person = mockPeople.find((p) => p.id === userId);
+  if (person) {
+    if (accept && person.requestedMe) person.connectedToMe = true;
+    if (!accept) person.connectedToMe = false;
+    person.requestedMe = false;
+  }
+  return { ok: true, data: null };
+}
+
+async function getInviteLink(): Promise<ApiResult<InviteLinkResponse>> {
+  await delay(100);
+  return { ok: true, data: { url: `${window.location.origin}/invite/demo7k2x9q` } };
 }
 
 async function disconnectFrom(userId: string): Promise<ApiResult<null>> {
   await delay(250);
   const person = mockPeople.find((p) => p.id === userId);
-  if (person) person.connection = null;
+  if (person) {
+    person.connection = null;
+    person.requested = false;
+  }
   return { ok: true, data: null };
 }
 
@@ -1228,6 +1275,8 @@ export const mockApi = {
   searchPeople,
   connectTo,
   disconnectFrom,
+  answerFollowRequest,
+  getInviteLink,
   listChats,
   openChat,
   getChat,

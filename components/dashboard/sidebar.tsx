@@ -307,17 +307,23 @@ function UserCard({
         <p className="truncate text-[13px] leading-tight font-semibold text-neutral-900 dark:text-white">{name}</p>
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] leading-tight text-neutral-500 dark:text-neutral-400">
           {user && <span className="font-semibold text-brand-700 dark:text-brand-300">{ROLE_LABEL[user.role]}</span>}
-          {/* The account's connections: people you're connected to, and people connected to you. */}
+          {/* Follower counts (anyone can see these; the names stay private). */}
           {user && chat && (
             <Link
-              href="/dashboard/chat"
-              title={`Connected to ${chat.connectedTo} · ${chat.connectedToMe} connected to you`}
+              href={chat.requests ? "/dashboard/chat?tab=people" : "/dashboard/chat"}
+              title={`${chat.connectedToMe} followers · ${chat.connectedTo} following${chat.requests ? ` · ${chat.requests} waiting for your answer` : ""}`}
               className="truncate rounded tabular-nums hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:hover:text-white"
             >
               <span aria-hidden="true">· </span>
-              {chat.connectedTo} connected<span aria-hidden="true"> · </span>
+              {chat.connectedToMe} followers<span aria-hidden="true"> · </span>
               <span className="sr-only">, </span>
-              {chat.connectedToMe} to you
+              {chat.connectedTo} following
+              {chat.requests > 0 && (
+                <span className="ml-1 rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-bold text-white">
+                  {chat.requests}
+                  <span className="sr-only"> follow requests</span>
+                </span>
+              )}
             </Link>
           )}
         </p>
