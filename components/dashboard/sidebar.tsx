@@ -210,7 +210,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
   }
 
   // Compact rows (36px) so clocks, account, menu and the deadline tracker all fit without scrolling.
-  const itemClass = "flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium transition";
+  const itemClass = "flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-white/80";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-3">
@@ -248,10 +248,11 @@ function SidebarContent({ pathname }: { pathname: string }) {
 }
 
 /** The number at the end of a menu item (unread chat messages, unread emails); nothing when it's zero. */
-function UnreadBadge({ count, what }: { count: number | undefined; what: string; active?: boolean }) {
+function UnreadBadge({ count, what, active = false }: { count: number | undefined; what: string; active?: boolean }) {
   if (!count || count < 1) return null;
   return (
-    <span className="ml-auto rounded-full bg-(--peach) px-1.5 py-px text-[10px] font-bold text-neutral-900 tabular-nums">
+    // On the active item's pill, peach would blend in, so the badge turns dark.
+    <span className={`ml-auto rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums ${active ? "bg-(--menu-pill-text) text-white" : "bg-(--peach) text-neutral-900"}`}>
       {count > 99 ? "99+" : count}
       <span className="sr-only"> unread {what}</span>
     </span>
