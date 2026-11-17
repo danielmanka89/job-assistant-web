@@ -506,7 +506,7 @@ function ClockTemplateForm({
 }) {
   const [choice, setChoice] = useState<ClockTemplate>(user.clockTemplate ?? "MINIMALIST");
   const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
-  
+
   async function choose(template: ClockTemplate) {
     if (template === choice) return;
     const previous = choice;

@@ -546,6 +546,14 @@ body:not(:has(.glass-shell)) {
   --color-brand-800: #000000;
   --color-brand-900: #000000;
   --color-brand-950: #000000;
+  /* The menu, quote bar and phone top bar: charcoal with a light gray pill, not the theme's navy and peach. */
+  --menu-top: #1f1f1f;
+  --menu-bottom: #2a2a2a;
+  --menu-pill: #e5e5e5;
+  --menu-pill-text: #171717;
+  --peach: #d4d4d4;
+  --page-bg: #f5f5f5;
+  --card-bg: #ffffff;
 }
 
 /* On dark panels (auth brand panel, landing pill) black accents would vanish, so they use light grays. */
