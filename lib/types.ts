@@ -669,7 +669,7 @@ export interface JobPitchListResponse {
 
 /* ---------- My JDs: job descriptions vendors send you ---------- */
 
-/** The details of a JD you can type in (all optional except the description). */
+/** A JD's details: detected from the pasted text, and editable. */
 export interface VendorJdFields {
   title: string;
   client: string;
@@ -689,8 +689,15 @@ export interface VendorJd extends VendorJdFields {
   sentTo: string;
   /** The Spreadsheet row made when it was sent. */
   submissionId: string | null;
-  /** Your latest resume tailored to this exact description, with its files. */
-  tailored: { id: string; finalMatchPercent: number | null; createdAt: string; files: GeneratedFile[] } | null;
+  /** Your resume tailored to this JD (made automatically when it's saved), with its files. */
+  tailored: {
+    id: string;
+    finalMatchPercent: number | null;
+    createdAt: string;
+    matchedKeywords: string[];
+    missingKeywords: string[];
+    files: GeneratedFile[];
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

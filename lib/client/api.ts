@@ -887,3 +887,9 @@ export async function sendVendorJd(id: string, request: SendVendorJdRequest): Pr
   if (USE_MOCK_API) return mockApi.sendVendorJd(id, request);
   return postJson<SendVendorJdRequest, VendorJd>(`/api/jds/${encodeURIComponent(id)}/send`, request);
 }
+
+/** Tailors your latest resume to the JD (POST /api/jds/:id/tailor) and returns it with the files. */
+export async function tailorVendorJd(id: string): Promise<ApiResult<VendorJd>> {
+  if (USE_MOCK_API) return mockApi.tailorVendorJd(id);
+  return postJson<Record<string, never>, VendorJd>(`/api/jds/${encodeURIComponent(id)}/tailor`, {});
+}

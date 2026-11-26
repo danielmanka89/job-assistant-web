@@ -11,6 +11,7 @@ CREATE TABLE "VendorJd" (
     "vendorEmail" TEXT NOT NULL DEFAULT '',
     "notes" TEXT NOT NULL DEFAULT '',
     "jobDescription" TEXT NOT NULL,
+    "tailoredResumeId" TEXT,
     "sentAt" TIMESTAMP(3),
     "sentTo" TEXT NOT NULL DEFAULT '',
     "submissionId" TEXT,
@@ -20,6 +21,8 @@ CREATE TABLE "VendorJd" (
     CONSTRAINT "VendorJd_pkey" PRIMARY KEY ("id")
 );
 CREATE UNIQUE INDEX "VendorJd_submissionId_key" ON "VendorJd"("submissionId");
+CREATE INDEX "VendorJd_tailoredResumeId_idx" ON "VendorJd"("tailoredResumeId");
 CREATE INDEX "VendorJd_userId_createdAt_idx" ON "VendorJd"("userId", "createdAt");
 ALTER TABLE "VendorJd" ADD CONSTRAINT "VendorJd_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "VendorJd" ADD CONSTRAINT "VendorJd_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "Submission"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "VendorJd" ADD CONSTRAINT "VendorJd_tailoredResumeId_fkey" FOREIGN KEY ("tailoredResumeId") REFERENCES "TailoredResume"("id") ON DELETE SET NULL ON UPDATE CASCADE;

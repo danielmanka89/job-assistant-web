@@ -31,10 +31,7 @@ export function descriptionSnippet(text: string, max = 240) {
 // characters, too long to pass in the URL.
 const PENDING_KEY = "job-assistant.pending-job";
 
-export type PendingJob = Pick<JobPosting, "id" | "title" | "company" | "description"> & {
-  /** "jd": a JD from My JDs (the analyze page says so, and the download page links back to send it). */
-  source?: "jd";
-};
+export type PendingJob = Pick<JobPosting, "id" | "title" | "company" | "description">;
 
 export function storePendingJob(job: PendingJob): void {
   try {
@@ -58,33 +55,6 @@ export function readPendingJob(): PendingJob | null {
 export function clearPendingJob(): void {
   try {
     sessionStorage.removeItem(PENDING_KEY);
-  } catch {
-    // ignore
-  }
-}
-
-// The My JDs entry being tailored, so the download page can offer "Send to vendor". Kept for the tab.
-const TAILORING_JD_KEY = "job-assistant.tailoring-jd";
-
-export function storeTailoringJd(id: string): void {
-  try {
-    sessionStorage.setItem(TAILORING_JD_KEY, id);
-  } catch {
-    // ignore
-  }
-}
-
-export function readTailoringJd(): string | null {
-  try {
-    return sessionStorage.getItem(TAILORING_JD_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function clearTailoringJd(): void {
-  try {
-    sessionStorage.removeItem(TAILORING_JD_KEY);
   } catch {
     // ignore
   }

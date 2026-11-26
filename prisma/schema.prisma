@@ -224,6 +224,7 @@ model TailoredResume {
   finalMatchPercent Int? // score of the generated file; null for rows created before it was stored
   createdAt         DateTime        @default(now())
   files             GeneratedFile[]
+  vendorJds         VendorJd[]
 
   @@index([userId])
 }
@@ -289,28 +290,31 @@ model Submission {
 }
 
 // A job description a vendor sent the user directly (My JDs), kept apart from the public job board.
-// Its tailored resume is found by matching the description text of a gap analysis (as the Spreadsheet does).
+// Its details are detected from the pasted text, and the resume is tailored to it automatically.
 model VendorJd {
-  id             String      @id @default(cuid())
-  userId         String
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title          String // the role, e.g. "Senior Java Developer"
-  client         String      @default("")
-  location       String      @default("")
-  rate           String      @default("")
-  vendorCompany  String      @default("")
-  vendorContact  String      @default("")
-  vendorEmail    String      @default("")
-  notes          String      @default("")
-  jobDescription String
-  sentAt         DateTime? // when the user sent (or marked as sent) their resume to the vendor
-  sentTo         String      @default("")
-  submissionId   String?     @unique // the Spreadsheet row made when it was sent
-  submission     Submission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String // the role, e.g. "Senior Java Developer"
+  client           String          @default("")
+  location         String          @default("")
+  rate             String          @default("")
+  vendorCompany    String          @default("")
+  vendorContact    String          @default("")
+  vendorEmail      String          @default("")
+  notes            String          @default("")
+  jobDescription   String
+  tailoredResumeId String? // the resume tailored to this JD (made right after it's saved, or again on request)
+  tailoredResume   TailoredResume? @relation(fields: [tailoredResumeId], references: [id], onDelete: SetNull)
+  sentAt           DateTime? // when the user sent (or marked as sent) their resume to the vendor
+  sentTo           String          @default("")
+  submissionId     String?         @unique // the Spreadsheet row made when it was sent
+  submission       Submission?     @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([userId, createdAt])
+  @@index([tailoredResumeId])
 }
 
 // Mock call preparation for one submission (Spreadsheet > Submission Details > Mock Call Prep):

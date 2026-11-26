@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState, useTransition } from "reac
 import { useRouter } from "next/navigation";
 import { createSubmission, listJobPitches, listJobs, listSubmissions, logout } from "@/lib/client/api";
 import type { JobPosting } from "@/lib/types";
-import { clearTailoringJd, storePendingJob } from "@/lib/client/jobs";
+import { storePendingJob } from "@/lib/client/jobs";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { JobCard } from "./job-card";
@@ -131,7 +131,6 @@ export function JobBoard() {
   ];
 
   function tailorFor(job: JobPosting) {
-    clearTailoringJd();
     storePendingJob({ id: job.id, title: job.title, company: job.company, description: job.description });
     setOpeningId(job.id);
     startNavigation(() => router.push("/dashboard/analyze"));

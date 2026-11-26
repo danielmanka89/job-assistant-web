@@ -1,12 +1,13 @@
-// My JDs (server side): checking what the user typed, and finding each JD's tailored resume.
+// My JDs (server side): checking input, detecting a JD's details, and shaping rows for the page.
 
+import { AiError, extractJdDetails } from "@/lib/ai";
 import { toGeneratedFile } from "@/lib/api";
-import { prisma } from "@/lib/db";
 import { isEmailAddress } from "@/lib/email";
-import type { VendorJd as VendorJdRow } from "@/lib/generated/prisma/client";
+import type { Prisma } from "@/lib/generated/prisma/client";
+import { detectJdDetails, guessTitle, type JdDetails } from "@/lib/jd-details";
 import { VENDOR_JD_MAX_CHARS, VENDOR_JD_MIN_CHARS, type SaveVendorJdRequest, type VendorJd, type VendorJdFields } from "@/lib/types";
 
-const LIMITS: Record<keyof VendorJdFields, number> = {
+export const LIMITS: Record<keyof VendorJdFields, number> = {
   title: 150,
   client: 120,
   location: 120,
@@ -18,14 +19,21 @@ const LIMITS: Record<keyof VendorJdFields, number> = {
 };
 const FIELDS = Object.keys(LIMITS) as (keyof VendorJdFields)[];
 
-/** A role name from the description itself: a "Job Title:" line, or else its first short line. */
-export function guessTitle(description: string): string {
-  const labelled = description.match(/^\s*(?:job\s*title|position|role|title)\s*[:\-–]\s*(.+)$/im)?.[1];
-  const firstLine = description.split(/\n/).map((l) => l.trim()).find(Boolean) ?? "";
-  const pick = (labelled ?? firstLine).replace(/\s+/g, " ").trim();
-  if (!pick) return "Untitled JD";
-  return pick.length > LIMITS.title ? `${pick.slice(0, LIMITS.title - 1).replace(/\s+\S*$/, "")}…` : pick;
-}
+/** What every JD query loads: its tailored resume's files (without their bytes) and keywords. */
+export const JD_INCLUDE = {
+  tailoredResume: {
+    select: {
+      id: true,
+      sourceResumeId: true,
+      finalMatchPercent: true,
+      createdAt: true,
+      gapAnalysis: { select: { matchedKeywords: true, missingKeywords: true } },
+      files: { omit: { data: true }, orderBy: { createdAt: "asc" } },
+    },
+  },
+} satisfies Prisma.VendorJdInclude;
+
+export type JdRow = Prisma.VendorJdGetPayload<{ include: typeof JD_INCLUDE }>;
 
 export function descriptionError(value: string): string | undefined {
   if (!value) return "Paste the job description";
@@ -36,7 +44,7 @@ export function descriptionError(value: string): string | undefined {
 
 /**
  * The fields present in a create/update body, trimmed and checked. With `creating`, the description
- * is required and a missing title is taken from the description.
+ * is required; the other fields may be left out and are detected from it.
  */
 export function readVendorJdInput(
   body: Record<string, unknown>,
@@ -65,63 +73,67 @@ export function readVendorJdInput(
     else data.jobDescription = description;
   }
 
-  if (data.title === "") {
-    if (creating) delete data.title;
-    else fieldErrors.title = "Give the role a name";
-  }
-  if (creating && !data.title && data.jobDescription) data.title = guessTitle(data.jobDescription);
+  if (!creating && data.title === "") fieldErrors.title = "Give the role a name";
   return { data, fieldErrors };
 }
 
 /**
- * The JDs as the page shows them. A JD's tailored resume is the newest one made from a match of
- * this exact description (the analyze page trims the text the same way).
+ * The JD's details, read by the AI (or, if it isn't available, by simple patterns), cut to the
+ * field limits. A detected email that isn't valid is dropped.
  */
-export async function toVendorJds(userId: string, rows: VendorJdRow[]): Promise<VendorJd[]> {
-  const descriptions = [...new Set(rows.map((r) => r.jobDescription.trim()))];
-  const tailored = descriptions.length
-    ? await prisma.tailoredResume.findMany({
-        where: { userId, gapAnalysis: { jobDescription: { in: descriptions } } },
-        select: {
-          id: true,
-          sourceResumeId: true,
-          finalMatchPercent: true,
-          createdAt: true,
-          gapAnalysis: { select: { jobDescription: true } },
-          files: { omit: { data: true }, orderBy: { createdAt: "asc" } },
-        },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
-  const newest = new Map<string, (typeof tailored)[number]>();
-  for (const t of tailored) if (!newest.has(t.gapAnalysis.jobDescription)) newest.set(t.gapAnalysis.jobDescription, t);
+export async function detectDetails(description: string): Promise<JdDetails> {
+  let found: JdDetails;
+  try {
+    found = await extractJdDetails(description);
+  } catch (error) {
+    if (!(error instanceof AiError)) throw error;
+    console.error("JD detail detection fell back to patterns", error.reason);
+    found = detectJdDetails(description);
+  }
+  const fit = (key: keyof JdDetails) => {
+    const value = found[key].trim();
+    return value.length > LIMITS[key] ? `${value.slice(0, LIMITS[key] - 1)}…` : value;
+  };
+  const vendorEmail = fit("vendorEmail");
+  return {
+    title: fit("title") || guessTitle(description),
+    client: fit("client"),
+    location: fit("location"),
+    rate: fit("rate"),
+    vendorCompany: fit("vendorCompany"),
+    vendorContact: fit("vendorContact"),
+    vendorEmail: isEmailAddress(vendorEmail) ? vendorEmail : "",
+  };
+}
 
-  return rows.map((row) => {
-    const t = newest.get(row.jobDescription.trim());
-    return {
-      id: row.id,
-      title: row.title,
-      client: row.client,
-      location: row.location,
-      rate: row.rate,
-      vendorCompany: row.vendorCompany,
-      vendorContact: row.vendorContact,
-      vendorEmail: row.vendorEmail,
-      notes: row.notes,
-      jobDescription: row.jobDescription,
-      sentAt: row.sentAt?.toISOString() ?? null,
-      sentTo: row.sentTo,
-      submissionId: row.submissionId,
-      tailored: t
-        ? {
-            id: t.id,
-            finalMatchPercent: t.finalMatchPercent,
-            createdAt: t.createdAt.toISOString(),
-            files: t.files.map((f) => toGeneratedFile(f, t.sourceResumeId)),
-          }
-        : null,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    };
-  });
+/** A JD as the page shows it. */
+export function toVendorJd(row: JdRow): VendorJd {
+  const t = row.tailoredResume;
+  return {
+    id: row.id,
+    title: row.title,
+    client: row.client,
+    location: row.location,
+    rate: row.rate,
+    vendorCompany: row.vendorCompany,
+    vendorContact: row.vendorContact,
+    vendorEmail: row.vendorEmail,
+    notes: row.notes,
+    jobDescription: row.jobDescription,
+    sentAt: row.sentAt?.toISOString() ?? null,
+    sentTo: row.sentTo,
+    submissionId: row.submissionId,
+    tailored: t
+      ? {
+          id: t.id,
+          finalMatchPercent: t.finalMatchPercent,
+          createdAt: t.createdAt.toISOString(),
+          matchedKeywords: t.gapAnalysis.matchedKeywords as string[],
+          missingKeywords: t.gapAnalysis.missingKeywords as string[],
+          files: t.files.map((f) => toGeneratedFile(f, t.sourceResumeId)),
+        }
+      : null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }

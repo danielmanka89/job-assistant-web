@@ -1,12 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { analyzeGap } from "@/lib/ai";
-import { aiErrorResponse, apiError, jobDescriptionError, readJsonObject, toResume } from "@/lib/api";
+import { AiError } from "@/lib/ai";
+import { aiErrorResponse, apiError, jobDescriptionError, readJsonObject } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { withProfile } from "@/lib/profile";
-import { getProfileValues } from "@/lib/profile-store";
 import { matchPercent } from "@/lib/skills";
-import type { GapAnalysisResponse } from "@/lib/types";
+import { createGapAnalysis } from "@/lib/tailoring";
+import type { GapAnalysisResponse, SuggestedBullet } from "@/lib/types";
 
 /**
  * POST /api/gap-analysis — compares one of the user's resumes with a pasted job description.
@@ -32,36 +31,29 @@ export async function POST(request: NextRequest) {
   const row = await prisma.resume.findFirst({ where: { id: resumeId, userId: user.id } });
   if (!row) return apiError(404, "RESUME_NOT_FOUND", "Resume not found");
 
-  let result;
+  let analysis;
   try {
     // The profile's skills count as the candidate's, so they match job keywords too.
-    result = await analyzeGap(withProfile(toResume(row), await getProfileValues(user.id)), jobDescription);
+    analysis = await createGapAnalysis(user.id, row, jobDescription);
   } catch (error) {
-    console.error("gap analysis failed", error);
-    return aiErrorResponse(error, {
-      code: "ANALYSIS_FAILED",
-      message: "We couldn't analyze this job description. Please try again.",
-    });
-  }
-
-  try {
-    const analysis = await prisma.gapAnalysis.create({
-      data: {
-        userId: user.id,
-        resumeId: row.id,
-        jobDescription,
-        matchedKeywords: result.matchedKeywords,
-        missingKeywords: result.missingKeywords,
-        suggestedBullets: result.suggestedBullets as object[],
-      },
-    });
-    return NextResponse.json<GapAnalysisResponse>({
-      id: analysis.id,
-      ...result,
-      matchPercent: matchPercent(result.matchedKeywords.length, result.missingKeywords.length),
-    });
-  } catch (error) {
+    if (error instanceof AiError) {
+      console.error("gap analysis failed", error);
+      return aiErrorResponse(error, {
+        code: "ANALYSIS_FAILED",
+        message: "We couldn't analyze this job description. Please try again.",
+      });
+    }
     console.error("saving gap analysis failed", error);
     return apiError(500, "INTERNAL_ERROR", "Something went wrong. Please try again.");
   }
+
+  const matchedKeywords = analysis.matchedKeywords as string[];
+  const missingKeywords = analysis.missingKeywords as string[];
+  return NextResponse.json<GapAnalysisResponse>({
+    id: analysis.id,
+    matchedKeywords,
+    missingKeywords,
+    suggestedBullets: analysis.suggestedBullets as unknown as SuggestedBullet[],
+    matchPercent: matchPercent(matchedKeywords.length, missingKeywords.length),
+  });
 }

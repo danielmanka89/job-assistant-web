@@ -3,19 +3,30 @@ import { apiError, readJsonObject } from "@/lib/api";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canSend } from "@/lib/email";
-import { readVendorJdInput, toVendorJds } from "@/lib/vendor-jds";
+import { JD_INCLUDE, detectDetails, readVendorJdInput, toVendorJd } from "@/lib/vendor-jds";
 import { MAX_VENDOR_JDS, type VendorJd, type VendorJdListResponse } from "@/lib/types";
 
-/** GET /api/jds — the JDs vendors sent you (My JDs), newest first, each with its tailored resume if any. */
+export const maxDuration = 60;
+
+/** GET /api/jds — the JDs vendors sent you (My JDs), newest first, each with its tailored resume. */
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to see your JDs");
 
-  const rows = await prisma.vendorJd.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: MAX_VENDOR_JDS });
-  return NextResponse.json<VendorJdListResponse>({ jds: await toVendorJds(user.id, rows), canSendEmail: canSend() });
+  const rows = await prisma.vendorJd.findMany({
+    where: { userId: user.id },
+    include: JD_INCLUDE,
+    orderBy: { createdAt: "desc" },
+    take: MAX_VENDOR_JDS,
+  });
+  return NextResponse.json<VendorJdListResponse>({ jds: rows.map(toVendorJd), canSendEmail: canSend() });
 }
 
-/** POST /api/jds { jobDescription, title?, client?, … } — saves a JD. A missing title is read from the text. */
+/**
+ * POST /api/jds { jobDescription, title?, client?, … } — saves a JD. The role, client, location, rate
+ * and vendor details are detected from the text; anything typed in wins over what's detected.
+ * The page then asks for the tailored resume (POST /api/jds/:id/tailor).
+ */
 export async function POST(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in to save a JD");
@@ -30,9 +41,12 @@ export async function POST(request: NextRequest) {
     return apiError(409, "TOO_MANY_JDS", `You can keep up to ${MAX_VENDOR_JDS} JDs. Delete some old ones first.`);
   }
 
+  const jobDescription = data.jobDescription!;
+  const detected = await detectDetails(jobDescription);
+  const typed = Object.fromEntries(Object.entries(data).filter(([, v]) => v));
   const row = await prisma.vendorJd.create({
-    data: { ...data, userId: user.id, title: data.title!, jobDescription: data.jobDescription! },
+    data: { ...detected, ...typed, userId: user.id, jobDescription },
+    include: JD_INCLUDE,
   });
-  const [jd] = await toVendorJds(user.id, [row]);
-  return NextResponse.json<VendorJd>(jd, { status: 201 });
+  return NextResponse.json<VendorJd>(toVendorJd(row), { status: 201 });
 }

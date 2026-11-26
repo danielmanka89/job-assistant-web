@@ -6,7 +6,7 @@ import { EmailServiceError, canSend, emailDomain, ensureMailboxName, isEmailAddr
 import { jobTypesOf } from "@/lib/job-types";
 import { getProfileValues } from "@/lib/profile-store";
 import { prefillSubmission } from "@/lib/spreadsheet";
-import { toVendorJds } from "@/lib/vendor-jds";
+import { JD_INCLUDE, toVendorJd, type JdRow } from "@/lib/vendor-jds";
 import { MAX_EMAILS_PER_DAY, MAX_EMAIL_BODY_CHARS, MAX_EMAIL_SUBJECT_CHARS, type VendorJd } from "@/lib/types";
 
 type Context = { params: Promise<{ id: string }> };
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", { mode: 'Use "email" or "mark"' });
   }
 
-  const row = await prisma.vendorJd.findFirst({ where: { id, userId: user.id } });
+  const row = await prisma.vendorJd.findFirst({ where: { id, userId: user.id }, include: JD_INCLUDE });
   if (!row) return apiError(404, "JD_NOT_FOUND", "That JD isn't saved anymore");
 
   const to = typeof body.to === "string" ? body.to.trim().toLowerCase() : row.vendorEmail;
@@ -56,8 +56,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     if (Object.keys(fieldErrors).length) return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", fieldErrors);
 
     // Only the files of this JD's own tailored resume can be attached.
-    const [jd] = await toVendorJds(user.id, [row]);
-    const allowed = new Set(jd.tailored?.files.map((f) => f.id) ?? []);
+    const allowed = new Set(row.tailoredResume?.files.map((f) => f.id) ?? []);
     if (fileIds.some((f) => !allowed.has(f))) {
       return apiError(400, "VALIDATION_ERROR", "Please fix the highlighted fields", { fileIds: "Tailor your resume for this JD first" });
     }
@@ -108,21 +107,21 @@ export async function POST(request: NextRequest, { params }: Context) {
   }
 
   const submissionId = row.submissionId ?? (await addSpreadsheetRow(user.id, row));
-  const saved = await prisma.vendorJd.update({ where: { id: row.id }, data: { sentAt: new Date(), sentTo: to, submissionId } });
-  const [jd] = await toVendorJds(user.id, [saved]);
-  return NextResponse.json<VendorJd>(jd);
+  const saved = await prisma.vendorJd.update({
+    where: { id: row.id },
+    data: { sentAt: new Date(), sentTo: to, submissionId },
+    include: JD_INCLUDE,
+  });
+  return NextResponse.json<VendorJd>(toVendorJd(saved));
 }
 
 /** A Spreadsheet row for the JD, filled in like an Apply from the job board. Null when the sheet is full. */
-async function addSpreadsheetRow(userId: string, jd: NonNullable<Awaited<ReturnType<typeof prisma.vendorJd.findFirst>>>) {
+async function addSpreadsheetRow(userId: string, jd: JdRow) {
   if ((await prisma.submission.count({ where: { userId } })) >= MAX_SUBMISSIONS) return null;
   const [resume, analysis, profile] = await Promise.all([
     prisma.resume.findFirst({ where: { userId }, orderBy: { updatedAt: "desc" } }),
-    prisma.gapAnalysis.findFirst({
-      where: { userId, jobDescription: jd.jobDescription.trim() },
-      orderBy: { createdAt: "desc" },
-      select: { matchedKeywords: true, missingKeywords: true },
-    }),
+    // The match from this JD's own tailoring, if it has one.
+    jd.tailoredResume?.gapAnalysis ?? null,
     getProfileValues(userId),
   ]);
   const cells = prefillSubmission(
