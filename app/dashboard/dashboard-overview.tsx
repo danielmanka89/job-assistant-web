@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ApiError, ChatConversation, DashboardStats, DeadlineItem, GeneratedFile, Submission, TailoredResumeWithFiles, VendorJd } from "@/lib/types";
-import { getDashboardStats, listChats, listDeadlines, listSubmissions, listTailoredResumes, listVendorJds, logout, updateDeadline } from "@/lib/client/api";
+import { getDashboardStats, listChats, listDeadlines, listSubmissions, listTailoredResumes, listVendorJds, logout } from "@/lib/client/api";
 import { appliedCounts, daysBetween, localDate, nextDeadline, relativeDay, visibleDeadlines } from "@/lib/deadlines";
+import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { ErrorAlert } from "@/components/ui/alert";
-import { OrbButton, OrbLink } from "@/components/ui/orb";
+import { OrbLink } from "@/components/ui/orb";
 import { RingAvatar } from "@/components/ui/ring-avatar";
 
-// The Dashboard home (Gray Glass design): a big card with this month's numbers, the next deadline,
-// then your tailored resumes, your chats and where your JDs are. Works in every theme color.
+// The Dashboard home (Command Center): your numbers on the left, today's queue and your resumes in
+// the middle, your chats on the right. Works in every theme color.
 
 type Load<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string };
 
@@ -31,11 +32,12 @@ export function DashboardOverview() {
   const [resumes, setResumes] = useState<Load<TailoredResumeWithFiles[]>>({ status: "loading" });
   const [applications, setApplications] = useState<Load<Submission[]>>({ status: "loading" });
   const [jds, setJds] = useState<VendorJd[] | null>(null);
+  const [deadlines, setDeadlines] = useState<DeadlineItem[] | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getDashboardStats(), listTailoredResumes(), listSubmissions(), listVendorJds()]).then(async ([s, r, a, j]) => {
+    Promise.all([getDashboardStats(), listTailoredResumes(), listSubmissions(), listVendorJds(), listDeadlines()]).then(async ([s, r, a, j, d]) => {
       if (!active) return;
       if ([s, r, a].some((result) => !result.ok && isUnauthorized(result.error))) {
         await logout();
@@ -46,6 +48,7 @@ export function DashboardOverview() {
       setResumes(r.ok ? { status: "ready", data: r.data } : { status: "error", message: r.error.message });
       setApplications(a.ok ? { status: "ready", data: a.data } : { status: "error", message: a.error.message });
       setJds(j.ok ? j.data.jds : []);
+      setDeadlines(d.ok ? d.data : []);
     });
     return () => {
       active = false;
@@ -63,26 +66,6 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl dark:text-white">
-            {firstName ? `${greeting()}, ${firstName}` : "Dashboard"}
-          </h1>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your resumes, your JDs and what&apos;s next.</p>
-        </div>
-        <nav aria-label="Dashboard views" className="pill-glass flex gap-1 rounded-full p-1 text-sm font-medium">
-          <Link href="/dashboard" aria-current="page" className="pill-seg-on rounded-full px-4 py-2 sm:px-5">
-            Overview
-          </Link>
-          <Link href="/dashboard/jds" className="pill-seg-off rounded-full px-4 py-2 transition hover:opacity-80 sm:px-5">
-            My JDs
-          </Link>
-          <Link href="/dashboard/chat?tab=people" className="pill-seg-off rounded-full px-4 py-2 transition hover:opacity-80 sm:px-5">
-            Vendors
-          </Link>
-        </nav>
-      </header>
-
       {(stats.status === "error" || resumes.status === "error") && (
         <div className="space-y-3">
           <ErrorAlert>{stats.status === "error" ? stats.message : resumes.status === "error" ? resumes.message : null}</ErrorAlert>
@@ -92,23 +75,35 @@ export function DashboardOverview() {
         </div>
       )}
 
-      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <HeroCard stats={stats} resumes={resumes} applications={applications} jds={jds} />
-        <NextDeadlineCard />
-      </div>
+      {/* Command center: your numbers | today's queue and resumes | chat. Stacks on phones. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_19rem]">
+        <NumbersColumn stats={stats} resumes={resumes} applications={applications} jds={jds} deadlines={deadlines} />
 
-      <div className="grid items-start gap-5 lg:grid-cols-3">
-        <section aria-labelledby="my-resumes" className="min-w-0">
-          <h2 id="my-resumes" className={sectionTitle}>
-            My resumes
-          </h2>
-          <div className="mt-3">
-            {resumes.status === "loading" && <ResumeListSkeleton />}
-            {resumes.status === "ready" && (resumes.data.length ? <ResumeList items={resumes.data} /> : <EmptyState />)}
+        <section aria-label="Today" className={`${card} order-1 min-w-0 space-y-6 p-5 sm:p-6 lg:order-none`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+                {firstName ? `${greeting()}, ${firstName}` : "Dashboard"}
+              </h1>
+              <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Here&apos;s what to do next.</p>
+            </div>
+            <OrbLink href="/dashboard/jds" label="Add a JD" tone="teal" icon="plus" />
           </div>
+
+          <TodaysQueue jds={jds} deadlines={deadlines} />
+
+          <section aria-labelledby="my-resumes">
+            <h2 id="my-resumes" className={sectionTitle}>
+              My resumes
+            </h2>
+            <div className="mt-3">
+              {resumes.status === "loading" && <ResumeListSkeleton />}
+              {resumes.status === "ready" && (resumes.data.length ? <ResumeList items={resumes.data} /> : <EmptyState />)}
+            </div>
+          </section>
         </section>
-        <RecentChats />
-        <JobLocations jds={jds} />
+
+        <ChatPanel />
       </div>
     </div>
   );
@@ -119,21 +114,22 @@ function greeting(now = new Date()) {
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
-/* ---------- The big card ---------- */
+/* ---------- Your numbers (left column) ---------- */
 
-const monthName = new Intl.DateTimeFormat(undefined, { month: "long" });
+const monthName = new Intl.DateTimeFormat(undefined, { month: "short" });
 
-/** This month's tailored resumes in big type, with applications, ready-to-send JDs and open jobs under it. */
-function HeroCard({
+function NumbersColumn({
   stats,
   resumes,
   applications,
   jds,
+  deadlines,
 }: {
   stats: Load<DashboardStats>;
   resumes: Load<TailoredResumeWithFiles[]>;
   applications: Load<Submission[]>;
   jds: VendorJd[] | null;
+  deadlines: DeadlineItem[] | null;
 }) {
   // Counted here, not on the server, so "this month" follows the viewer's own calendar.
   const now = new Date();
@@ -141,137 +137,141 @@ function HeroCard({
   const tailored = resumes.status === "ready" ? resumes.data.filter((r) => new Date(r.createdAt).getTime() >= monthStart).length : null;
   const applied = applications.status === "ready" ? appliedCounts(applications.data, now) : null;
   const ready = jds ? jds.filter((j) => j.tailored && !j.sentAt).length : null;
-  const openJobs = stats.status === "ready" ? stats.data.jobs.total : null;
-  const facts: { label: string; value: number | null }[] = [
-    { label: "Applied this week", value: applied?.week ?? null },
-    { label: "Applied this month", value: applied?.month ?? null },
-    { label: "Ready to send", value: ready },
-    { label: "Open jobs", value: openJobs },
+  const match = stats.status === "ready" ? stats.data.averageMatchPercent : null;
+  const tiles: { label: string; value: string | null }[] = [
+    { label: "Applied this month", value: applied ? String(applied.month) : null },
+    { label: "Ready to send", value: ready === null ? null : String(ready) },
+    { label: "Average match", value: stats.status !== "ready" ? null : match === null ? "—" : `${match}%` },
+    { label: "Open jobs", value: stats.status === "ready" ? String(stats.data.jobs.total) : null },
   ];
 
   return (
-    <section
-      aria-labelledby="hero-title"
-      className="relative flex min-h-64 overflow-hidden rounded-3xl bg-[linear-gradient(115deg,var(--color-brand-950)_0%,var(--color-brand-700)_55%,var(--color-brand-400)_100%)] p-6 pb-20 text-white shadow-lg shadow-brand-950/20 sm:p-8 sm:pb-20"
-    >
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col gap-4">
-        <h2 id="hero-title" className="text-sm font-medium text-white/80">
-          Resumes tailored in {monthName.format(now)}
-        </h2>
-        <p className="text-7xl leading-none font-light tracking-tight tabular-nums">
-          {tailored ?? <span className="inline-block h-16 w-20 animate-pulse rounded-xl bg-white/15 align-bottom" aria-label="Loading" />}
-        </p>
-        <dl className="flex flex-wrap gap-x-6 gap-y-3">
-          {facts.map((f) => (
-            <div key={f.label}>
-              <dt className="text-xs text-white/70">{f.label}</dt>
-              <dd className="text-xl font-semibold tabular-nums">{f.value ?? "—"}</dd>
-            </div>
-          ))}
-        </dl>
+    <aside aria-label="Your numbers" className="order-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:order-none lg:grid-cols-1">
+      <div className="col-span-2 rounded-3xl bg-[linear-gradient(140deg,var(--color-brand-950),var(--color-brand-600))] p-5 text-white shadow-lg shadow-brand-950/20 sm:col-span-3 lg:col-span-1">
+        <p className="text-xs text-white/75">Tailored in {monthName.format(now)}</p>
+        <p className="mt-1 text-5xl leading-none font-light tabular-nums">{tailored ?? "—"}</p>
       </div>
-      <ResumeArt />
-      <div className="absolute right-5 bottom-5 z-10 flex gap-3">
-        <OrbLink href="/dashboard/jds" label="Add a JD" tone="teal" icon="plus" size="lg" onDark />
-        <OrbLink href="/dashboard/spreadsheet" label="See everything in the Spreadsheet" tone="silver" icon="arrow" size="lg" onDark />
-      </div>
-    </section>
-  );
-}
-
-/** A resume page with a green check and a dashed flight path: the big card's picture. */
-function ResumeArt() {
-  return (
-    <svg viewBox="0 0 240 200" className="mono-grayscale pointer-events-none hidden h-48 w-auto shrink-0 self-center sm:block" aria-hidden="true">
-      <rect x="40" y="30" width="110" height="140" rx="12" fill="#fff" fillOpacity=".22" transform="rotate(-10 95 100)" />
-      <rect x="60" y="24" width="112" height="146" rx="12" fill="#fff" fillOpacity=".92" />
-      <rect x="76" y="44" width="52" height="7" rx="3.5" className="fill-brand-700" />
-      <rect x="76" y="58" width="80" height="6" rx="3" fill="#dfe1e7" />
-      <rect x="76" y="72" width="70" height="6" rx="3" fill="#dfe1e7" />
-      <rect x="76" y="86" width="76" height="6" rx="3" className="fill-brand-200" />
-      <rect x="76" y="100" width="60" height="6" rx="3" fill="#dfe1e7" />
-      <path d="M150 120l46-28" stroke="#fff" strokeWidth="3" strokeDasharray="4 6" />
-      <path d="M196 72l24 10-10 4-4 10z" fill="#ffd36e" />
-      <circle cx="96" cy="150" r="16" fill="#22c58b" />
-      <path d="m88 150 6 6 10-11" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/* ---------- Next deadline ---------- */
-
-/** The soonest open deadline from the tracker, with a ring that fills over its last week. */
-function NextDeadlineCard() {
-  const [items, setItems] = useState<DeadlineItem[] | null | "error">(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    listDeadlines().then((result) => {
-      if (active) setItems(result.ok ? result.data : "error");
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const today = localDate(new Date());
-  const visible = Array.isArray(items) ? visibleDeadlines(items, today) : [];
-  const next = nextDeadline(visible);
-  const others = visible.filter((i) => !i.done && i.dueOn && i !== next).length;
-  const days = next?.dueOn ? daysBetween(today, next.dueOn) : null;
-  // Full when due (or late); empty a week out.
-  const fill = days === null ? 0 : Math.min(1, Math.max(0, 1 - days / 7));
-
-  async function markDone(item: DeadlineItem) {
-    setBusy(true);
-    const result = await updateDeadline(item.id, true);
-    setBusy(false);
-    if (result.ok) setItems((list) => (Array.isArray(list) ? list.map((i) => (i.id === item.id ? result.data : i)) : list));
-  }
-
-  return (
-    <section aria-labelledby="next-deadline" className={`${card} flex flex-col gap-3 p-6`}>
-      <h2 id="next-deadline" className={sectionTitle}>
-        Next deadline
-      </h2>
-      {items === null ? (
-        <div className="space-y-3" aria-busy="true">
-          <span className="block h-12 w-24 animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-800" />
-          <span className="block h-4 w-3/4 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
+      {tiles.map((t) => (
+        <div key={t.label} className={`${card} px-4 py-3`}>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">{t.label}</p>
+          {t.value === null ? (
+            <span className="mt-1 block h-6 w-10 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
+          ) : (
+            <p className="text-2xl font-bold text-neutral-900 tabular-nums dark:text-white">{t.value}</p>
+          )}
         </div>
-      ) : items === "error" ? (
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">Deadlines couldn&apos;t be loaded right now.</p>
-      ) : !next?.dueOn ? (
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">Nothing due. Add a deadline from the tracker at the bottom of the menu.</p>
+      ))}
+      <NextUp deadlines={deadlines} />
+      <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+        <SidebarClocks />
+      </div>
+    </aside>
+  );
+}
+
+/** The soonest open deadline as a small peach card. */
+function NextUp({ deadlines }: { deadlines: DeadlineItem[] | null }) {
+  const today = localDate(new Date());
+  const next = deadlines ? nextDeadline(visibleDeadlines(deadlines, today)) : null;
+  if (!next?.dueOn) return null;
+  const body = (
+    <>
+      <p className="text-[11px] font-bold tracking-wider text-orange-800 uppercase dark:text-orange-200">Next · {relativeDay(next.dueOn, today)}</p>
+      <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">{next.title}</p>
+    </>
+  );
+  const cls = "col-span-2 block rounded-3xl bg-orange-100 px-4 py-3 sm:col-span-1 lg:col-span-1 dark:bg-orange-500/15";
+  return next.href ? (
+    <Link href={next.href} className={`${cls} outline-none hover:brightness-[1.03] focus-visible:ring-4 focus-visible:ring-brand-500/40`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
+  );
+}
+
+/* ---------- Today's queue ---------- */
+
+type QueueItem = { key: string; dot: string; title: string; detail: string; action: string; href: string; primary: boolean };
+
+/**
+ * What to do next, in order: JDs tailored and ready to send, deadlines in the coming week, then JDs
+ * still waiting to be tailored. Each row has the one button that does it.
+ */
+function TodaysQueue({ jds, deadlines }: { jds: VendorJd[] | null; deadlines: DeadlineItem[] | null }) {
+  if (jds === null || deadlines === null) {
+    return (
+      <div className="space-y-2.5" aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="block h-16 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800" />
+        ))}
+      </div>
+    );
+  }
+  const today = localDate(new Date());
+  const pct = (jd: VendorJd) => (jd.tailored?.finalMatchPercent === null || jd.tailored?.finalMatchPercent === undefined ? "" : ` · ${jd.tailored.finalMatchPercent}% match`);
+  const where = (jd: VendorJd) => [jd.vendorCompany, jd.location].filter(Boolean).join(" · ");
+  const items: QueueItem[] = [
+    ...jds
+      .filter((jd) => jd.tailored && !jd.sentAt)
+      .map((jd) => ({ key: `send-${jd.id}`, dot: "bg-blue-600", title: jd.title, detail: `${where(jd)}${pct(jd)} · ready to send`, action: "Send", href: "/dashboard/jds", primary: true })),
+    ...visibleDeadlines(deadlines, today)
+      .filter((d) => !d.done && d.dueOn && daysBetween(today, d.dueOn) <= 7)
+      .map((d) => ({
+        key: `due-${d.id}`,
+        dot: d.kind === "interview" ? "bg-rose-500" : "bg-amber-500",
+        title: d.title,
+        detail: `${relativeDay(d.dueOn!, today)} · ${d.detail}`,
+        action: d.kind === "interview" ? "Prep" : "Open",
+        href: d.href ?? "/dashboard/spreadsheet",
+        primary: false,
+      })),
+    ...jds
+      .filter((jd) => !jd.tailored)
+      .map((jd) => ({ key: `tailor-${jd.id}`, dot: "bg-neutral-400", title: jd.title, detail: `${where(jd)} · not tailored yet`, action: "Tailor", href: "/dashboard/jds", primary: false })),
+  ].slice(0, 6);
+
+  return (
+    <section aria-labelledby="queue-title">
+      <h2 id="queue-title" className={sectionTitle}>
+        Today&apos;s queue
+      </h2>
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+          You&apos;re all caught up.{" "}
+          <Link href="/dashboard/jds" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+            Add a JD
+          </Link>{" "}
+          when a vendor sends one.
+        </p>
       ) : (
-        <>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">{relativeDay(next.dueOn, today)}</p>
-            <svg viewBox="0 0 80 80" className="size-18 shrink-0 -rotate-90" aria-hidden="true">
-              <circle cx="40" cy="40" r="32" fill="none" strokeWidth="9" className="stroke-neutral-200 dark:stroke-white/10" />
-              <circle cx="40" cy="40" r="32" fill="none" strokeWidth="9" strokeLinecap="round" strokeDasharray={`${fill * 201} 201`} className="stroke-brand-600 dark:stroke-brand-300" />
-            </svg>
-          </div>
-          <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
-            <span className="font-semibold text-neutral-900 dark:text-white">{next.title}.</span> {next.detail}
-          </p>
-          <div className="mt-auto flex items-center gap-3 pt-2">
-            <span className="flex-1 text-xs text-neutral-500 dark:text-neutral-400">
-              {others ? `${others} more coming up` : "Nothing else coming up"}
-            </span>
-            {next.kind === "custom" && <OrbButton label="Mark done" tone="pink" icon="check" disabled={busy} onClick={() => void markDone(next)} />}
-            {next.href && <OrbLink href={next.href} label="Open" tone="silver" icon="arrow" />}
-          </div>
-        </>
+        <ul className="mt-3 space-y-2.5">
+          {items.map((item) => (
+            <li key={item.key} className="flex items-center gap-3.5 rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-white/5">
+              <span className={`size-2.5 shrink-0 rounded-full ${item.dot}`} aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-neutral-900 dark:text-white">{item.title}</span>
+                <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{item.detail}</span>
+              </span>
+              <Link
+                href={item.href}
+                className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 ${
+                  item.primary ? "pill-seg-on" : "border border-neutral-300 text-neutral-800 hover:bg-white dark:border-white/15 dark:text-neutral-100 dark:hover:bg-white/10"
+                }`}
+              >
+                {item.action}
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
 }
 
-/* ---------- Recent chats ---------- */
+/* ---------- Chat (right column) ---------- */
 
-const RECENT_CHATS = 4;
+const RECENT_CHATS = 5;
 const chatTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 const chatDay = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
@@ -282,8 +282,8 @@ function shortTime(iso: string) {
   return d.toDateString() === new Date().toDateString() ? chatTime.format(d) : chatDay.format(d);
 }
 
-/** The most recent conversations as glass pills, each picture in its owner's ring (dim when they're away). */
-function RecentChats() {
+/** A dark panel with your latest chats; each picture in its owner's ring, dim when they're away. */
+function ChatPanel() {
   const [chats, setChats] = useState<ChatConversation[] | null | "error">(null);
 
   useEffect(() => {
@@ -298,126 +298,61 @@ function RecentChats() {
   }, []);
 
   return (
-    <section aria-labelledby="recent-chats" className="min-w-0">
+    <section
+      aria-labelledby="chat-title"
+      className="order-3 flex flex-col gap-4 rounded-3xl lg:order-none xl:min-h-80 bg-[rgb(24_32_37/0.88)] p-5 text-neutral-100 shadow-lg backdrop-blur-xl lg:col-span-2 xl:col-span-1 dark:bg-white/5"
+    >
       <div className="flex items-center justify-between">
-        <h2 id="recent-chats" className={sectionTitle}>
-          Chats
+        <h2 id="chat-title" className="text-[15px] font-semibold">
+          Chat
         </h2>
-        <OrbLink href="/dashboard/chat" label="Open Chat" tone="teal" icon="arrow" size="sm" />
+        <OrbLink href="/dashboard/chat" label="Open Chat" tone="teal" icon="arrow" size="sm" onDark />
       </div>
-      <div className="mt-3">
-        {chats === null ? (
-          <div className="space-y-2.5" aria-busy="true">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="block h-14 animate-pulse rounded-full bg-neutral-100 dark:bg-neutral-800" />
-            ))}
-          </div>
-        ) : chats === "error" ? (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">Chats couldn&apos;t be loaded right now.</p>
-        ) : chats.length === 0 ? (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            No chats yet.{" "}
-            <Link href="/dashboard/chat" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
-              Connect with someone
-            </Link>{" "}
-            to start one.
-          </p>
-        ) : (
-          <ul className="space-y-2.5">
-            {chats.map((chat) => (
-              <li key={chat.id}>
-                <Link
-                  href={`/dashboard/chat?c=${encodeURIComponent(chat.id)}`}
-                  className="pill-glass flex items-center gap-3 rounded-full py-1.5 pr-4 pl-1.5 outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40"
-                >
-                  <RingAvatar name={chat.person.name} photoUrl={chat.person.photoUrl} ring={chat.person.ring} online={chat.person.online} className="size-11" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-2">
-                      <span className={`truncate text-sm text-neutral-900 dark:text-white ${chat.unread ? "font-bold" : "font-semibold"}`}>{chat.person.name}</span>
-                      <span className="ml-auto shrink-0 text-[11px] text-neutral-500 tabular-nums dark:text-neutral-400">{shortTime(chat.lastMessageAt)}</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className={`truncate text-xs ${chat.unread ? "text-neutral-800 dark:text-neutral-200" : "text-neutral-500 dark:text-neutral-400"}`}>
-                        {chat.lastMessage ?? "No messages yet"}
-                      </span>
-                      {chat.unread > 0 && (
-                        <span className="ml-auto shrink-0 rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-semibold text-white tabular-nums">
-                          {chat.unread > 99 ? "99+" : chat.unread}
-                          <span className="sr-only"> unread</span>
-                        </span>
-                      )}
-                    </span>
+      {chats === null ? (
+        <div className="space-y-3" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className="block h-11 animate-pulse rounded-full bg-white/10" />
+          ))}
+        </div>
+      ) : chats === "error" ? (
+        <p className="text-sm text-neutral-300">Chats couldn&apos;t be loaded right now.</p>
+      ) : chats.length === 0 ? (
+        <p className="text-sm text-neutral-300">
+          No chats yet.{" "}
+          <Link href="/dashboard/chat" className="font-semibold text-white underline-offset-2 hover:underline">
+            Connect with someone
+          </Link>{" "}
+          to start one.
+        </p>
+      ) : (
+        <ul className="space-y-1">
+          {chats.map((chat) => (
+            <li key={chat.id}>
+              <Link
+                href={`/dashboard/chat?c=${encodeURIComponent(chat.id)}`}
+                className="flex items-center gap-3 rounded-2xl p-2 outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/60"
+              >
+                <RingAvatar name={chat.person.name} photoUrl={chat.person.photoUrl} ring={chat.person.ring} online={chat.person.online} className="size-10" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className={`truncate text-sm ${chat.unread ? "font-bold text-white" : "font-semibold"}`}>{chat.person.name}</span>
+                    <span className="ml-auto shrink-0 text-[11px] text-neutral-400 tabular-nums">{shortTime(chat.lastMessageAt)}</span>
                   </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Where your jobs are ---------- */
-
-/** "Dallas, TX (Hybrid)" -> "TX"; "Remote" stays "Remote"; anything else is kept as typed. */
-function placeOf(location: string): string {
-  const text = location.replace(/\(.*?\)/g, "").trim();
-  if (!text) return "";
-  if (/remote/i.test(text)) return "Remote";
-  const state = text.match(/,\s*([A-Z]{2})\b/);
-  return state ? state[1] : text;
-}
-
-/** The top places across your JDs, on a dotted map card. */
-function JobLocations({ jds }: { jds: VendorJd[] | null }) {
-  const counts = new Map<string, number>();
-  for (const jd of jds ?? []) {
-    const place = placeOf(jd.location);
-    if (place) counts.set(place, (counts.get(place) ?? 0) + 1);
-  }
-  const total = [...counts.values()].reduce((a, b) => a + b, 0);
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-  return (
-    <section aria-labelledby="job-places" className="min-w-0">
-      <h2 id="job-places" className={sectionTitle}>
-        Where your JDs are
-      </h2>
-      <div
-        className={`${card} relative mt-3 h-52 overflow-hidden bg-[radial-gradient(rgb(var(--brand-glow)/0.22)_1.6px,transparent_1.8px)] [background-size:11px_11px] p-4`}
-      >
-        {jds === null ? (
-          <span className="block h-full animate-pulse rounded-2xl bg-neutral-100/60 dark:bg-neutral-800/60" aria-busy="true" />
-        ) : top.length === 0 ? (
-          <p className="relative max-w-56 rounded-2xl bg-white/90 p-3 text-sm text-neutral-600 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-300">
-            Add JDs in{" "}
-            <Link href="/dashboard/jds" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
-              My JDs
-            </Link>{" "}
-            to see where your jobs are.
-          </p>
-        ) : (
-          <>
-            <span aria-hidden="true" className="absolute top-[58%] left-[24%] grid size-13 place-items-center rounded-full bg-brand-500/20">
-              <span className="size-3 rounded-full border-[3px] border-white bg-brand-600 dark:border-neutral-900" />
-            </span>
-            {top.length > 1 && (
-              <span aria-hidden="true" className="absolute top-[40%] left-[74%] grid size-10 place-items-center rounded-full bg-rose-500/20">
-                <span className="size-2.5 rounded-full border-[3px] border-white bg-rose-500 dark:border-neutral-900" />
-              </span>
-            )}
-            <ol className="relative w-fit space-y-1 rounded-2xl bg-white/90 px-3.5 py-2.5 shadow-md dark:bg-neutral-900/90">
-              {top.map(([place, n]) => (
-                <li key={place} className="flex items-baseline gap-3 text-sm">
-                  <span className="font-semibold text-neutral-900 dark:text-white">{place}</span>
-                  <span className="ml-auto text-xs text-neutral-500 tabular-nums dark:text-neutral-400">{Math.round((n / total) * 100)}% of JDs</span>
-                </li>
-              ))}
-            </ol>
-          </>
-        )}
-      </div>
+                  <span className="flex items-center gap-2">
+                    <span className={`truncate text-xs ${chat.unread ? "text-neutral-100" : "text-neutral-400"}`}>{chat.lastMessage ?? "No messages yet"}</span>
+                    {chat.unread > 0 && (
+                      <span className="ml-auto shrink-0 rounded-full bg-blue-600 px-1.5 py-px text-[10px] font-semibold text-white tabular-nums">
+                        {chat.unread > 99 ? "99+" : chat.unread}
+                        <span className="sr-only"> unread</span>
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

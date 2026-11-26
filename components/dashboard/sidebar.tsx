@@ -143,7 +143,10 @@ const SETTINGS_ICON = (
 
 const ROLE_LABEL: Record<User["role"], string> = { SEEKER: "Job Seeker", EMPLOYER: "Employer" };
 
-/** Left sidebar on large screens; a top bar with a slide-in menu on phones and tablets. */
+/**
+ * Laptops: a glass bar across the top (menu, deadlines, ON/OFF, light/dark, your account). Phones
+ * and tablets: a deep-colored top bar with a slide-in menu.
+ */
 export function Sidebar() {
   const pathname = usePathname() ?? "";
   // The phone menu remembers the page it was opened on, so navigating closes it.
@@ -186,9 +189,11 @@ export function Sidebar() {
         <div className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-sm lg:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
       )}
 
+      <DesktopTopBar pathname={pathname} user={user} chat={chat} />
+
       <aside
         id="dashboard-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col pt-(--safe-top) pb-(--safe-bottom) text-white transition-transform duration-200 lg:translate-x-0 lg:pb-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col pt-(--safe-top) pb-(--safe-bottom) text-white transition-transform duration-200 lg:hidden ${
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
@@ -209,6 +214,122 @@ export function Sidebar() {
       </aside>
     </>
   );
+}
+
+/** The laptop menu: one glass bar across the top of every dashboard page. */
+function DesktopTopBar({ pathname, user, chat }: { pathname: string; user: User | null | undefined; chat: ChatSummary | null }) {
+  const router = useRouter();
+  const items = NAV.filter((item) => !item.employerOnly || user?.role === "EMPLOYER");
+
+  async function signOut() {
+    await logout();
+    router.replace("/");
+  }
+
+  return (
+    <header className="pill-glass fixed inset-x-3 top-3 z-40 hidden h-(--topbar-inner-h) items-center gap-3 rounded-full py-2 pr-2 pl-3 lg:flex">
+      <Logo className="shrink-0 [&>span:last-child]:hidden 2xl:[&>span:last-child]:inline" />
+      <nav aria-label="Main" className="min-w-0 flex-1">
+        <ul className="flex items-center gap-0.5">
+          {items.map((item) => {
+            const active = item.match(pathname);
+            const count = item.href === "/dashboard/chat" ? chat?.unread : item.href === "/dashboard/inbox" ? chat?.emailUnread : 0;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  title={item.label}
+                  className={`relative flex h-10 items-center gap-2 rounded-full px-3 text-[13px] font-semibold whitespace-nowrap transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 ${
+                    active ? "pill-seg-on" : "pill-seg-off hover:bg-white/40 dark:hover:bg-white/5"
+                  }`}
+                >
+                  {item.icon}
+                  <span className="hidden xl:inline">{item.label}</span>
+                  {count ? (
+                    <span className="absolute -top-0.5 right-0.5 rounded-full bg-brand-600 px-1 text-[9px] leading-4 font-bold text-white tabular-nums xl:static xl:ml-0.5 xl:px-1.5">
+                      {count > 99 ? "99+" : count}
+                      <span className="sr-only"> unread</span>
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+      <DeadlineTracker compact />
+      <PresenceSwitch />
+      <ThemeSwitch />
+      <AccountButton user={user} chat={chat} pathname={pathname} onSignOut={signOut} />
+    </header>
+  );
+}
+
+/** Your ringed picture in the top bar; opens Notifications, Settings and Sign out. */
+function AccountButton({
+  user,
+  chat,
+  pathname,
+  onSignOut,
+}: {
+  user: User | null | undefined;
+  chat: ChatSummary | null;
+  pathname: string;
+  onSignOut: () => void;
+}) {
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === pathname;
+  const boxRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  useDismiss(open, boxRef, () => setOpenOn(null));
+  const waiting = chat?.requests ?? 0;
+  const name = user?.name || "Your account";
+
+  return (
+    <div ref={boxRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpenOn(open ? null : pathname)}
+        disabled={!user}
+        aria-expanded={open}
+        aria-controls={menuId}
+        aria-label={`${name}: notifications and settings${waiting ? `, ${waiting} new` : ""}`}
+        className="relative grid size-11 place-items-center rounded-full outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40"
+      >
+        <RingAvatar name={name} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} ring={user?.ringStyle} className="size-10" />
+        {waiting > 0 && (
+          <span className="absolute -top-1 -right-1 z-10 grid min-w-4.5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] leading-4.5 font-bold text-white tabular-nums">
+            {waiting > 9 ? "9+" : waiting}
+          </span>
+        )}
+      </button>
+      {open && user && (
+        <AccountMenu id={menuId} chat={chat} pathname={pathname} onSignOut={onSignOut} header={name} className="right-0 left-auto w-80" />
+      )}
+    </div>
+  );
+}
+
+/** Closes a popup on Escape (without closing anything behind it) or a click outside `box`. */
+function useDismiss(open: boolean, box: React.RefObject<HTMLElement | null>, close: () => void) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      close();
+    };
+    const onDown = (e: PointerEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) close();
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [open, box, close]);
 }
 
 function SidebarContent({ pathname, user, chat }: { pathname: string; user: User | null | undefined; chat: ChatSummary | null }) {
@@ -413,7 +534,21 @@ function UserCard({
  * The panel under your name: notifications (follow requests for now) and Settings. Sections are
  * stacked so more can be added later.
  */
-function AccountMenu({ id, chat, pathname }: { id: string; chat: ChatSummary | null; pathname: string }) {
+function AccountMenu({
+  id,
+  chat,
+  pathname,
+  onSignOut,
+  header,
+  className = "inset-x-0",
+}: {
+  id: string;
+  chat: ChatSummary | null;
+  pathname: string;
+  onSignOut?: () => void;
+  header?: string;
+  className?: string;
+}) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [answered, setAnswered] = useState<Record<string, "accepted" | "declined">>({});
   const requesters = chat?.requesters ?? [];
@@ -432,8 +567,9 @@ function AccountMenu({ id, chat, pathname }: { id: string; chat: ChatSummary | n
   return (
     <div
       id={id}
-      className="absolute inset-x-0 top-full z-20 mt-1.5 max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200/80 bg-white p-1.5 text-neutral-900 shadow-xl shadow-neutral-900/15 [scrollbar-width:none] motion-safe:animate-panel-in dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
+      className={`absolute ${className} top-full z-20 mt-1.5 max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200/80 bg-white p-1.5 text-neutral-900 shadow-xl shadow-neutral-900/15 [scrollbar-width:none] motion-safe:animate-panel-in dark:border-neutral-800 dark:bg-neutral-900 dark:text-white`}
     >
+      {header && <p className="truncate px-2.5 pt-1.5 pb-1 text-sm font-semibold">{header}</p>}
       <section aria-labelledby={`${id}-notes`}>
         <h2 id={`${id}-notes`} className={sectionTitle}>
           Notifications
@@ -496,6 +632,18 @@ function AccountMenu({ id, chat, pathname }: { id: string; chat: ChatSummary | n
         {SETTINGS_ICON}
         Settings
       </Link>
+      {onSignOut && (
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] font-medium outline-none hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:hover:bg-neutral-800"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
+            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Sign out
+        </button>
+      )}
     </div>
   );
 }

@@ -481,6 +481,9 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
  * so the theme color fills the very top. These are the gaps to keep clear; all 0 on laptops.
  */
 :root {
+  /* The laptop top bar (dashboard): its own height, and the space pages keep above them. */
+  --topbar-inner-h: 4rem;
+  --topbar-h: 5rem;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
