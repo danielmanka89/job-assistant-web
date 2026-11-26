@@ -111,7 +111,8 @@ function mockUser(email: string, name: string, role: UserRole = "SEEKER"): User 
     name,
     role,
     clockTemplate: "MINIMALIST",
-    themeColor: "NAVY",
+    themeColor: "GRAPHITE",
+    ringStyle: "PRISM",
     profilePictureUrl: null,
     avatarUrl: null,
     phone: "+15551234567",
@@ -212,6 +213,7 @@ async function updateAccount(request: UpdateAccountRequest): Promise<ApiResult<A
         ...(request.email !== undefined ? { email: request.email.trim().toLowerCase() } : {}),
         ...(request.clockTemplate !== undefined ? { clockTemplate: request.clockTemplate } : {}),
         ...(request.themeColor !== undefined ? { themeColor: request.themeColor } : {}),
+        ...(request.ringStyle !== undefined ? { ringStyle: request.ringStyle } : {}),
       },
     },
   };
@@ -936,12 +938,15 @@ const person = (p: Pick<Person, "id" | "name" | "role"> & Partial<Person>): Pers
   requestedMe: false,
   followers: 12,
   following: 8,
+  photoUrl: null,
+  ring: "PRISM",
+  online: false,
   ...p,
 });
 const mockPeople: Person[] = [
-  person({ id: "person_1", name: "Priya Raman", role: "EMPLOYER", connectedToMe: true, followers: 48, following: 30 }),
-  person({ id: "person_2", name: "Marcus Lee", role: "SEEKER", connection: "friend", followers: 9, following: 14 }),
-  person({ id: "person_3", name: "Northwind Staffing", role: "EMPLOYER", connection: "vendor", connectedToMe: true, followers: 210, following: 5 }),
+  person({ id: "person_1", name: "Priya Raman", role: "EMPLOYER", connectedToMe: true, followers: 48, following: 30, ring: "SUNSET", online: true }),
+  person({ id: "person_2", name: "Marcus Lee", role: "SEEKER", connection: "friend", followers: 9, following: 14, ring: "OCEAN", online: true }),
+  person({ id: "person_3", name: "Northwind Staffing", role: "EMPLOYER", connection: "vendor", connectedToMe: true, followers: 210, following: 5, ring: "AURORA" }),
   person({ id: "person_4", name: "Elena Petrova", role: "SEEKER", requestedMe: true, followers: 3, following: 6 }),
 ];
 const mockChats = new Map<string, { personId: string; messages: ChatMessage[]; readAt: string }>();

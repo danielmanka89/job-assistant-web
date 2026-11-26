@@ -20,6 +20,7 @@ export interface User {
   role: UserRole;
   clockTemplate: ClockTemplate;
   themeColor: ThemeColor;
+  ringStyle: RingStyle; // the ring around their picture in Chat
   profilePictureUrl: string | null; // the portfolio photo, or null to show initials
   avatarUrl: string | null; // the menu photo; null falls back to the portfolio photo
   phone: string | null; // mobile number in international form, for password resets; only ever sent to its owner
@@ -32,8 +33,12 @@ export type ClockTemplate = "MINIMALIST" | "NEON" | "GLASS";
 export const CLOCK_TEMPLATES: readonly ClockTemplate[] = ["MINIMALIST", "NEON", "GLASS"];
 
 /** The candidate's color theme for the whole app, clocks included; chosen in Settings. Navy is the default. Accounts saved with the older Blue, Green or Red are read as Navy, Teal and Plum (themeColorOf). */
-export type ThemeColor = "NAVY" | "TEAL" | "PLUM";
-export const THEME_COLORS: readonly ThemeColor[] = ["NAVY", "TEAL", "PLUM"];
+export type ThemeColor = "NAVY" | "TEAL" | "PLUM" | "GRAPHITE";
+export const THEME_COLORS: readonly ThemeColor[] = ["NAVY", "TEAL", "PLUM", "GRAPHITE"];
+
+/** The glowing ring around a user's picture in Chat and on the Dashboard; each user picks theirs in Settings. */
+export type RingStyle = "PRISM" | "SUNSET" | "OCEAN" | "AURORA" | "NONE";
+export const RING_STYLES: readonly RingStyle[] = ["PRISM", "SUNSET", "OCEAN", "AURORA", "NONE"];
 
 /** Job seekers tailor resumes; employers can also post jobs and see their own postings. */
 export type UserRole = "SEEKER" | "EMPLOYER";
@@ -78,6 +83,7 @@ export interface UpdateAccountRequest {
   currentPassword?: string; // required when email or newPassword is sent
   clockTemplate?: ClockTemplate;
   themeColor?: ThemeColor;
+  ringStyle?: RingStyle;
 }
 
 /** A motivational quote shown in the banner at the bottom of the dashboard. */
@@ -409,6 +415,9 @@ export interface Person {
   requestedMe: boolean; // they asked to follow you and you haven't answered yet
   followers: number; // how many people follow them
   following: number; // how many people they follow
+  photoUrl: string | null; // their menu photo (or portfolio photo); null shows a plain silhouette
+  ring: RingStyle; // the ring they picked for their picture
+  online: boolean; // ON: they have the app open right now
 }
 
 /** GET /api/connections: your own lists, which only you can see. */

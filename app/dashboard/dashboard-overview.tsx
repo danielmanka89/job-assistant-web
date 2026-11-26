@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ApiError, ChatConversation, DashboardStats, GeneratedFile, Submission, TailoredResumeWithFiles } from "@/lib/types";
-import { getDashboardStats, listChats, listSubmissions, listTailoredResumes, logout } from "@/lib/client/api";
-import { Avatar } from "@/components/ui/avatar";
-import { appliedCounts } from "@/lib/deadlines";
+import type { ApiError, ChatConversation, DashboardStats, DeadlineItem, GeneratedFile, Submission, TailoredResumeWithFiles, VendorJd } from "@/lib/types";
+import { getDashboardStats, listChats, listDeadlines, listSubmissions, listTailoredResumes, listVendorJds, logout, updateDeadline } from "@/lib/client/api";
+import { appliedCounts, daysBetween, localDate, nextDeadline, relativeDay, visibleDeadlines } from "@/lib/deadlines";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { ErrorAlert } from "@/components/ui/alert";
+import { OrbButton, OrbLink } from "@/components/ui/orb";
+import { RingAvatar } from "@/components/ui/ring-avatar";
+
+// The Dashboard home (Gray Glass design): a big card with this month's numbers, the next deadline,
+// then your tailored resumes, your chats and where your JDs are. Works in every theme color.
 
 type Load<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string };
 
@@ -17,17 +21,21 @@ const isUnauthorized = (e: ApiError) => e.code === "UNAUTHORIZED" || e.code === 
 const primaryLink =
   "inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-2.5 font-display text-[15px] font-medium tracking-wider text-white uppercase shadow-md shadow-brand-600/30 transition hover:bg-brand-700 dark:hover:bg-brand-500";
 
+const card = "rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60";
+const sectionTitle = "text-[15px] font-semibold tracking-tight text-neutral-900 dark:text-white";
+
 export function DashboardOverview() {
   const router = useRouter();
   const user = useCurrentUser();
   const [stats, setStats] = useState<Load<DashboardStats>>({ status: "loading" });
   const [resumes, setResumes] = useState<Load<TailoredResumeWithFiles[]>>({ status: "loading" });
   const [applications, setApplications] = useState<Load<Submission[]>>({ status: "loading" });
+  const [jds, setJds] = useState<VendorJd[] | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getDashboardStats(), listTailoredResumes(), listSubmissions()]).then(async ([s, r, a]) => {
+    Promise.all([getDashboardStats(), listTailoredResumes(), listSubmissions(), listVendorJds()]).then(async ([s, r, a, j]) => {
       if (!active) return;
       if ([s, r, a].some((result) => !result.ok && isUnauthorized(result.error))) {
         await logout();
@@ -37,6 +45,7 @@ export function DashboardOverview() {
       setStats(s.ok ? { status: "ready", data: s.data } : { status: "error", message: s.error.message });
       setResumes(r.ok ? { status: "ready", data: r.data } : { status: "error", message: r.error.message });
       setApplications(a.ok ? { status: "ready", data: a.data } : { status: "error", message: a.error.message });
+      setJds(j.ok ? j.data.jds : []);
     });
     return () => {
       active = false;
@@ -54,33 +63,44 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl dark:text-white">
-            {firstName ? `Welcome back, ${firstName}` : "Dashboard"}
+            {firstName ? `${greeting()}, ${firstName}` : "Dashboard"}
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your resumes and how well they match your jobs.</p>
+          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your resumes, your JDs and what&apos;s next.</p>
         </div>
+        <nav aria-label="Dashboard views" className="pill-glass flex gap-1 rounded-full p-1 text-sm font-medium">
+          <Link href="/dashboard" aria-current="page" className="pill-seg-on rounded-full px-4 py-2 sm:px-5">
+            Overview
+          </Link>
+          <Link href="/dashboard/jds" className="pill-seg-off rounded-full px-4 py-2 transition hover:opacity-80 sm:px-5">
+            My JDs
+          </Link>
+          <Link href="/dashboard/chat?tab=people" className="pill-seg-off rounded-full px-4 py-2 transition hover:opacity-80 sm:px-5">
+            Vendors
+          </Link>
+        </nav>
       </header>
 
       {(stats.status === "error" || resumes.status === "error") && (
         <div className="space-y-3">
-          <ErrorAlert>
-            {stats.status === "error" ? stats.message : resumes.status === "error" ? resumes.message : null}
-          </ErrorAlert>
+          <ErrorAlert>{stats.status === "error" ? stats.message : resumes.status === "error" ? resumes.message : null}</ErrorAlert>
           <button type="button" onClick={retry} className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
             Try again
           </button>
         </div>
       )}
 
-      <StatCards stats={stats} applications={applications} />
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <HeroCard stats={stats} resumes={resumes} applications={applications} jds={jds} />
+        <NextDeadlineCard />
+      </div>
 
-      {/* My Resumes and Recent chats side by side on wide screens; stacked on phones. */}
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <section aria-labelledby="my-resumes">
-          <h2 id="my-resumes" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            My Resumes
+      <div className="grid items-start gap-5 lg:grid-cols-3">
+        <section aria-labelledby="my-resumes" className="min-w-0">
+          <h2 id="my-resumes" className={sectionTitle}>
+            My resumes
           </h2>
           <div className="mt-3">
             {resumes.status === "loading" && <ResumeListSkeleton />}
@@ -88,69 +108,170 @@ export function DashboardOverview() {
           </div>
         </section>
         <RecentChats />
+        <JobLocations jds={jds} />
       </div>
     </div>
   );
 }
 
-/* ---------- Stats ---------- */
+function greeting(now = new Date()) {
+  const h = now.getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+/* ---------- The big card ---------- */
 
 const monthName = new Intl.DateTimeFormat(undefined, { month: "long" });
 
-function StatCards({ stats, applications }: { stats: Load<DashboardStats>; applications: Load<Submission[]> }) {
-  if (stats.status === "error") return null;
-  const s = stats.status === "ready" ? stats.data : null;
-  // Counted here, not on the server, so "today" and "this week" follow the viewer's own calendar.
+/** This month's tailored resumes in big type, with applications, ready-to-send JDs and open jobs under it. */
+function HeroCard({
+  stats,
+  resumes,
+  applications,
+  jds,
+}: {
+  stats: Load<DashboardStats>;
+  resumes: Load<TailoredResumeWithFiles[]>;
+  applications: Load<Submission[]>;
+  jds: VendorJd[] | null;
+}) {
+  // Counted here, not on the server, so "this month" follows the viewer's own calendar.
   const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const tailored = resumes.status === "ready" ? resumes.data.filter((r) => new Date(r.createdAt).getTime() >= monthStart).length : null;
   const applied = applications.status === "ready" ? appliedCounts(applications.data, now) : null;
-  // null shows the loading bar; a dash means the applications couldn't be loaded.
-  const appliedText = (n: number | undefined) => (n === undefined ? (applications.status === "error" ? "—" : null) : String(n));
-  const cards = [
-    { label: "Tailored", value: s && String(s.tailoredResumeCount), hint: "Resumes tailored, ready to download", icon: <SparkIcon /> },
-    { label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
-    { label: "This Week", value: appliedText(applied?.week), hint: "Applied since Monday", icon: <CalendarIcon /> },
-    { label: "This Month", value: appliedText(applied?.month), hint: `Applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
-    {
-      label: "Open Jobs",
-      value: s && String(s.jobs.total),
-      hint: s ? `${s.jobs.native} on JobAssistant` : "On the job board",
-      icon: <BriefcaseIcon />,
-    },
+  const ready = jds ? jds.filter((j) => j.tailored && !j.sentAt).length : null;
+  const openJobs = stats.status === "ready" ? stats.data.jobs.total : null;
+  const facts: { label: string; value: number | null }[] = [
+    { label: "Applied this week", value: applied?.week ?? null },
+    { label: "Applied this month", value: applied?.month ?? null },
+    { label: "Ready to send", value: ready },
+    { label: "Open jobs", value: openJobs },
   ];
 
   return (
-    <section aria-label="Your stats" aria-busy={!s} className="-m-1 flex gap-2 overflow-x-auto p-1">
-      {cards.map((card) => (
-        // One compact strip: icon, number and label on a single row of small cards. The hint is a
-        // tooltip (and read by screen readers) instead of a third line. Phones scroll sideways.
-        <div
-          key={card.label}
-          title={card.hint}
-          className="flex min-w-30 flex-1 items-center gap-2.5 rounded-2xl border border-neutral-200/80 bg-white px-3 py-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
-        >
-          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300 [&_svg]:size-4">
-            {card.icon}
-          </span>
-          <div className="min-w-0">
-            {card.value === null ? (
-              <span className="block h-6 w-10 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
-            ) : (
-              <p className="font-display text-2xl leading-6 font-semibold tracking-tight text-neutral-900 tabular-nums dark:text-white">{card.value}</p>
-            )}
-            <p className="mt-0.5 truncate text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              {card.label}
-              <span className="sr-only">: {card.hint}</span>
-            </p>
-          </div>
+    <section
+      aria-labelledby="hero-title"
+      className="relative flex min-h-64 overflow-hidden rounded-3xl bg-[linear-gradient(115deg,var(--color-brand-950)_0%,var(--color-brand-700)_55%,var(--color-brand-400)_100%)] p-6 pb-20 text-white shadow-lg shadow-brand-950/20 sm:p-8 sm:pb-20"
+    >
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col gap-4">
+        <h2 id="hero-title" className="text-sm font-medium text-white/80">
+          Resumes tailored in {monthName.format(now)}
+        </h2>
+        <p className="text-7xl leading-none font-light tracking-tight tabular-nums">
+          {tailored ?? <span className="inline-block h-16 w-20 animate-pulse rounded-xl bg-white/15 align-bottom" aria-label="Loading" />}
+        </p>
+        <dl className="flex flex-wrap gap-x-6 gap-y-3">
+          {facts.map((f) => (
+            <div key={f.label}>
+              <dt className="text-xs text-white/70">{f.label}</dt>
+              <dd className="text-xl font-semibold tabular-nums">{f.value ?? "—"}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      <ResumeArt />
+      <div className="absolute right-5 bottom-5 z-10 flex gap-3">
+        <OrbLink href="/dashboard/jds" label="Add a JD" tone="teal" icon="plus" size="lg" onDark />
+        <OrbLink href="/dashboard/spreadsheet" label="See everything in the Spreadsheet" tone="silver" icon="arrow" size="lg" onDark />
+      </div>
+    </section>
+  );
+}
+
+/** A resume page with a green check and a dashed flight path: the big card's picture. */
+function ResumeArt() {
+  return (
+    <svg viewBox="0 0 240 200" className="mono-grayscale pointer-events-none hidden h-48 w-auto shrink-0 self-center sm:block" aria-hidden="true">
+      <rect x="40" y="30" width="110" height="140" rx="12" fill="#fff" fillOpacity=".22" transform="rotate(-10 95 100)" />
+      <rect x="60" y="24" width="112" height="146" rx="12" fill="#fff" fillOpacity=".92" />
+      <rect x="76" y="44" width="52" height="7" rx="3.5" className="fill-brand-700" />
+      <rect x="76" y="58" width="80" height="6" rx="3" fill="#dfe1e7" />
+      <rect x="76" y="72" width="70" height="6" rx="3" fill="#dfe1e7" />
+      <rect x="76" y="86" width="76" height="6" rx="3" className="fill-brand-200" />
+      <rect x="76" y="100" width="60" height="6" rx="3" fill="#dfe1e7" />
+      <path d="M150 120l46-28" stroke="#fff" strokeWidth="3" strokeDasharray="4 6" />
+      <path d="M196 72l24 10-10 4-4 10z" fill="#ffd36e" />
+      <circle cx="96" cy="150" r="16" fill="#22c58b" />
+      <path d="m88 150 6 6 10-11" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* ---------- Next deadline ---------- */
+
+/** The soonest open deadline from the tracker, with a ring that fills over its last week. */
+function NextDeadlineCard() {
+  const [items, setItems] = useState<DeadlineItem[] | null | "error">(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    listDeadlines().then((result) => {
+      if (active) setItems(result.ok ? result.data : "error");
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const today = localDate(new Date());
+  const visible = Array.isArray(items) ? visibleDeadlines(items, today) : [];
+  const next = nextDeadline(visible);
+  const others = visible.filter((i) => !i.done && i.dueOn && i !== next).length;
+  const days = next?.dueOn ? daysBetween(today, next.dueOn) : null;
+  // Full when due (or late); empty a week out.
+  const fill = days === null ? 0 : Math.min(1, Math.max(0, 1 - days / 7));
+
+  async function markDone(item: DeadlineItem) {
+    setBusy(true);
+    const result = await updateDeadline(item.id, true);
+    setBusy(false);
+    if (result.ok) setItems((list) => (Array.isArray(list) ? list.map((i) => (i.id === item.id ? result.data : i)) : list));
+  }
+
+  return (
+    <section aria-labelledby="next-deadline" className={`${card} flex flex-col gap-3 p-6`}>
+      <h2 id="next-deadline" className={sectionTitle}>
+        Next deadline
+      </h2>
+      {items === null ? (
+        <div className="space-y-3" aria-busy="true">
+          <span className="block h-12 w-24 animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-800" />
+          <span className="block h-4 w-3/4 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
         </div>
-      ))}
+      ) : items === "error" ? (
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">Deadlines couldn&apos;t be loaded right now.</p>
+      ) : !next?.dueOn ? (
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">Nothing due. Add a deadline from the tracker at the bottom of the menu.</p>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">{relativeDay(next.dueOn, today)}</p>
+            <svg viewBox="0 0 80 80" className="size-18 shrink-0 -rotate-90" aria-hidden="true">
+              <circle cx="40" cy="40" r="32" fill="none" strokeWidth="9" className="stroke-neutral-200 dark:stroke-white/10" />
+              <circle cx="40" cy="40" r="32" fill="none" strokeWidth="9" strokeLinecap="round" strokeDasharray={`${fill * 201} 201`} className="stroke-brand-600 dark:stroke-brand-300" />
+            </svg>
+          </div>
+          <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+            <span className="font-semibold text-neutral-900 dark:text-white">{next.title}.</span> {next.detail}
+          </p>
+          <div className="mt-auto flex items-center gap-3 pt-2">
+            <span className="flex-1 text-xs text-neutral-500 dark:text-neutral-400">
+              {others ? `${others} more coming up` : "Nothing else coming up"}
+            </span>
+            {next.kind === "custom" && <OrbButton label="Mark done" tone="pink" icon="check" disabled={busy} onClick={() => void markDone(next)} />}
+            {next.href && <OrbLink href={next.href} label="Open" tone="silver" icon="arrow" />}
+          </div>
+        </>
+      )}
     </section>
   );
 }
 
 /* ---------- Recent chats ---------- */
 
-const RECENT_CHATS = 3;
+const RECENT_CHATS = 4;
 const chatTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 const chatDay = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
@@ -161,7 +282,7 @@ function shortTime(iso: string) {
   return d.toDateString() === new Date().toDateString() ? chatTime.format(d) : chatDay.format(d);
 }
 
-/** The three most recent conversations; each opens straight into that chat. */
+/** The most recent conversations as glass pills, each picture in its owner's ring (dim when they're away). */
 function RecentChats() {
   const [chats, setChats] = useState<ChatConversation[] | null | "error">(null);
 
@@ -177,29 +298,24 @@ function RecentChats() {
   }, []);
 
   return (
-    <section aria-labelledby="recent-chats">
-      <div className="flex items-baseline justify-between">
-        <h2 id="recent-chats" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-          Recent chats
+    <section aria-labelledby="recent-chats" className="min-w-0">
+      <div className="flex items-center justify-between">
+        <h2 id="recent-chats" className={sectionTitle}>
+          Chats
         </h2>
-        <Link href="/dashboard/chat" className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
-          Open Chat
-        </Link>
+        <OrbLink href="/dashboard/chat" label="Open Chat" tone="teal" icon="arrow" size="sm" />
       </div>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+      <div className="mt-3">
         {chats === null ? (
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800" aria-busy="true">
+          <div className="space-y-2.5" aria-busy="true">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5">
-                <span className="size-8 animate-pulse rounded-full bg-neutral-100 dark:bg-neutral-800" />
-                <span className="block h-3.5 flex-1 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
-              </div>
+              <span key={i} className="block h-14 animate-pulse rounded-full bg-neutral-100 dark:bg-neutral-800" />
             ))}
           </div>
         ) : chats === "error" ? (
-          <p className="px-4 py-5 text-sm text-neutral-500 dark:text-neutral-400">Chats couldn&apos;t be loaded right now.</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Chats couldn&apos;t be loaded right now.</p>
         ) : chats.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             No chats yet.{" "}
             <Link href="/dashboard/chat" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
               Connect with someone
@@ -207,18 +323,18 @@ function RecentChats() {
             to start one.
           </p>
         ) : (
-          <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+          <ul className="space-y-2.5">
             {chats.map((chat) => (
               <li key={chat.id}>
                 <Link
                   href={`/dashboard/chat?c=${encodeURIComponent(chat.id)}`}
-                  className="flex items-center gap-2.5 px-3.5 py-2.5 transition hover:bg-neutral-50 focus-visible:bg-neutral-50 focus-visible:outline-none dark:hover:bg-neutral-800/60 dark:focus-visible:bg-neutral-800/60"
+                  className="pill-glass flex items-center gap-3 rounded-full py-1.5 pr-4 pl-1.5 outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40"
                 >
-                  <Avatar name={chat.person.name} className="size-8 text-xs" />
+                  <RingAvatar name={chat.person.name} photoUrl={chat.person.photoUrl} ring={chat.person.ring} online={chat.person.online} className="size-11" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-2">
-                      <span className={`truncate text-[13px] text-neutral-900 dark:text-white ${chat.unread ? "font-bold" : "font-semibold"}`}>{chat.person.name}</span>
-                      <span className="ml-auto shrink-0 text-[11px] text-neutral-400 tabular-nums dark:text-neutral-500">{shortTime(chat.lastMessageAt)}</span>
+                      <span className={`truncate text-sm text-neutral-900 dark:text-white ${chat.unread ? "font-bold" : "font-semibold"}`}>{chat.person.name}</span>
+                      <span className="ml-auto shrink-0 text-[11px] text-neutral-500 tabular-nums dark:text-neutral-400">{shortTime(chat.lastMessageAt)}</span>
                     </span>
                     <span className="flex items-center gap-2">
                       <span className={`truncate text-xs ${chat.unread ? "text-neutral-800 dark:text-neutral-200" : "text-neutral-500 dark:text-neutral-400"}`}>
@@ -242,6 +358,70 @@ function RecentChats() {
   );
 }
 
+/* ---------- Where your jobs are ---------- */
+
+/** "Dallas, TX (Hybrid)" -> "TX"; "Remote" stays "Remote"; anything else is kept as typed. */
+function placeOf(location: string): string {
+  const text = location.replace(/\(.*?\)/g, "").trim();
+  if (!text) return "";
+  if (/remote/i.test(text)) return "Remote";
+  const state = text.match(/,\s*([A-Z]{2})\b/);
+  return state ? state[1] : text;
+}
+
+/** The top places across your JDs, on a dotted map card. */
+function JobLocations({ jds }: { jds: VendorJd[] | null }) {
+  const counts = new Map<string, number>();
+  for (const jd of jds ?? []) {
+    const place = placeOf(jd.location);
+    if (place) counts.set(place, (counts.get(place) ?? 0) + 1);
+  }
+  const total = [...counts.values()].reduce((a, b) => a + b, 0);
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  return (
+    <section aria-labelledby="job-places" className="min-w-0">
+      <h2 id="job-places" className={sectionTitle}>
+        Where your JDs are
+      </h2>
+      <div
+        className={`${card} relative mt-3 h-52 overflow-hidden bg-[radial-gradient(rgb(var(--brand-glow)/0.22)_1.6px,transparent_1.8px)] [background-size:11px_11px] p-4`}
+      >
+        {jds === null ? (
+          <span className="block h-full animate-pulse rounded-2xl bg-neutral-100/60 dark:bg-neutral-800/60" aria-busy="true" />
+        ) : top.length === 0 ? (
+          <p className="relative max-w-56 rounded-2xl bg-white/90 p-3 text-sm text-neutral-600 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-300">
+            Add JDs in{" "}
+            <Link href="/dashboard/jds" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+              My JDs
+            </Link>{" "}
+            to see where your jobs are.
+          </p>
+        ) : (
+          <>
+            <span aria-hidden="true" className="absolute top-[58%] left-[24%] grid size-13 place-items-center rounded-full bg-brand-500/20">
+              <span className="size-3 rounded-full border-[3px] border-white bg-brand-600 dark:border-neutral-900" />
+            </span>
+            {top.length > 1 && (
+              <span aria-hidden="true" className="absolute top-[40%] left-[74%] grid size-10 place-items-center rounded-full bg-rose-500/20">
+                <span className="size-2.5 rounded-full border-[3px] border-white bg-rose-500 dark:border-neutral-900" />
+              </span>
+            )}
+            <ol className="relative w-fit space-y-1 rounded-2xl bg-white/90 px-3.5 py-2.5 shadow-md dark:bg-neutral-900/90">
+              {top.map(([place, n]) => (
+                <li key={place} className="flex items-baseline gap-3 text-sm">
+                  <span className="font-semibold text-neutral-900 dark:text-white">{place}</span>
+                  <span className="ml-auto text-xs text-neutral-500 tabular-nums dark:text-neutral-400">{Math.round((n / total) * 100)}% of JDs</span>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /* ---------- Resume list ---------- */
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -251,53 +431,32 @@ function formatDate(iso: string) {
   return Number.isNaN(d.getTime()) ? "" : dateFormat.format(d);
 }
 
-const bulletsText = (n: number) => (n === 0 ? "no changes" : `${n} ${n === 1 ? "bullet" : "bullets"}`);
-
+/** Each tailored resume with its match as a bar, and its two downloads. Long lists scroll inside the card. */
 function ResumeList({ items }: { items: TailoredResumeWithFiles[] }) {
   return (
-    // Slim rows: when it was made and how much changed, its match score, and two tiny download buttons.
-    <ul className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
-      {items.map((item) => (
-        <li key={item.id} className="flex items-center gap-2 px-3.5 py-2.5">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-neutral-900 dark:text-white">
-              <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-              <span className="mx-1 text-neutral-300 dark:text-neutral-600" aria-hidden="true">
-                ·
-              </span>
-              {bulletsText(item.acceptedBulletIds?.length ?? 0)}
-            </p>
-            <p className="truncate text-[11px] text-neutral-400 dark:text-neutral-500">Tailored resume</p>
-          </div>
-          <ScoreChip percent={item.finalMatchPercent} />
-          <FileLink file={item.files.find((f) => f.format === "docx")} format="docx" />
-          <FileLink file={item.files.find((f) => f.format === "pdf")} format="pdf" />
-        </li>
-      ))}
+    <ul className={`${card} max-h-80 space-y-3.5 overflow-y-auto p-4`}>
+      {items.map((item) => {
+        const pct = item.finalMatchPercent;
+        return (
+          <li key={item.id} className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <time dateTime={item.createdAt} className="min-w-0 flex-1 truncate text-[13px] font-semibold text-neutral-900 dark:text-white">
+                {formatDate(item.createdAt)}
+              </time>
+              <span className="text-xs font-semibold text-neutral-600 tabular-nums dark:text-neutral-300">{pct === null || pct === undefined ? "—" : `${pct}%`}</span>
+              <FileLink file={item.files.find((f) => f.format === "docx")} format="docx" />
+              <FileLink file={item.files.find((f) => f.format === "pdf")} format="pdf" />
+            </div>
+            <div className="h-2 rounded-full bg-neutral-200/70 dark:bg-white/10" role="presentation">
+              <div
+                className={`h-full rounded-full ${pct === null || pct === undefined ? "" : pct >= 75 ? "bg-brand-600 dark:bg-brand-300" : pct >= 50 ? "bg-brand-400" : "bg-neutral-400"}`}
+                style={{ width: `${pct ?? 0}%` }}
+              />
+            </div>
+          </li>
+        );
+      })}
     </ul>
-  );
-}
-
-/** The resume's match with its job: green from 75%, amber from 50%, otherwise neutral (never red); "—" when unscored. */
-function ScoreChip({ percent }: { percent: number | null | undefined }) {
-  if (percent === null || percent === undefined) {
-    return (
-      <span title="No match score" className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
-        <span aria-hidden="true">—</span>
-        <span className="sr-only">No match score</span>
-      </span>
-    );
-  }
-  const tone =
-    percent >= 75
-      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-      : percent >= 50
-        ? "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
-        : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300";
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${tone}`}>
-      {percent}%<span className="sr-only"> match</span>
-    </span>
   );
 }
 
@@ -380,7 +539,6 @@ function EmptyIllustration() {
 
 /* ---------- Icons ---------- */
 
-const ICON = "size-5";
 
 function PlusIcon() {
   return (
@@ -389,38 +547,3 @@ function PlusIcon() {
     </svg>
   );
 }
-
-function SparkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M6.3 17.7l2.5-2.5M15.2 8.8l2.5-2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <path d="M20.5 3.5 10 14M20.5 3.5 14 20.5l-4-6.5-6.5-4 17-6.5Z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
-      <path d="M3.5 10h17M8 3v4M16 3v4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BriefcaseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18" strokeLinecap="round" />
-    </svg>
-  );
-}
-

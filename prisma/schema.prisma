@@ -30,6 +30,11 @@ model User {
   phoneVerifiedAt   DateTime? // when a texted code last proved the number works
   // The code in this user's personal invite link (/invite/<code>); made the first time they open it.
   inviteCode        String?           @unique
+  // The glowing ring around this user's picture in Chat: "PRISM" | "SUNSET" | "OCEAN" | "AURORA" | "NONE".
+  ringStyle         String            @default("PRISM")
+  // When this user last had the app open (sent every 30 seconds while a tab is visible). Recent means
+  // ON (in the app); older or null means OFF (away).
+  lastSeenAt        DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   resumes           Resume[]

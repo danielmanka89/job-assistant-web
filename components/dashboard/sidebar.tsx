@@ -4,7 +4,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/brand";
-import { Avatar } from "@/components/ui/avatar";
+import { RingAvatar } from "@/components/ui/ring-avatar";
+import { PresenceSwitch } from "@/components/dashboard/presence-switch";
+import { ThemeSwitch } from "@/components/theme-toggle";
 import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { DeadlineTracker } from "@/components/dashboard/deadline-tracker";
 import { CHAT_CHANGED_EVENT, answerFollowRequest, getChatSummary, logout } from "@/lib/client/api";
@@ -227,6 +229,11 @@ function SidebarContent({ pathname, user, chat }: { pathname: string; user: User
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-3">
       <SidebarClocks />
       <UserCard user={user} chat={chat} onSignOut={signOut} signingOut={signingOut} pathname={pathname} className="mt-3 z-10" />
+      {/* Your ON/OFF status (set by the app) and the light/dark switch. */}
+      <div className="mt-2.5 flex items-center justify-between gap-2 px-0.5">
+        <PresenceSwitch />
+        <ThemeSwitch />
+      </div>
 
       <nav aria-label="Main" className="mt-3">
         <ul className="space-y-0.5">
@@ -272,23 +279,31 @@ function UnreadBadge({ count, what, active = false }: { count: number | undefine
 
 const SUMMARY_POLL_MS = 30000;
 
-/** Unread messages, unread emails and connection counts for the menu; refreshed every 30 seconds and whenever chat changes. */
+/**
+ * Unread messages, unread emails and connection counts for the menu; refreshed every 30 seconds and
+ * whenever chat changes. Each request is also the "in the app" check-in that shows you as ON in
+ * Chat, so it pauses while the tab is hidden (you turn OFF) and runs again the moment you come back.
+ */
 function useChatSummary(enabled: boolean): ChatSummary | null {
   const [summary, setSummary] = useState<ChatSummary | null>(null);
   useEffect(() => {
     if (!enabled) return;
     let live = true;
-    const load = () =>
+    const load = () => {
+      if (document.visibilityState !== "visible") return;
       void getChatSummary().then((result) => {
         if (live && result.ok) setSummary(result.data);
       });
+    };
     load();
     const timer = setInterval(load, SUMMARY_POLL_MS);
     window.addEventListener(CHAT_CHANGED_EVENT, load);
+    document.addEventListener("visibilitychange", load);
     return () => {
       live = false;
       clearInterval(timer);
       window.removeEventListener(CHAT_CHANGED_EVENT, load);
+      document.removeEventListener("visibilitychange", load);
     };
   }, [enabled]);
   return summary;
@@ -354,7 +369,7 @@ function UserCard({
         >
           <span className="relative shrink-0">
             {/* The menu photo, or the portfolio photo until one is set. */}
-            <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} className="size-9 text-sm" />
+            <RingAvatar name={user?.name ?? "Your account"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} ring={user?.ringStyle} className="size-9" />
             {waiting > 0 && (
               <span className="absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] leading-4 font-bold text-white tabular-nums ring-2 ring-neutral-50 dark:ring-neutral-900">
                 {waiting > 9 ? "9+" : waiting}

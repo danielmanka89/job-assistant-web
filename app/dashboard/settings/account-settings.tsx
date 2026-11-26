@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CLOCK_TEMPLATES, type ApiError, type ThemeColor, type ClockTemplate, type UpdateAccountRequest, type User } from "@/lib/types";
+import { CLOCK_TEMPLATES, RING_STYLES, type ApiError, type ThemeColor, type ClockTemplate, type RingStyle, type UpdateAccountRequest, type User } from "@/lib/types";
 import { confirmPhoneChange, getAccount, logout, startPhoneChange, removeAvatarPhoto, removeProfilePhoto, updateAccount, uploadAvatarPhoto, uploadProfilePhoto } from "@/lib/client/api";
 import { loadPhoto, type PreparedPhoto } from "@/lib/client/photo-crop";
 import { PhotoCropDialog } from "./photo-crop-dialog";
 import { Avatar } from "@/components/ui/avatar";
+import { RingAvatar } from "@/components/ui/ring-avatar";
 import { focusLost } from "@/lib/client/a11y";
 import { storeUser } from "@/lib/client/current-user";
 import { maskPhone, normalizePhone, phoneError } from "@/lib/phone";
@@ -88,6 +89,7 @@ export function AccountSettings() {
       <AppearanceCard />
       <ThemeColorForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PhotoForm kind="menu" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
+      <RingStyleForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PhotoForm kind="portfolio" user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <ProfileForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
       <PhoneForm user={state.user} onSaved={onSaved} onUnauthorized={onUnauthorized} />
@@ -415,8 +417,9 @@ const THEME_COLOR_SWATCH: Record<ThemeColor, { swatch: string; hint: string }> =
   NAVY: { swatch: "bg-gradient-to-br from-[#465773] via-[#33435e] to-[#27344b]", hint: "Crisp and professional" },
   TEAL: { swatch: "bg-gradient-to-br from-[#548481] via-[#3f6f6c] to-[#2d524f]", hint: "Fresh and focused" },
   PLUM: { swatch: "bg-gradient-to-br from-[#806a83] via-[#6e5872] to-[#533d56]", hint: "Warm and gentle" },
+  GRAPHITE: { swatch: "bg-gradient-to-br from-[#c9d3d7] via-[#5d7279] to-[#1f2a30]", hint: "Frosted glass in slate gray" },
 };
-const THEME_COLOR_ORDER: readonly ThemeColor[] = ["NAVY", "TEAL", "PLUM"];
+const THEME_COLOR_ORDER: readonly ThemeColor[] = ["GRAPHITE", "NAVY", "TEAL", "PLUM"];
 
 /** The candidate's color for the whole app: buttons, links, the menu, the glass background and the clocks. */
 function ThemeColorForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
@@ -455,7 +458,7 @@ function ThemeColorForm({ user, onSaved, onUnauthorized }: { user: User; onSaved
     >
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <legend className="sr-only">Theme color</legend>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {THEME_COLOR_ORDER.map((option) => {
             const selected = color === option;
             return (
@@ -473,6 +476,72 @@ function ThemeColorForm({ user, onSaved, onUnauthorized }: { user: User; onSaved
                   <span className="block font-semibold text-neutral-900 dark:text-white">{THEME_COLOR_LABEL[option]}</span>
                   <span className="block text-sm text-neutral-500 dark:text-neutral-400">{THEME_COLOR_SWATCH[option].hint}</span>
                 </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+      <p role="status" className={`mt-4 min-h-5 text-sm ${status?.kind === "error" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}>
+        {status?.message}
+      </p>
+    </SettingsCard>
+  );
+}
+
+/* ---------- Profile ring ---------- */
+
+const RING_LABEL: Record<RingStyle, string> = { PRISM: "Prism", SUNSET: "Sunset", OCEAN: "Ocean", AURORA: "Aurora", NONE: "No ring" };
+
+/** The glowing ring around your picture that the people you chat with see; each choice saves straight away. */
+function RingStyleForm({ user, onSaved, onUnauthorized }: { user: User; onSaved: (user: User) => void; onUnauthorized: () => void }) {
+  const [ring, setRing] = useState<RingStyle>(user.ringStyle ?? "PRISM");
+  const [status, setStatus] = useState<{ kind: "saving" | "saved" | "error"; message: string } | null>(null);
+
+  async function choose(next: RingStyle) {
+    if (next === ring) return;
+    const previous = ring;
+    setRing(next);
+    setStatus({ kind: "saving", message: "Saving…" });
+    const result = await updateAccount({ ringStyle: next });
+    if (!result.ok) {
+      if (isUnauthorized(result.error)) return onUnauthorized();
+      setRing(previous);
+      setStatus({ kind: "error", message: result.error.message || "Couldn't save your ring. Please try again." });
+      return;
+    }
+    onSaved(result.data.user);
+    setStatus({ kind: "saved", message: `${RING_LABEL[next]} ring saved.` });
+  }
+
+  return (
+    <SettingsCard
+      id="ring-title"
+      title="Profile ring"
+      description="The glowing ring around your picture in Chat and on the Dashboard. It glows while you're in the app (ON) and dims when you're away (OFF)."
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="5" />
+        </svg>
+      }
+    >
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend className="sr-only">Profile ring</legend>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+          {RING_STYLES.map((option) => {
+            const selected = ring === option;
+            return (
+              <label
+                key={option}
+                className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 p-3 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-500/30 ${
+                  selected
+                    ? "border-brand-600 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-500/10"
+                    : "border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700"
+                }`}
+              >
+                <input type="radio" name="ringStyle" value={option} checked={selected} onChange={() => choose(option)} className="sr-only" />
+                <RingAvatar name={user.name} photoUrl={user.avatarUrl ?? user.profilePictureUrl} ring={option} className="size-12" />
+                <span className="text-sm font-semibold text-neutral-900 dark:text-white">{RING_LABEL[option]}</span>
               </label>
             );
           })}
