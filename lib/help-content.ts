@@ -126,6 +126,22 @@ export const HELP_ARTICLES: HelpArticle[] = [
     href: "/dashboard/download",
   },
   {
+    id: "my-jds",
+    title: "Tailor and send a JD a vendor sent you",
+    category: "Jobs & applying",
+    keywords: "jd job description vendor recruiter email paste my jds send resume submit c2c",
+    body: [
+      "My JDs is for job descriptions vendors send you directly, for example by email or WhatsApp. They stay in your own list, apart from the Job Board, and nobody else sees them.",
+      "1. Open My JDs in the menu and paste the JD. Add the client, location, rate and the vendor's name and email if you have them. If you leave Role empty, it's read from the JD.",
+      "2. Click Tailor resume. The job match opens with the JD filled in: analyze it, pick the bullet changes you want and click Tailor Resume.",
+      "3. On the download page, click Send to the vendor. You're back in My JDs with an email ready: check the To address, subject and message.",
+      "4. Click Send email to send it from your project address with your resume attached. If sending isn't switched on, download the PDF, open the email in your own email app, attach the PDF, and click Mark as sent.",
+      "Once it's sent, the JD shows Sent with the date, and a row is added to your Spreadsheet with the status Submitted to vendor. Mock Call Prep for that row uses the JD you saved.",
+      "Use the filters (To tailor, Ready to send, Sent) and the search box to find a JD. Edit details changes the vendor or rate; changing the description itself means tailoring again.",
+    ],
+    href: "/dashboard/jds",
+  },
+  {
     id: "job-board",
     title: "Finding jobs on the Job Board",
     category: "Jobs & applying",

@@ -13,7 +13,7 @@ type Context = { params: Promise<{ id: string }> };
 
 /** The user's submission with what the prep is written from: its job posting, saved prep and their latest resume. */
 async function load(userId: string, id: string) {
-  const row = await prisma.submission.findFirst({ where: { id, userId }, include: { jobPosting: true, mockCallPrep: true } });
+  const row = await prisma.submission.findFirst({ where: { id, userId }, include: { jobPosting: true, mockCallPrep: true, vendorJd: { select: { jobDescription: true } } } });
   if (!row) return null;
   const resume = await prisma.resume.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } });
   return { row, resume };
@@ -28,7 +28,7 @@ function respond(
   return NextResponse.json<MockCallPrepResponse>({
     job: { title, company },
     hasResume: Boolean(latestResumeId),
-    hasJobDescription: Boolean(row.jobPosting?.description || saved?.jobDescription),
+    hasJobDescription: Boolean(row.jobPosting?.description || row.vendorJd?.jobDescription || saved?.jobDescription),
     prep: saved
       ? { questions: saved.questions as PrepQuestion[], createdAt: saved.updatedAt.toISOString(), upToDate: saved.resumeId === latestResumeId }
       : null,
@@ -62,10 +62,10 @@ export async function POST(request: NextRequest, { params }: Context) {
   const { row, resume } = found;
   if (!resume) return apiError(400, "NO_RESUME", "Upload your resume first: your answers are written from it");
 
-  // The job posting's own description wins; otherwise the one pasted now, or the one pasted last time.
+  // The job posting's (or My JDs') own description wins; otherwise the one pasted now, or the one pasted last time.
   const pasted = typeof body.jobDescription === "string" ? body.jobDescription.trim() : "";
   let pastedToSave: string | null = null;
-  let description = row.jobPosting?.description ?? "";
+  let description = row.jobPosting?.description ?? row.vendorJd?.jobDescription ?? "";
   if (!description) {
     description = pasted || row.mockCallPrep?.jobDescription || "";
     const error = jobDescriptionError(description);

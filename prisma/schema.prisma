@@ -10,52 +10,53 @@ datasource db {
 }
 
 model User {
-  id              String            @id @default(cuid())
-  email           String            @unique // stored lowercased
-  name            String
-  passwordHash    String // bcrypt hash; never returned by the API
-  role            String            @default("SEEKER") // "SEEKER" | "EMPLOYER"
-  clockTemplate   String            @default("MINIMALIST") // dashboard clock style: "MINIMALIST" | "NEON" | "GLASS"
+  id                String            @id @default(cuid())
+  email             String            @unique // stored lowercased
+  name              String
+  passwordHash      String // bcrypt hash; never returned by the API
+  role              String            @default("SEEKER") // "SEEKER" | "EMPLOYER"
+  clockTemplate     String            @default("MINIMALIST") // dashboard clock style: "MINIMALIST" | "NEON" | "GLASS"
   // The candidate's color theme for the whole app (buttons, links, clocks…): "BLUE" | "GREEN" | "RED".
   // Stored in the column first added for clock colors.
-  themeColor      String            @default("BLUE") @map("clockColor")
+  themeColor        String            @default("BLUE") @map("clockColor")
   // Link to the profile photo ("/api/profile/photo/<id>?v=<saved at>"); null shows initials instead.
   // The image itself is in ProfilePhoto, so loading a user never loads the picture.
   profilePictureUrl String?
   // The small round photo in the menu, uploaded and cropped separately; null uses the portfolio photo.
-  avatarUrl       String?
+  avatarUrl         String?
   // Mobile number in international form ("+15551234567"). Password resets text a code to it, on top
   // of the emailed code. Set at sign-up; changing it needs the password and a texted code.
-  phone           String?
-  phoneVerifiedAt DateTime?         // when a texted code last proved the number works
+  phone             String?
+  phoneVerifiedAt   DateTime? // when a texted code last proved the number works
   // The code in this user's personal invite link (/invite/<code>); made the first time they open it.
-  inviteCode      String?           @unique
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  resumes         Resume[]
-  gapAnalyses     GapAnalysis[]
-  tailoredResumes TailoredResume[]
-  generatedFiles  GeneratedFile[]
-  jobPostings     JobPosting[]
-  sessions        Session[]
-  passwordResets  PasswordReset[]
-  submissions     Submission[]
-  profile         CandidateProfile?
-  learningPaths   LearningPath[]
-  deadlines       Deadline[]
-  jobPitches      JobPitch[]
-  profilePhoto    ProfilePhoto?
-  avatarPhoto     AvatarPhoto?
-  introduction    Introduction?
-  connectionsFrom Connection[]      @relation("ConnectionFrom")
-  connectionsTo   Connection[]      @relation("ConnectionTo")
-  conversationsA  Conversation[]    @relation("ConversationA")
-  conversationsB  Conversation[]    @relation("ConversationB")
-  messages        Message[]
+  inviteCode        String?           @unique
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  resumes           Resume[]
+  gapAnalyses       GapAnalysis[]
+  tailoredResumes   TailoredResume[]
+  generatedFiles    GeneratedFile[]
+  jobPostings       JobPosting[]
+  sessions          Session[]
+  passwordResets    PasswordReset[]
+  submissions       Submission[]
+  vendorJds         VendorJd[]
+  profile           CandidateProfile?
+  learningPaths     LearningPath[]
+  deadlines         Deadline[]
+  jobPitches        JobPitch[]
+  profilePhoto      ProfilePhoto?
+  avatarPhoto       AvatarPhoto?
+  introduction      Introduction?
+  connectionsFrom   Connection[]      @relation("ConnectionFrom")
+  connectionsTo     Connection[]      @relation("ConnectionTo")
+  conversationsA    Conversation[]    @relation("ConversationA")
+  conversationsB    Conversation[]    @relation("ConversationB")
+  messages          Message[]
   // The name part of this account's project email address (Inbox), e.g. "daniel.k7x2"; the domain is
   // EMAIL_DOMAIN. Given the first time the account opens its inbox, then never changed.
-  mailboxName     String?           @unique
-  emails          EmailMessage[]
+  mailboxName       String?           @unique
+  emails            EmailMessage[]
 }
 
 // "fromUser is connected to toUser" (Chat > People), labelled with what they are to them. One-way,
@@ -246,20 +247,20 @@ model GeneratedFile {
 
 // Jobs posted on the site ("native") or pulled from an external provider.
 model JobPosting {
-  id          String       @id @default(cuid())
-  title       String
-  company     String
-  location    String
-  description String // full job description text
-  applyUrl    String // http(s) only
-  employmentTypes String[] @default([]) // "Full-time" | "C2C" | "W2" (lib/job-types.ts); empty for older rows: read from the description
-  source      String // "native" | "adzuna" | "mock"
-  externalId  String? // the provider's id; null for native jobs
-  postedById  String? // user who posted a native job
-  postedBy    User?        @relation(fields: [postedById], references: [id], onDelete: SetNull)
-  createdAt   DateTime     @default(now())
-  submissions Submission[]
-  pitches     JobPitch[]
+  id              String       @id @default(cuid())
+  title           String
+  company         String
+  location        String
+  description     String // full job description text
+  applyUrl        String // http(s) only
+  employmentTypes String[]     @default([]) // "Full-time" | "C2C" | "W2" (lib/job-types.ts); empty for older rows: read from the description
+  source          String // "native" | "adzuna" | "mock"
+  externalId      String? // the provider's id; null for native jobs
+  postedById      String? // user who posted a native job
+  postedBy        User?        @relation(fields: [postedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  submissions     Submission[]
+  pitches         JobPitch[]
 
   @@unique([source, externalId])
   @@index([createdAt])
@@ -281,8 +282,34 @@ model Submission {
   updatedAt    DateTime    @updatedAt
 
   mockCallPrep MockCallPrep?
+  vendorJd     VendorJd?
 
   @@unique([userId, jobPostingId]) // applying twice to the same job reuses the row
+  @@index([userId, createdAt])
+}
+
+// A job description a vendor sent the user directly (My JDs), kept apart from the public job board.
+// Its tailored resume is found by matching the description text of a gap analysis (as the Spreadsheet does).
+model VendorJd {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String // the role, e.g. "Senior Java Developer"
+  client         String      @default("")
+  location       String      @default("")
+  rate           String      @default("")
+  vendorCompany  String      @default("")
+  vendorContact  String      @default("")
+  vendorEmail    String      @default("")
+  notes          String      @default("")
+  jobDescription String
+  sentAt         DateTime? // when the user sent (or marked as sent) their resume to the vendor
+  sentTo         String      @default("")
+  submissionId   String?     @unique // the Spreadsheet row made when it was sent
+  submission     Submission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
   @@index([userId, createdAt])
 }
 
@@ -301,8 +328,8 @@ model MockCallPrep {
 // The job seeker's saved profile, one per user. Used when they apply to a job (Spreadsheet row)
 // and when they tailor a resume; lib/profile.ts lists the fields.
 model CandidateProfile {
-  userId    String   @id
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String    @id
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   values      Json // ProfileValues
   // Set when the candidate approves sharing their public portfolio (/profile/<userId>); null = private.
   publishedAt DateTime?

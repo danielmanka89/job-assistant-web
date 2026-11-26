@@ -71,6 +71,17 @@ const NAV: NavItem[] = [
     ),
   },
   {
+    href: "/dashboard/jds",
+    label: "My JDs",
+    match: (p) => under(p, "/dashboard/jds"),
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
+        <path d="M14 3.5H7A2.5 2.5 0 0 0 4.5 6v12A2.5 2.5 0 0 0 7 20.5h10a2.5 2.5 0 0 0 2.5-2.5V9L14 3.5Z" strokeLinejoin="round" />
+        <path d="M14 3.5V9h5.5M8.5 13h7M8.5 16.5h4.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/dashboard/spreadsheet",
     label: "Spreadsheet",
     match: (p) => under(p, "/dashboard/spreadsheet"),

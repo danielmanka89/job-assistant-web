@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { readTailoringJd } from "@/lib/client/jobs";
 import type { GeneratedFile, Resume, SuggestedBullet, TailoredResumeResponse } from "@/lib/types";
 import { scoreLevel } from "@/components/ui/score-badge";
 import { ResumePreview } from "./resume-preview";
@@ -18,6 +20,8 @@ export function TailorView({ original, response, suggestions }: Props) {
   const changes = tailoredResume.acceptedBulletIds.length;
   // Results saved in this tab before the score existed don't have it.
   const finalPercent = typeof response.finalMatchPercent === "number" ? Math.round(response.finalMatchPercent) : null;
+  // Tailored from My JDs: offer to send it to the vendor. Mounts only in the browser (see DownloadLoader).
+  const [jdId] = useState(readTailoringJd);
 
   return (
     <div className="space-y-8">
@@ -27,6 +31,20 @@ export function TailorView({ original, response, suggestions }: Props) {
 
         {/* First on phones so the downloads don't sit below the whole preview. */}
         <aside className="order-first space-y-4 lg:sticky lg:top-24 lg:order-none">
+          {jdId && (
+            <Link
+              href={`/dashboard/jds?send=${encodeURIComponent(jdId)}`}
+              className="flex items-center justify-between gap-3 rounded-3xl bg-brand-600 px-5 py-4 text-white shadow-md shadow-brand-600/25 outline-none transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/40"
+            >
+              <span>
+                <span className="block text-[15px] font-semibold">Send to the vendor</span>
+                <span className="block text-xs text-white/80">Back to My JDs, with this resume attached</span>
+              </span>
+              <svg viewBox="0 0 20 20" fill="currentColor" className="size-5 shrink-0" aria-hidden="true">
+                <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+              </svg>
+            </Link>
+          )}
           <section className="rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
             <h2 className="text-base font-semibold text-neutral-900 dark:text-white">Download</h2>
             <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your files are ready.</p>
