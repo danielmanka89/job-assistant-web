@@ -75,8 +75,9 @@ export function DashboardOverview() {
         </div>
       )}
 
-      {/* Command center: your numbers | today's queue and resumes | chat. Stacks on phones. */}
-      <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_19rem]">
+      {/* Your numbers | today's queue and resumes. On laptops chat is the column on the right of
+          every page (ChatDock); on phones the chat panel comes last here. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <NumbersColumn stats={stats} resumes={resumes} applications={applications} jds={jds} deadlines={deadlines} />
 
         <section aria-label="Today" className={`${card} order-1 min-w-0 space-y-6 p-5 sm:p-6 lg:order-none`}>
@@ -300,7 +301,7 @@ function ChatPanel() {
   return (
     <section
       aria-labelledby="chat-title"
-      className="order-3 flex flex-col gap-4 rounded-3xl lg:order-none xl:min-h-80 bg-[rgb(24_32_37/0.88)] p-5 text-neutral-100 shadow-lg backdrop-blur-xl lg:col-span-2 xl:col-span-1 dark:bg-white/5"
+      className="order-3 flex flex-col gap-4 rounded-3xl bg-[rgb(24_32_37/0.88)] p-5 text-neutral-100 shadow-lg backdrop-blur-xl lg:hidden dark:bg-white/5"
     >
       <div className="flex items-center justify-between">
         <h2 id="chat-title" className="text-[15px] font-semibold">

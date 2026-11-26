@@ -456,6 +456,19 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
 .app-window {
   background: var(--window-bg);
 }
+/* Laptops: while the chat column shows, pages keep the other 75%, and the Help button sits just
+   left of the column instead of on top of its message box. */
+.glass-shell {
+  --help-right: 1rem;
+}
+@media (width >= 64rem) {
+  .glass-shell:has([data-chat-dock]) .app-window {
+    right: var(--chat-w);
+  }
+  .glass-shell:has([data-chat-dock]) {
+    --help-right: calc(var(--chat-w) + 0.75rem);
+  }
+}
 /* The old frame: gone in the edge-to-edge layout. */
 .app-frame {
   display: none;
@@ -484,6 +497,8 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
   /* The laptop top bar (dashboard): its own height, and the space pages keep above them. */
   --topbar-inner-h: 4rem;
   --topbar-h: 5rem;
+  /* The chat column on the right of laptop dashboard pages: a quarter of the screen. */
+  --chat-w: max(18rem, 25vw);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
