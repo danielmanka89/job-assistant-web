@@ -229,7 +229,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     keywords: "chat message connect connections friends follow followers following request accept decline invite link share privacy recruiters vendors unread",
     body: [
       "In Chat, open People and search by name or exact email, then choose Follow as… (Friend, Vendor, Recruiter…). They get a notification and must accept before you're connected; until then it shows Requested, and you can cancel.",
-      "When someone asks to follow you, a card pops up at the top right with Accept and Decline. Every waiting request is also listed under People → Follow requests. Remove takes someone off your followers without telling them.",
+      "Each person's picture sits in the ring they picked: it glows while they're in the app (ON) and dims when they're away (OFF). Your own ON/OFF switch is under your name in the menu; the app sets it, ON while JobAssistant is open in front of you and OFF when you leave. When someone asks to follow you, a number appears on your photo next to your name (and a dot on the ☰ button on phones). Click your name to see it under Notifications, with Accept and Decline. Every waiting request is also listed under People → Follow requests. Remove takes someone off your followers without telling them.",
       "Privacy: only you can see who you follow and who follows you. Other people only see the numbers, on your profile and next to your name.",
       "Invite a friend: in People, tap Share link and send it on WhatsApp, Messages or email. When they sign up from it (or log in from it), the two of you are connected straight away and can chat.",
       "You can message someone once one of you follows the other. Unread messages show as a number next to Chat in the menu.",
@@ -253,7 +253,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "Account",
     keywords: "settings theme dark light black white color photo avatar name email password clocks",
     body: [
-      "In Settings you can choose Light, Dark or Black & White appearance, a theme color (Midnight Navy, the default, Deep Teal or Dusky Plum), and the style of the dashboard clocks. The theme color fills the menu, the quote bar and every button, and the app runs edge to edge on a soft cream background. On phones it also colors the very top of the screen, behind the time and battery, in the browser and in the installed app.",
+      "Open Settings by clicking your name at the top of the menu. There you can choose Light, Dark or Black & White appearance, a theme color (Gray Glass, with frosted see-through panels, or the flat Midnight Navy, the default, Deep Teal or Dusky Plum), the glowing ring around your picture in Chat, and the style of the dashboard clocks. The sun/moon switch under your name in the menu flips between light and dark in one tap. The theme color fills the menu, the quote bar and every button, and the app runs edge to edge on a soft cream background. On phones it also colors the very top of the screen, behind the time and battery, in the browser and in the installed app.",
       "You can also set your portfolio photo and a separate menu photo, and change your name, the email you sign in with, and your password.",
     ],
     href: "/dashboard/settings",

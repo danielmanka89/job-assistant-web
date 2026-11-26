@@ -42,7 +42,11 @@ function savedView(): View {
   }
 }
 
-export function DeadlineTracker() {
+/**
+ * `compact`: the small pill in the laptop top bar (ring and the next item's title); otherwise the full
+ * card at the bottom of the phone menu.
+ */
+export function DeadlineTracker({ compact = false }: { compact?: boolean }) {
   const now = useNow();
   const today = now ? localDate(now) : null;
   const [items, setItems] = useState<DeadlineItem[] | null>(null);
@@ -152,7 +156,7 @@ export function DeadlineTracker() {
   const added = (item: DeadlineItem) => setItems((list) => [...(list ?? []), item]);
 
   return (
-    <div className="mt-auto shrink-0 pt-3" onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+    <div className={compact ? "shrink-0" : "mt-auto shrink-0 pt-3"} onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
       <button
         ref={buttonRef}
         type="button"
@@ -160,13 +164,22 @@ export function DeadlineTracker() {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         aria-label={widgetLabel(next, pending.length, today)}
-        className={`group flex w-full items-center gap-2.5 rounded-xl border p-2.5 text-left transition focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none ${
-          open
+        className={`group flex items-center text-left transition focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none ${
+          compact ? "pill-glass h-11 max-w-56 gap-2 rounded-full py-1 pr-3.5 pl-1" : "w-full gap-2.5 rounded-xl border p-2.5"
+        } ${
+          compact
+            ? ""
+            : open
             ? "border-brand-200 bg-brand-50 shadow-md shadow-brand-600/10 dark:border-brand-500/30 dark:bg-brand-500/10"
             : "border-neutral-200/80 bg-white hover:border-brand-200 hover:bg-brand-50/60 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-brand-500/30"
         }`}
       >
         <CountdownRing next={next} today={today} />
+        {compact ? (
+          <span className="min-w-0 truncate text-[13px] font-semibold text-neutral-900 dark:text-white">
+            {next ? next.title : visible === null ? "Deadlines" : "Nothing due"}
+          </span>
+        ) : (
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-bold tracking-widest text-brand-700 uppercase dark:text-brand-300">
@@ -187,6 +200,7 @@ export function DeadlineTracker() {
             <span className="mt-0.5 block text-[13px] text-neutral-500 dark:text-neutral-400">{loadError ? "Couldn't load" : "Nothing due"}</span>
           )}
         </span>
+        )}
       </button>
 
       {open &&
@@ -197,7 +211,7 @@ export function DeadlineTracker() {
             aria-label="Deadlines and pending work"
             onMouseEnter={() => window.clearTimeout(timer.current)}
             onMouseLeave={hoverOut}
-            className={`fixed inset-2 z-[60] flex flex-col overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-2xl shadow-neutral-900/20 motion-safe:animate-panel-in sm:right-auto lg:inset-y-[calc(var(--edge)+0.5rem)] lg:left-[calc(var(--edge)+18rem+0.5rem)] dark:border-neutral-800 dark:bg-neutral-950 ${
+            className={`fixed inset-2 z-[60] flex flex-col overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-2xl shadow-neutral-900/20 motion-safe:animate-panel-in sm:right-auto lg:top-[calc(var(--topbar-h)+0.5rem)] lg:right-3 lg:bottom-[calc(var(--quote-banner-h)+0.5rem)] lg:left-auto dark:border-neutral-800 dark:bg-neutral-950 ${
               view === "board" ? "sm:w-[44rem]" : "sm:w-[26rem]"
             } max-w-[calc(100vw-1rem)]`}
           >

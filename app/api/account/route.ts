@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { SESSION_COOKIE, deleteOtherSessions } from "@/lib/session";
-import { THEME_COLORS, CLOCK_TEMPLATES, type AccountResponse, type ThemeColor, type ClockTemplate } from "@/lib/types";
+import { THEME_COLORS, CLOCK_TEMPLATES, RING_STYLES, type AccountResponse, type ThemeColor, type ClockTemplate, type RingStyle } from "@/lib/types";
 
 /** GET /api/account — the logged-in user, fresh from the database. */
 export async function GET(request: NextRequest) {
@@ -50,9 +50,16 @@ export async function PATCH(request: NextRequest) {
   }
   if (body.themeColor !== undefined) {
     if (!THEME_COLORS.includes(body.themeColor as ThemeColor)) {
-      fieldErrors.themeColor = "Choose Blue, Green or Red";
+      fieldErrors.themeColor = "Choose Midnight Navy, Deep Teal, Dusky Plum or Gray Glass";
     } else if (body.themeColor !== user.themeColor) {
       data.themeColor = body.themeColor as ThemeColor;
+    }
+  }
+  if (body.ringStyle !== undefined) {
+    if (!RING_STYLES.includes(body.ringStyle as RingStyle)) {
+      fieldErrors.ringStyle = "Choose Prism, Sunset, Ocean, Aurora or No ring";
+    } else if (body.ringStyle !== user.ringStyle) {
+      data.ringStyle = body.ringStyle as RingStyle;
     }
   }
   const newPassword = body.newPassword === undefined ? undefined : typeof body.newPassword === "string" ? body.newPassword : "";

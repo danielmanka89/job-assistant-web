@@ -2,7 +2,23 @@
 // start "pending" and become "accepted" when the person followed says yes.
 
 import { prisma } from "@/lib/db";
+import { ringStyleOf } from "@/lib/theme-color";
 import { CONNECTION_KINDS, type ConnectionKind, type Person, type UserRole } from "@/lib/types";
+
+/** How recently someone must have had the app open to show as ON. The app checks in every 30 seconds. */
+export const ONLINE_WINDOW_MS = 90_000;
+
+/** ON: seen within the last 90 seconds. */
+export const isOnline = (lastSeenAt: Date | null | undefined, now = Date.now()) => Boolean(lastSeenAt && now - lastSeenAt.getTime() < ONLINE_WINDOW_MS);
+
+/**
+ * Marks the user as in the app. Writes at most every 30 seconds per user, so the menu's poll
+ * doesn't turn into a database write each time.
+ */
+export async function touchPresence(userId: string) {
+  const cutoff = new Date(Date.now() - 30_000);
+  await prisma.user.updateMany({ where: { id: userId, OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: cutoff } }] }, data: { lastSeenAt: new Date() } });
+}
 
 type UserBits = { id: string; name: string; role: string };
 
@@ -24,14 +40,18 @@ export async function followCounts(ids: string[]) {
 export async function toPeople(meId: string, users: UserBits[]): Promise<Person[]> {
   if (!users.length) return [];
   const ids = users.map((u) => u.id);
-  const [mine, theirs, counts] = await Promise.all([
+  const [mine, theirs, counts, looks] = await Promise.all([
     prisma.connection.findMany({ where: { fromUserId: meId, toUserId: { in: ids } }, select: { toUserId: true, kind: true, status: true } }),
     prisma.connection.findMany({ where: { toUserId: meId, fromUserId: { in: ids } }, select: { fromUserId: true, status: true } }),
     followCounts(ids),
+    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, avatarUrl: true, profilePictureUrl: true, ringStyle: true, lastSeenAt: true } }),
   ]);
   const out = new Map(mine.map((c) => [c.toUserId, c]));
   const back = new Map(theirs.map((c) => [c.fromUserId, c.status]));
+  const look = new Map(looks.map((l) => [l.id, l]));
+  const now = Date.now();
   return users.map((u) => {
+    const l = look.get(u.id);
     const row = out.get(u.id);
     const accepted = row?.status === "accepted";
     return {
@@ -44,6 +64,9 @@ export async function toPeople(meId: string, users: UserBits[]): Promise<Person[
       requestedMe: back.get(u.id) === "pending",
       followers: counts.followers.get(u.id) ?? 0,
       following: counts.following.get(u.id) ?? 0,
+      photoUrl: l?.avatarUrl ?? l?.profilePictureUrl ?? null,
+      ring: ringStyleOf(l?.ringStyle),
+      online: isOnline(l?.lastSeenAt, now),
     };
   });
 }

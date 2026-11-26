@@ -481,6 +481,9 @@ body:has([data-quote-banner]) [data-fixed-bottom-bar] {
  * so the theme color fills the very top. These are the gaps to keep clear; all 0 on laptops.
  */
 :root {
+  /* The laptop top bar (dashboard): its own height, and the space pages keep above them. */
+  --topbar-inner-h: 4rem;
+  --topbar-h: 5rem;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -686,4 +689,222 @@ body {
 :root[data-theme="mono"] .neon-auth {
   --brand-glow: 212 212 212;
   --brand-glow-deep: 163 163 163;
+}
+
+/*
+ * Gray Glass (data-accent="graphite"): slate grays, and unlike the flat themes above, real frosted
+ * glass. Panels are see-through and blurred over soft gray blobs (.glass-sunset), in light and dark.
+ * The black & white theme still wins (it is excluded here).
+ */
+[data-accent="graphite"] {
+  --color-brand-50: #f1f4f5;
+  --color-brand-100: #e1e7e9;
+  --color-brand-200: #c5d0d4;
+  --color-brand-300: #9fb0b6;
+  --color-brand-400: #788d94;
+  --color-brand-500: #5d7279;
+  --color-brand-600: #45575e;
+  --color-brand-700: #36454b;
+  --color-brand-800: #2b373c;
+  --color-brand-900: #232d31;
+  --color-brand-950: #141a1d;
+  --brand-glow: 69 87 94;
+  --brand-glow-deep: 54 69 75;
+  --menu-top: #26313a;
+  --menu-bottom: #3a4a52;
+  --menu-pill: #e6ecee;
+  --menu-pill-text: #1c252a;
+  --page-bg: #e3e8ea;
+  --card-bg: #f4f6f7;
+  --peach: #c9d3d7;
+}
+:root[data-accent="graphite"]:not([data-theme="mono"]) .glass-shell {
+  --window-bg: transparent;
+  --menu-bg: rgb(22 30 35 / 0.74);
+  --glass-panel: rgb(255 255 255 / 0.55);
+  --glass-soft: rgb(255 255 255 / 0.4);
+  --glass-field: rgb(255 255 255 / 0.85);
+  --glass-border: rgb(255 255 255 / 0.75);
+  --glass-shadow: 0 10px 30px rgb(40 55 62 / 0.12);
+  --blob-1: #bfcbd0;
+  --blob-2: #dfe5e8;
+  --blob-3: #a9b9bf;
+  --blob-base: linear-gradient(160deg, #e9edef 0%, #dde3e6 55%, #cfd8dc 100%);
+}
+:root[data-accent="graphite"][data-theme="dark"] .glass-shell {
+  --menu-bg: rgb(8 13 16 / 0.6);
+  --glass-panel: rgb(20 28 32 / 0.5);
+  --glass-soft: rgb(255 255 255 / 0.05);
+  --glass-field: rgb(255 255 255 / 0.07);
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+  --blob-1: #2c4249;
+  --blob-2: #1e2c31;
+  --blob-3: #4a646c;
+  --blob-base: linear-gradient(160deg, #0f1a1f 0%, #18262c 55%, #2c3d44 100%);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-accent="graphite"]:not([data-theme]) .glass-shell {
+    --menu-bg: rgb(8 13 16 / 0.6);
+    --glass-panel: rgb(20 28 32 / 0.5);
+    --glass-soft: rgb(255 255 255 / 0.05);
+    --glass-field: rgb(255 255 255 / 0.07);
+    --glass-border: rgb(255 255 255 / 0.09);
+    --glass-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+    --blob-1: #2c4249;
+    --blob-2: #1e2c31;
+    --blob-3: #4a646c;
+    --blob-base: linear-gradient(160deg, #0f1a1f 0%, #18262c 55%, #2c3d44 100%);
+  }
+}
+/* The blobs the glass blurs. */
+:root[data-accent="graphite"]:not([data-theme="mono"]) .glass-shell .glass-sunset {
+  background:
+    radial-gradient(38rem 38rem at 8% 0%, var(--blob-1) 0%, transparent 62%),
+    radial-gradient(34rem 34rem at 92% 32%, var(--blob-2) 0%, transparent 62%),
+    radial-gradient(40rem 40rem at 45% 108%, var(--blob-3) 0%, transparent 62%),
+    var(--blob-base);
+}
+/* Frosted panels (the flat themes switch the blur off). */
+:root[data-accent="graphite"]:not([data-theme="mono"]) .glass-shell
+  :is(.bg-white, .bg-white\/85, .bg-white\/90, .bg-white\/95, .dark\:bg-neutral-900, .dark\:bg-neutral-900\/60, .dark\:bg-neutral-950):not(input, textarea, select),
+:root[data-accent="graphite"]:not([data-theme="mono"]) .glass-shell #dashboard-sidebar {
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+}
+
+/*
+ * The glass controls (Gray Glass design, available to every theme): pills with a bright lower rim,
+ * glowing round "orb" buttons, the ON/OFF status switch, the sun/moon theme switch and the ringed
+ * profile pictures. Their light and dark looks follow the theme.
+ */
+:root {
+  --pill-bg: linear-gradient(180deg, rgb(255 255 255 / 0.75), rgb(255 255 255 / 0.35));
+  --pill-border: rgb(255 255 255 / 0.95);
+  --pill-shadow: inset 0 -1.5px 0 #ffffff, inset 0 1px 0 rgb(255 255 255 / 0.7), 0 10px 26px rgb(40 55 62 / 0.14);
+  --seg-on-bg: linear-gradient(180deg, #26313a 0%, #45545b 100%);
+  --seg-on-shadow: inset 0 1px 3px rgb(0 0 0 / 0.35);
+  --seg-off-text: #5d6a70;
+  --orb-center: #eef2f4;
+  --orb-icon: #1c2328;
+  --orb-glow: 0.28;
+}
+:root[data-theme="dark"] {
+  --pill-bg: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02));
+  --pill-border: rgb(170 205 215 / 0.35);
+  --pill-shadow: inset 0 -1.5px 0 rgb(220 240 245 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.12), 0 12px 30px rgb(0 0 0 / 0.35);
+  --seg-on-bg: linear-gradient(180deg, #1b272c 0%, #34454c 100%);
+  --seg-on-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.06);
+  --seg-off-text: rgb(205 215 220 / 0.7);
+  --orb-center: #0c2230;
+  --orb-icon: #ffffff;
+  --orb-glow: 0.45;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --pill-bg: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02));
+    --pill-border: rgb(170 205 215 / 0.35);
+    --pill-shadow: inset 0 -1.5px 0 rgb(220 240 245 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.12), 0 12px 30px rgb(0 0 0 / 0.35);
+    --seg-on-bg: linear-gradient(180deg, #1b272c 0%, #34454c 100%);
+    --seg-on-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.06);
+    --seg-off-text: rgb(205 215 220 / 0.7);
+    --orb-center: #0c2230;
+    --orb-icon: #ffffff;
+    --orb-glow: 0.45;
+  }
+}
+
+.pill-glass {
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
+  box-shadow: var(--pill-shadow);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.pill-seg-on {
+  background: var(--seg-on-bg);
+  box-shadow: var(--seg-on-shadow);
+  color: #ffffff;
+}
+.pill-seg-off {
+  color: var(--seg-off-text);
+}
+
+/* Orbs: a dark (or, in light, pale) center fading into a colored rim, with a soft glow. */
+.orb {
+  --orb-rim: linear-gradient(150deg, #c9d3da 0%, #7d8b95 100%);
+  --orb-glow-color: 190 205 215;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--orb-icon);
+  background: radial-gradient(circle at 50% 54%, var(--orb-center) 36%, transparent 72%), var(--orb-rim);
+  box-shadow: 0 0 16px rgb(var(--orb-glow-color) / var(--orb-glow));
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.orb:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 22px rgb(var(--orb-glow-color) / calc(var(--orb-glow) + 0.15));
+}
+.orb-teal {
+  --orb-rim: linear-gradient(160deg, #2b6f78 0%, #164a54 100%);
+  --orb-glow-color: 40 120 130;
+}
+.orb-pink {
+  --orb-rim: linear-gradient(135deg, #e192b2 0%, #9a7bc0 100%);
+  --orb-glow-color: 200 120 170;
+}
+/* On a dark card the center stays dark in both themes. */
+.orb-on-dark {
+  --orb-center: #13232a;
+  --orb-icon: #ffffff;
+  --orb-glow: 0.45;
+}
+
+/* Ringed pictures: the ring colors per style, a blurred copy behind it for the glow. */
+.ring-avatar {
+  --ring: conic-gradient(from 210deg, #ffffff, #ffd36e, #ff7a3d, #ff4f9a, #8a6bff, #3fd0ff, #ffffff);
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+.ring-avatar[data-ring="SUNSET"] {
+  --ring: conic-gradient(from 200deg, #fff4d6, #ffb347, #ff6a3d, #ff3d7f, #ffb347, #fff4d6);
+}
+.ring-avatar[data-ring="OCEAN"] {
+  --ring: conic-gradient(from 30deg, #ffffff, #7fe9ff, #2f7bff, #6a5cff, #2fd2b8, #ffffff);
+}
+.ring-avatar[data-ring="AURORA"] {
+  --ring: conic-gradient(from 120deg, #ffffff, #8bffc1, #3fd0ff, #c084fc, #fde68a, #ffffff);
+}
+.ring-avatar[data-ring="NONE"] {
+  --ring: rgb(148 163 170 / 0.35);
+}
+.ring-avatar::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: var(--ring);
+  filter: blur(7px);
+  opacity: 0.7;
+}
+.ring-avatar > .ring-avatar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2.5px;
+  background: var(--ring);
+}
+/* Away (OFF): a dimmer ring and no glow. */
+.ring-avatar[data-online="false"]::before,
+.ring-avatar[data-ring="NONE"]::before {
+  opacity: 0;
+}
+.ring-avatar[data-online="false"] > .ring-avatar-ring {
+  opacity: 0.45;
+}
+:root[data-theme="mono"] .ring-avatar {
+  filter: grayscale(1);
 }

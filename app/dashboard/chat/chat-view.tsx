@@ -30,7 +30,7 @@ import {
   type Person,
 } from "@/lib/types";
 import { ErrorAlert } from "@/components/ui/alert";
-import { Avatar } from "@/components/ui/avatar";
+import { RingAvatar } from "@/components/ui/ring-avatar";
 import { Button } from "@/components/ui/button";
 
 const isUnauthorized = (e: ApiError) => e.code === "UNAUTHORIZED" || e.code === "HTTP_401";
@@ -244,7 +244,7 @@ function ChatList({
               chat.id === openId ? "bg-brand-50 dark:bg-brand-500/15" : "hover:bg-neutral-100 dark:hover:bg-neutral-800/70"
             }`}
           >
-            <Avatar name={chat.person.name} className="size-10 text-sm" />
+            <RingAvatar name={chat.person.name} photoUrl={chat.person.photoUrl} ring={chat.person.ring} online={chat.person.online} className="size-10" />
             <span className="min-w-0 flex-1">
               <span className="flex items-baseline justify-between gap-2">
                 <span className="truncate font-semibold text-neutral-900 dark:text-white">{chat.person.name}</span>
@@ -418,7 +418,7 @@ function PersonRow({ person, onMessage, onConnection, onAnswer }: PeopleHandlers
   return (
     <li className="rounded-2xl border border-neutral-200/80 p-3 dark:border-neutral-800">
       <div className="flex items-center gap-3">
-        <Avatar name={person.name} className="size-9 text-sm" />
+        <RingAvatar name={person.name} photoUrl={person.photoUrl} ring={person.ring} online={person.online} className="size-9" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{person.name}</p>
           <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
@@ -598,13 +598,14 @@ function Thread({ id, onBack, onActivity, onError }: { id: string; onBack: () =>
         </button>
         {person ? (
           <>
-            <Avatar name={person.name} className="size-10 text-sm" />
+            <RingAvatar name={person.name} photoUrl={person.photoUrl} ring={person.ring} online={person.online} className="size-10" />
             <div className="min-w-0">
               <h2 ref={heading} tabIndex={-1} className="truncate font-semibold text-neutral-900 outline-none dark:text-white">
                 {person.name}
               </h2>
               <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
-                {ROLE_LABEL[person.role]}
+                <span className={person.online ? "font-semibold text-blue-600 dark:text-blue-400" : "font-semibold text-red-600 dark:text-red-400"}>{person.online ? "ON" : "OFF"}</span>
+                {` · ${ROLE_LABEL[person.role]}`}
                 {person.connection && ` · ${CONNECTION_KIND_LABEL[person.connection]}`}
               </p>
             </div>

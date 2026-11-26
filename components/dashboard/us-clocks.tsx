@@ -5,7 +5,7 @@ import { useCurrentUser } from "@/lib/client/current-user";
 import { useNow, zoneTimes } from "@/lib/client/us-clock";
 
 export const CLOCK_TEMPLATE_LABEL: Record<ClockTemplate, string> = { MINIMALIST: "Minimalist", NEON: "Neon", GLASS: "Glass" };
-export const THEME_COLOR_LABEL: Record<ThemeColor, string> = { NAVY: "Midnight Navy", TEAL: "Deep Teal", PLUM: "Dusky Plum" };
+export const THEME_COLOR_LABEL: Record<ThemeColor, string> = { NAVY: "Midnight Navy", TEAL: "Deep Teal", PLUM: "Dusky Plum", GRAPHITE: "Gray Glass" };
 
 type ClockStyle = { box: string; cell: string; abbr: string; time: string };
 

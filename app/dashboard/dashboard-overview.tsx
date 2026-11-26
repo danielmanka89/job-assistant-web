@@ -3,12 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ApiError, ChatConversation, DashboardStats, GeneratedFile, Submission, TailoredResumeWithFiles } from "@/lib/types";
-import { getDashboardStats, listChats, listSubmissions, listTailoredResumes, logout } from "@/lib/client/api";
-import { Avatar } from "@/components/ui/avatar";
-import { appliedCounts } from "@/lib/deadlines";
+import type { ApiError, ChatConversation, DashboardStats, DeadlineItem, GeneratedFile, Submission, TailoredResumeWithFiles, VendorJd } from "@/lib/types";
+import { getDashboardStats, listChats, listDeadlines, listSubmissions, listTailoredResumes, listVendorJds, logout } from "@/lib/client/api";
+import { appliedCounts, daysBetween, localDate, nextDeadline, relativeDay, visibleDeadlines } from "@/lib/deadlines";
+import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { ErrorAlert } from "@/components/ui/alert";
+import { OrbLink } from "@/components/ui/orb";
+import { RingAvatar } from "@/components/ui/ring-avatar";
+
+// The Dashboard home (Command Center): your numbers on the left, today's queue and your resumes in
+// the middle, your chats on the right. Works in every theme color.
 
 type Load<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string };
 
@@ -17,17 +22,22 @@ const isUnauthorized = (e: ApiError) => e.code === "UNAUTHORIZED" || e.code === 
 const primaryLink =
   "inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-2.5 font-display text-[15px] font-medium tracking-wider text-white uppercase shadow-md shadow-brand-600/30 transition hover:bg-brand-700 dark:hover:bg-brand-500";
 
+const card = "rounded-3xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60";
+const sectionTitle = "text-[15px] font-semibold tracking-tight text-neutral-900 dark:text-white";
+
 export function DashboardOverview() {
   const router = useRouter();
   const user = useCurrentUser();
   const [stats, setStats] = useState<Load<DashboardStats>>({ status: "loading" });
   const [resumes, setResumes] = useState<Load<TailoredResumeWithFiles[]>>({ status: "loading" });
   const [applications, setApplications] = useState<Load<Submission[]>>({ status: "loading" });
+  const [jds, setJds] = useState<VendorJd[] | null>(null);
+  const [deadlines, setDeadlines] = useState<DeadlineItem[] | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getDashboardStats(), listTailoredResumes(), listSubmissions()]).then(async ([s, r, a]) => {
+    Promise.all([getDashboardStats(), listTailoredResumes(), listSubmissions(), listVendorJds(), listDeadlines()]).then(async ([s, r, a, j, d]) => {
       if (!active) return;
       if ([s, r, a].some((result) => !result.ok && isUnauthorized(result.error))) {
         await logout();
@@ -37,6 +47,8 @@ export function DashboardOverview() {
       setStats(s.ok ? { status: "ready", data: s.data } : { status: "error", message: s.error.message });
       setResumes(r.ok ? { status: "ready", data: r.data } : { status: "error", message: r.error.message });
       setApplications(a.ok ? { status: "ready", data: a.data } : { status: "error", message: a.error.message });
+      setJds(j.ok ? j.data.jds : []);
+      setDeadlines(d.ok ? d.data : []);
     });
     return () => {
       active = false;
@@ -54,103 +66,212 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl dark:text-white">
-            {firstName ? `Welcome back, ${firstName}` : "Dashboard"}
-          </h1>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your resumes and how well they match your jobs.</p>
-        </div>
-      </header>
-
       {(stats.status === "error" || resumes.status === "error") && (
         <div className="space-y-3">
-          <ErrorAlert>
-            {stats.status === "error" ? stats.message : resumes.status === "error" ? resumes.message : null}
-          </ErrorAlert>
+          <ErrorAlert>{stats.status === "error" ? stats.message : resumes.status === "error" ? resumes.message : null}</ErrorAlert>
           <button type="button" onClick={retry} className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
             Try again
           </button>
         </div>
       )}
 
-      <StatCards stats={stats} applications={applications} />
+      {/* Command center: your numbers | today's queue and resumes | chat. Stacks on phones. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_19rem]">
+        <NumbersColumn stats={stats} resumes={resumes} applications={applications} jds={jds} deadlines={deadlines} />
 
-      {/* My Resumes and Recent chats side by side on wide screens; stacked on phones. */}
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <section aria-labelledby="my-resumes">
-          <h2 id="my-resumes" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            My Resumes
-          </h2>
-          <div className="mt-3">
-            {resumes.status === "loading" && <ResumeListSkeleton />}
-            {resumes.status === "ready" && (resumes.data.length ? <ResumeList items={resumes.data} /> : <EmptyState />)}
+        <section aria-label="Today" className={`${card} order-1 min-w-0 space-y-6 p-5 sm:p-6 lg:order-none`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+                {firstName ? `${greeting()}, ${firstName}` : "Dashboard"}
+              </h1>
+              <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Here&apos;s what to do next.</p>
+            </div>
+            <OrbLink href="/dashboard/jds" label="Add a JD" tone="teal" icon="plus" />
           </div>
+
+          <TodaysQueue jds={jds} deadlines={deadlines} />
+
+          <section aria-labelledby="my-resumes">
+            <h2 id="my-resumes" className={sectionTitle}>
+              My resumes
+            </h2>
+            <div className="mt-3">
+              {resumes.status === "loading" && <ResumeListSkeleton />}
+              {resumes.status === "ready" && (resumes.data.length ? <ResumeList items={resumes.data} /> : <EmptyState />)}
+            </div>
+          </section>
         </section>
-        <RecentChats />
+
+        <ChatPanel />
       </div>
     </div>
   );
 }
 
-/* ---------- Stats ---------- */
+function greeting(now = new Date()) {
+  const h = now.getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
 
-const monthName = new Intl.DateTimeFormat(undefined, { month: "long" });
+/* ---------- Your numbers (left column) ---------- */
 
-function StatCards({ stats, applications }: { stats: Load<DashboardStats>; applications: Load<Submission[]> }) {
-  if (stats.status === "error") return null;
-  const s = stats.status === "ready" ? stats.data : null;
-  // Counted here, not on the server, so "today" and "this week" follow the viewer's own calendar.
+const monthName = new Intl.DateTimeFormat(undefined, { month: "short" });
+
+function NumbersColumn({
+  stats,
+  resumes,
+  applications,
+  jds,
+  deadlines,
+}: {
+  stats: Load<DashboardStats>;
+  resumes: Load<TailoredResumeWithFiles[]>;
+  applications: Load<Submission[]>;
+  jds: VendorJd[] | null;
+  deadlines: DeadlineItem[] | null;
+}) {
+  // Counted here, not on the server, so "this month" follows the viewer's own calendar.
   const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const tailored = resumes.status === "ready" ? resumes.data.filter((r) => new Date(r.createdAt).getTime() >= monthStart).length : null;
   const applied = applications.status === "ready" ? appliedCounts(applications.data, now) : null;
-  // null shows the loading bar; a dash means the applications couldn't be loaded.
-  const appliedText = (n: number | undefined) => (n === undefined ? (applications.status === "error" ? "—" : null) : String(n));
-  const cards = [
-    { label: "Tailored", value: s && String(s.tailoredResumeCount), hint: "Resumes tailored, ready to download", icon: <SparkIcon /> },
-    { label: "Today", value: appliedText(applied?.today), hint: "Jobs applied today", icon: <SendIcon /> },
-    { label: "This Week", value: appliedText(applied?.week), hint: "Applied since Monday", icon: <CalendarIcon /> },
-    { label: "This Month", value: appliedText(applied?.month), hint: `Applied in ${monthName.format(now)}`, icon: <CalendarIcon /> },
-    {
-      label: "Open Jobs",
-      value: s && String(s.jobs.total),
-      hint: s ? `${s.jobs.native} on JobAssistant` : "On the job board",
-      icon: <BriefcaseIcon />,
-    },
+  const ready = jds ? jds.filter((j) => j.tailored && !j.sentAt).length : null;
+  const match = stats.status === "ready" ? stats.data.averageMatchPercent : null;
+  const tiles: { label: string; value: string | null }[] = [
+    { label: "Applied this month", value: applied ? String(applied.month) : null },
+    { label: "Ready to send", value: ready === null ? null : String(ready) },
+    { label: "Average match", value: stats.status !== "ready" ? null : match === null ? "—" : `${match}%` },
+    { label: "Open jobs", value: stats.status === "ready" ? String(stats.data.jobs.total) : null },
   ];
 
   return (
-    <section aria-label="Your stats" aria-busy={!s} className="-m-1 flex gap-2 overflow-x-auto p-1">
-      {cards.map((card) => (
-        // One compact strip: icon, number and label on a single row of small cards. The hint is a
-        // tooltip (and read by screen readers) instead of a third line. Phones scroll sideways.
-        <div
-          key={card.label}
-          title={card.hint}
-          className="flex min-w-30 flex-1 items-center gap-2.5 rounded-2xl border border-neutral-200/80 bg-white px-3 py-2.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
-        >
-          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300 [&_svg]:size-4">
-            {card.icon}
-          </span>
-          <div className="min-w-0">
-            {card.value === null ? (
-              <span className="block h-6 w-10 animate-pulse rounded-md bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
-            ) : (
-              <p className="font-display text-2xl leading-6 font-semibold tracking-tight text-neutral-900 tabular-nums dark:text-white">{card.value}</p>
-            )}
-            <p className="mt-0.5 truncate text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              {card.label}
-              <span className="sr-only">: {card.hint}</span>
-            </p>
-          </div>
+    <aside aria-label="Your numbers" className="order-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:order-none lg:grid-cols-1">
+      <div className="col-span-2 rounded-3xl bg-[linear-gradient(140deg,var(--color-brand-950),var(--color-brand-600))] p-5 text-white shadow-lg shadow-brand-950/20 sm:col-span-3 lg:col-span-1">
+        <p className="text-xs text-white/75">Tailored in {monthName.format(now)}</p>
+        <p className="mt-1 text-5xl leading-none font-light tabular-nums">{tailored ?? "—"}</p>
+      </div>
+      {tiles.map((t) => (
+        <div key={t.label} className={`${card} px-4 py-3`}>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">{t.label}</p>
+          {t.value === null ? (
+            <span className="mt-1 block h-6 w-10 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" aria-hidden="true" />
+          ) : (
+            <p className="text-2xl font-bold text-neutral-900 tabular-nums dark:text-white">{t.value}</p>
+          )}
         </div>
       ))}
+      <NextUp deadlines={deadlines} />
+      <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+        <SidebarClocks />
+      </div>
+    </aside>
+  );
+}
+
+/** The soonest open deadline as a small peach card. */
+function NextUp({ deadlines }: { deadlines: DeadlineItem[] | null }) {
+  const today = localDate(new Date());
+  const next = deadlines ? nextDeadline(visibleDeadlines(deadlines, today)) : null;
+  if (!next?.dueOn) return null;
+  const body = (
+    <>
+      <p className="text-[11px] font-bold tracking-wider text-orange-800 uppercase dark:text-orange-200">Next · {relativeDay(next.dueOn, today)}</p>
+      <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">{next.title}</p>
+    </>
+  );
+  const cls = "col-span-2 block rounded-3xl bg-orange-100 px-4 py-3 sm:col-span-1 lg:col-span-1 dark:bg-orange-500/15";
+  return next.href ? (
+    <Link href={next.href} className={`${cls} outline-none hover:brightness-[1.03] focus-visible:ring-4 focus-visible:ring-brand-500/40`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
+  );
+}
+
+/* ---------- Today's queue ---------- */
+
+type QueueItem = { key: string; dot: string; title: string; detail: string; action: string; href: string; primary: boolean };
+
+/**
+ * What to do next, in order: JDs tailored and ready to send, deadlines in the coming week, then JDs
+ * still waiting to be tailored. Each row has the one button that does it.
+ */
+function TodaysQueue({ jds, deadlines }: { jds: VendorJd[] | null; deadlines: DeadlineItem[] | null }) {
+  if (jds === null || deadlines === null) {
+    return (
+      <div className="space-y-2.5" aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="block h-16 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800" />
+        ))}
+      </div>
+    );
+  }
+  const today = localDate(new Date());
+  const pct = (jd: VendorJd) => (jd.tailored?.finalMatchPercent === null || jd.tailored?.finalMatchPercent === undefined ? "" : ` · ${jd.tailored.finalMatchPercent}% match`);
+  const where = (jd: VendorJd) => [jd.vendorCompany, jd.location].filter(Boolean).join(" · ");
+  const items: QueueItem[] = [
+    ...jds
+      .filter((jd) => jd.tailored && !jd.sentAt)
+      .map((jd) => ({ key: `send-${jd.id}`, dot: "bg-blue-600", title: jd.title, detail: `${where(jd)}${pct(jd)} · ready to send`, action: "Send", href: "/dashboard/jds", primary: true })),
+    ...visibleDeadlines(deadlines, today)
+      .filter((d) => !d.done && d.dueOn && daysBetween(today, d.dueOn) <= 7)
+      .map((d) => ({
+        key: `due-${d.id}`,
+        dot: d.kind === "interview" ? "bg-rose-500" : "bg-amber-500",
+        title: d.title,
+        detail: `${relativeDay(d.dueOn!, today)} · ${d.detail}`,
+        action: d.kind === "interview" ? "Prep" : "Open",
+        href: d.href ?? "/dashboard/spreadsheet",
+        primary: false,
+      })),
+    ...jds
+      .filter((jd) => !jd.tailored)
+      .map((jd) => ({ key: `tailor-${jd.id}`, dot: "bg-neutral-400", title: jd.title, detail: `${where(jd)} · not tailored yet`, action: "Tailor", href: "/dashboard/jds", primary: false })),
+  ].slice(0, 6);
+
+  return (
+    <section aria-labelledby="queue-title">
+      <h2 id="queue-title" className={sectionTitle}>
+        Today&apos;s queue
+      </h2>
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+          You&apos;re all caught up.{" "}
+          <Link href="/dashboard/jds" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+            Add a JD
+          </Link>{" "}
+          when a vendor sends one.
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-2.5">
+          {items.map((item) => (
+            <li key={item.key} className="flex items-center gap-3.5 rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-white/5">
+              <span className={`size-2.5 shrink-0 rounded-full ${item.dot}`} aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-neutral-900 dark:text-white">{item.title}</span>
+                <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{item.detail}</span>
+              </span>
+              <Link
+                href={item.href}
+                className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 ${
+                  item.primary ? "pill-seg-on" : "border border-neutral-300 text-neutral-800 hover:bg-white dark:border-white/15 dark:text-neutral-100 dark:hover:bg-white/10"
+                }`}
+              >
+                {item.action}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
 
-/* ---------- Recent chats ---------- */
+/* ---------- Chat (right column) ---------- */
 
-const RECENT_CHATS = 3;
+const RECENT_CHATS = 5;
 const chatTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 const chatDay = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
@@ -161,8 +282,8 @@ function shortTime(iso: string) {
   return d.toDateString() === new Date().toDateString() ? chatTime.format(d) : chatDay.format(d);
 }
 
-/** The three most recent conversations; each opens straight into that chat. */
-function RecentChats() {
+/** A dark panel with your latest chats; each picture in its owner's ring, dim when they're away. */
+function ChatPanel() {
   const [chats, setChats] = useState<ChatConversation[] | null | "error">(null);
 
   useEffect(() => {
@@ -177,67 +298,61 @@ function RecentChats() {
   }, []);
 
   return (
-    <section aria-labelledby="recent-chats">
-      <div className="flex items-baseline justify-between">
-        <h2 id="recent-chats" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-          Recent chats
+    <section
+      aria-labelledby="chat-title"
+      className="order-3 flex flex-col gap-4 rounded-3xl lg:order-none xl:min-h-80 bg-[rgb(24_32_37/0.88)] p-5 text-neutral-100 shadow-lg backdrop-blur-xl lg:col-span-2 xl:col-span-1 dark:bg-white/5"
+    >
+      <div className="flex items-center justify-between">
+        <h2 id="chat-title" className="text-[15px] font-semibold">
+          Chat
         </h2>
-        <Link href="/dashboard/chat" className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
-          Open Chat
-        </Link>
+        <OrbLink href="/dashboard/chat" label="Open Chat" tone="teal" icon="arrow" size="sm" onDark />
       </div>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-        {chats === null ? (
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800" aria-busy="true">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5">
-                <span className="size-8 animate-pulse rounded-full bg-neutral-100 dark:bg-neutral-800" />
-                <span className="block h-3.5 flex-1 animate-pulse rounded bg-neutral-100 dark:bg-neutral-800" />
-              </div>
-            ))}
-          </div>
-        ) : chats === "error" ? (
-          <p className="px-4 py-5 text-sm text-neutral-500 dark:text-neutral-400">Chats couldn&apos;t be loaded right now.</p>
-        ) : chats.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-neutral-500 dark:text-neutral-400">
-            No chats yet.{" "}
-            <Link href="/dashboard/chat" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
-              Connect with someone
-            </Link>{" "}
-            to start one.
-          </p>
-        ) : (
-          <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {chats.map((chat) => (
-              <li key={chat.id}>
-                <Link
-                  href={`/dashboard/chat?c=${encodeURIComponent(chat.id)}`}
-                  className="flex items-center gap-2.5 px-3.5 py-2.5 transition hover:bg-neutral-50 focus-visible:bg-neutral-50 focus-visible:outline-none dark:hover:bg-neutral-800/60 dark:focus-visible:bg-neutral-800/60"
-                >
-                  <Avatar name={chat.person.name} className="size-8 text-xs" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-2">
-                      <span className={`truncate text-[13px] text-neutral-900 dark:text-white ${chat.unread ? "font-bold" : "font-semibold"}`}>{chat.person.name}</span>
-                      <span className="ml-auto shrink-0 text-[11px] text-neutral-400 tabular-nums dark:text-neutral-500">{shortTime(chat.lastMessageAt)}</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className={`truncate text-xs ${chat.unread ? "text-neutral-800 dark:text-neutral-200" : "text-neutral-500 dark:text-neutral-400"}`}>
-                        {chat.lastMessage ?? "No messages yet"}
-                      </span>
-                      {chat.unread > 0 && (
-                        <span className="ml-auto shrink-0 rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-semibold text-white tabular-nums">
-                          {chat.unread > 99 ? "99+" : chat.unread}
-                          <span className="sr-only"> unread</span>
-                        </span>
-                      )}
-                    </span>
+      {chats === null ? (
+        <div className="space-y-3" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className="block h-11 animate-pulse rounded-full bg-white/10" />
+          ))}
+        </div>
+      ) : chats === "error" ? (
+        <p className="text-sm text-neutral-300">Chats couldn&apos;t be loaded right now.</p>
+      ) : chats.length === 0 ? (
+        <p className="text-sm text-neutral-300">
+          No chats yet.{" "}
+          <Link href="/dashboard/chat" className="font-semibold text-white underline-offset-2 hover:underline">
+            Connect with someone
+          </Link>{" "}
+          to start one.
+        </p>
+      ) : (
+        <ul className="space-y-1">
+          {chats.map((chat) => (
+            <li key={chat.id}>
+              <Link
+                href={`/dashboard/chat?c=${encodeURIComponent(chat.id)}`}
+                className="flex items-center gap-3 rounded-2xl p-2 outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/60"
+              >
+                <RingAvatar name={chat.person.name} photoUrl={chat.person.photoUrl} ring={chat.person.ring} online={chat.person.online} className="size-10" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className={`truncate text-sm ${chat.unread ? "font-bold text-white" : "font-semibold"}`}>{chat.person.name}</span>
+                    <span className="ml-auto shrink-0 text-[11px] text-neutral-400 tabular-nums">{shortTime(chat.lastMessageAt)}</span>
                   </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  <span className="flex items-center gap-2">
+                    <span className={`truncate text-xs ${chat.unread ? "text-neutral-100" : "text-neutral-400"}`}>{chat.lastMessage ?? "No messages yet"}</span>
+                    {chat.unread > 0 && (
+                      <span className="ml-auto shrink-0 rounded-full bg-blue-600 px-1.5 py-px text-[10px] font-semibold text-white tabular-nums">
+                        {chat.unread > 99 ? "99+" : chat.unread}
+                        <span className="sr-only"> unread</span>
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -251,53 +366,32 @@ function formatDate(iso: string) {
   return Number.isNaN(d.getTime()) ? "" : dateFormat.format(d);
 }
 
-const bulletsText = (n: number) => (n === 0 ? "no changes" : `${n} ${n === 1 ? "bullet" : "bullets"}`);
-
+/** Each tailored resume with its match as a bar, and its two downloads. Long lists scroll inside the card. */
 function ResumeList({ items }: { items: TailoredResumeWithFiles[] }) {
   return (
-    // Slim rows: when it was made and how much changed, its match score, and two tiny download buttons.
-    <ul className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-sm dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/60">
-      {items.map((item) => (
-        <li key={item.id} className="flex items-center gap-2 px-3.5 py-2.5">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-neutral-900 dark:text-white">
-              <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-              <span className="mx-1 text-neutral-300 dark:text-neutral-600" aria-hidden="true">
-                ·
-              </span>
-              {bulletsText(item.acceptedBulletIds?.length ?? 0)}
-            </p>
-            <p className="truncate text-[11px] text-neutral-400 dark:text-neutral-500">Tailored resume</p>
-          </div>
-          <ScoreChip percent={item.finalMatchPercent} />
-          <FileLink file={item.files.find((f) => f.format === "docx")} format="docx" />
-          <FileLink file={item.files.find((f) => f.format === "pdf")} format="pdf" />
-        </li>
-      ))}
+    <ul className={`${card} max-h-80 space-y-3.5 overflow-y-auto p-4`}>
+      {items.map((item) => {
+        const pct = item.finalMatchPercent;
+        return (
+          <li key={item.id} className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <time dateTime={item.createdAt} className="min-w-0 flex-1 truncate text-[13px] font-semibold text-neutral-900 dark:text-white">
+                {formatDate(item.createdAt)}
+              </time>
+              <span className="text-xs font-semibold text-neutral-600 tabular-nums dark:text-neutral-300">{pct === null || pct === undefined ? "—" : `${pct}%`}</span>
+              <FileLink file={item.files.find((f) => f.format === "docx")} format="docx" />
+              <FileLink file={item.files.find((f) => f.format === "pdf")} format="pdf" />
+            </div>
+            <div className="h-2 rounded-full bg-neutral-200/70 dark:bg-white/10" role="presentation">
+              <div
+                className={`h-full rounded-full ${pct === null || pct === undefined ? "" : pct >= 75 ? "bg-brand-600 dark:bg-brand-300" : pct >= 50 ? "bg-brand-400" : "bg-neutral-400"}`}
+                style={{ width: `${pct ?? 0}%` }}
+              />
+            </div>
+          </li>
+        );
+      })}
     </ul>
-  );
-}
-
-/** The resume's match with its job: green from 75%, amber from 50%, otherwise neutral (never red); "—" when unscored. */
-function ScoreChip({ percent }: { percent: number | null | undefined }) {
-  if (percent === null || percent === undefined) {
-    return (
-      <span title="No match score" className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-bold text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
-        <span aria-hidden="true">—</span>
-        <span className="sr-only">No match score</span>
-      </span>
-    );
-  }
-  const tone =
-    percent >= 75
-      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-      : percent >= 50
-        ? "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
-        : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300";
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${tone}`}>
-      {percent}%<span className="sr-only"> match</span>
-    </span>
   );
 }
 
@@ -380,7 +474,6 @@ function EmptyIllustration() {
 
 /* ---------- Icons ---------- */
 
-const ICON = "size-5";
 
 function PlusIcon() {
   return (
@@ -389,38 +482,3 @@ function PlusIcon() {
     </svg>
   );
 }
-
-function SparkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M6.3 17.7l2.5-2.5M15.2 8.8l2.5-2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <path d="M20.5 3.5 10 14M20.5 3.5 14 20.5l-4-6.5-6.5-4 17-6.5Z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
-      <path d="M3.5 10h17M8 3v4M16 3v4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BriefcaseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18" strokeLinecap="round" />
-    </svg>
-  );
-}
-

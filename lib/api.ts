@@ -1,4 +1,4 @@
-import { themeColorOf } from "@/lib/theme-color";
+import { ringStyleOf, themeColorOf } from "@/lib/theme-color";
 import { NextResponse } from "next/server";
 import { AiError } from "@/lib/ai";
 import { jobTypesOf } from "@/lib/job-types";
@@ -83,6 +83,7 @@ export function toUser(row: UserRow): User {
     role: row.role as UserRole,
     clockTemplate: CLOCK_TEMPLATES.includes(row.clockTemplate as ClockTemplate) ? (row.clockTemplate as ClockTemplate) : "MINIMALIST",
     themeColor: themeColorOf(row.themeColor),
+    ringStyle: ringStyleOf(row.ringStyle),
     profilePictureUrl: row.profilePictureUrl ?? null,
     avatarUrl: row.avatarUrl ?? null,
     phone: row.phone ?? null,
