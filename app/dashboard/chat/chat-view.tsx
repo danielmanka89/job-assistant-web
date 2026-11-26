@@ -604,8 +604,7 @@ function Thread({ id, onBack, onActivity, onError }: { id: string; onBack: () =>
                 {person.name}
               </h2>
               <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
-                <span className={person.online ? "font-semibold text-blue-600 dark:text-blue-400" : "font-semibold text-red-600 dark:text-red-400"}>{person.online ? "ON" : "OFF"}</span>
-                {` · ${ROLE_LABEL[person.role]}`}
+                {ROLE_LABEL[person.role]}
                 {person.connection && ` · ${CONNECTION_KIND_LABEL[person.connection]}`}
               </p>
             </div>

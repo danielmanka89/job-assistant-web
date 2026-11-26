@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!user) return apiError(401, "UNAUTHORIZED", "Please log in");
 
   // The menu asks for this every 30 seconds while a tab is open and visible, so it doubles as the
-  // "in the app" check-in that shows this user as ON in Chat.
+  // "in the app" check-in that makes this user's ring glow in Chat.
   const [conversations, connectedTo, connectedToMe, requests, newest, emailUnread] = await Promise.all([
     touchPresence(user.id).then(() => conversationsWithUnread(user.id)),
     prisma.connection.count({ where: { fromUserId: user.id, status: "accepted" } }),

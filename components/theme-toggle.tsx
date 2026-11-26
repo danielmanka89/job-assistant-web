@@ -154,9 +154,9 @@ export function ThemePicker() {
 }
 
 /**
- * The sun/moon switch in the menu: one tap between Light and Dark (Settings also has Black & White
- * and "follow my device"). The knob sits on the sun in light and on the moon in dark; Black & White
- * counts as light here.
+ * The sun/moon switch: one tap between Light and Dark (Settings also has Black & White and "follow
+ * my device"). It wears the theme it is in: light grays in light, dark grays in dark, with the knob
+ * on the sun or the moon. Black & White counts as light here.
  */
 export function ThemeSwitch({ className = "" }: { className?: string }) {
   const theme = useSyncExternalStore<Theme | null>(subscribe, currentTheme, () => null);
@@ -169,54 +169,32 @@ export function ThemeSwitch({ className = "" }: { className?: string }) {
       aria-label="Dark theme"
       title={dark ? "Switch to light" : "Switch to dark"}
       onClick={() => choose(dark ? "light" : "dark")}
-      className={`relative h-11 w-[5.5rem] shrink-0 rounded-full bg-[#0d0e11] shadow-[0_0_0_3px_#1b1c20,0_8px_20px_rgb(0_0_0/0.3)] outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 ${className}`}
+      className={`relative h-11 w-[5.5rem] shrink-0 rounded-full border border-neutral-300/80 bg-neutral-200/80 shadow-[inset_0_2px_4px_rgb(0_0_0/0.08)] outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 dark:border-white/10 dark:bg-neutral-900/80 dark:shadow-[inset_0_2px_5px_rgb(0_0_0/0.5)] ${className}`}
     >
-      {/* Orange glow on the sun side, blue on the moon side. */}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="absolute top-1/2 left-3 size-[18px] -translate-y-1/2 text-neutral-500">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true" className="absolute top-1/2 right-3 size-[17px] -translate-y-1/2 text-neutral-500">
+        <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+      </svg>
+      {/* The knob: white with a dark sun in light, charcoal with a light moon in dark. */}
       <span
         aria-hidden="true"
-        className={`absolute inset-[4px] rounded-full bg-[linear-gradient(90deg,#ffa726_0%,rgb(255_167_38/0.15)_42%,rgb(47_123_255/0.15)_58%,#2f7bff_100%)] p-[1.5px] ${
-          dark ? "shadow-[0_0_12px_rgb(47_123_255/0.45)]" : "shadow-[0_0_12px_rgb(255_167_38/0.45)]"
-        }`}
-      >
-        <span className="block size-full rounded-full bg-[linear-gradient(180deg,#17181c,#0f1013)]" />
-      </span>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#ffb020"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        aria-hidden="true"
-        className={`absolute top-1/2 left-3 size-5 -translate-y-1/2 drop-shadow-[0_0_4px_rgb(255_176_32/0.8)] transition-opacity ${dark ? "opacity-100" : "opacity-0"}`}
-      >
-        <circle cx="12" cy="12" r="4.2" fill="#ffb020" />
-        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M5.3 18.7l1.5-1.5M17.2 6.8l1.5-1.5" />
-      </svg>
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        className={`absolute top-1/2 right-3 size-[18px] -translate-y-1/2 drop-shadow-[0_0_4px_rgb(90_150_255/0.8)] transition-opacity ${dark ? "opacity-0" : "opacity-100"}`}
-      >
-        <path d="M19 14.5A7.5 7.5 0 1 1 9.5 5a6 6 0 0 0 9.5 9.5Z" fill="#9cc2ff" />
-      </svg>
-      {/* The knob: a glowing orange sun, or a deep blue moon. */}
-      <span
-        aria-hidden="true"
-        className={`absolute top-[5px] grid size-[34px] place-items-center rounded-full border-2 border-[#1f2024] shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_4px_10px_rgb(0_0_0/0.55)] transition-[left] duration-300 motion-reduce:transition-none ${
+        className={`absolute top-[4px] grid size-[34px] place-items-center rounded-full transition-[left] duration-300 motion-reduce:transition-none ${
           dark
-            ? "left-[calc(100%-39px)] bg-[radial-gradient(circle_at_50%_40%,#1d3f8f,#0b1a45_75%)] shadow-[0_0_14px_rgb(47_123_255/0.55)]"
-            : "left-[5px] bg-[radial-gradient(circle_at_50%_40%,#ffc04d,#e07b00_80%)] shadow-[0_0_14px_rgb(255_167_38/0.55)]"
+            ? "left-[calc(100%-38px)] border border-white/15 bg-[linear-gradient(180deg,#4a4d53,#2a2c30)] text-neutral-100 shadow-[inset_0_1px_0_rgb(255_255_255/0.15),0_3px_8px_rgb(0_0_0/0.5)]"
+            : "left-[4px] border border-neutral-300 bg-[linear-gradient(180deg,#ffffff,#e4e6e8)] text-neutral-800 shadow-[inset_0_1px_0_#fff,0_3px_8px_rgb(0_0_0/0.15)]"
         }`}
       >
         {dark ? (
-          <svg viewBox="0 0 24 24" className="size-5 drop-shadow-[0_0_5px_rgb(140_190_255/0.95)]">
-            <path d="M18.5 14.5A7 7 0 1 1 9.5 5.5a5.6 5.6 0 0 0 9 9Z" fill="#cfe2ff" />
-            <circle cx="18" cy="7" r=".9" fill="#fff" />
+          <svg viewBox="0 0 24 24" fill="currentColor" className="size-[18px]">
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
           </svg>
         ) : (
-          <svg viewBox="0 0 24 24" fill="none" stroke="#fff6d8" strokeWidth="1.8" strokeLinecap="round" className="size-5">
-            <circle cx="12" cy="12" r="4.2" fill="#fff6d8" />
-            <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="size-[18px]">
+            <circle cx="12" cy="12" r="4" fill="currentColor" />
+            <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
           </svg>
         )}
       </span>

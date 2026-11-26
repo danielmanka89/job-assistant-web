@@ -517,7 +517,7 @@ function RingStyleForm({ user, onSaved, onUnauthorized }: { user: User; onSaved:
     <SettingsCard
       id="ring-title"
       title="Profile ring"
-      description="The glowing ring around your picture in Chat and on the Dashboard. It glows while you're in the app (ON) and dims when you're away (OFF)."
+      description="The glowing ring around your picture in Chat and on the Dashboard. It glows while you're in the app and dims when you're away."
       icon={
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
           <circle cx="12" cy="12" r="8.5" />

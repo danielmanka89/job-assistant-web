@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/brand";
 import { RingAvatar } from "@/components/ui/ring-avatar";
-import { PresenceSwitch } from "@/components/dashboard/presence-switch";
 import { ThemeSwitch } from "@/components/theme-toggle";
 import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { DeadlineTracker } from "@/components/dashboard/deadline-tracker";
@@ -144,7 +143,7 @@ const SETTINGS_ICON = (
 const ROLE_LABEL: Record<User["role"], string> = { SEEKER: "Job Seeker", EMPLOYER: "Employer" };
 
 /**
- * Laptops: a glass bar across the top (menu, deadlines, ON/OFF, light/dark, your account). Phones
+ * Laptops: a glass bar across the top (menu, deadlines, light/dark, your account). Phones
  * and tablets: a deep-colored top bar with a slide-in menu.
  */
 export function Sidebar() {
@@ -259,7 +258,6 @@ function DesktopTopBar({ pathname, user, chat }: { pathname: string; user: User 
         </ul>
       </nav>
       <DeadlineTracker compact />
-      <PresenceSwitch />
       <ThemeSwitch />
       <AccountButton user={user} chat={chat} pathname={pathname} onSignOut={signOut} />
     </header>
@@ -350,9 +348,7 @@ function SidebarContent({ pathname, user, chat }: { pathname: string; user: User
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-3">
       <SidebarClocks />
       <UserCard user={user} chat={chat} onSignOut={signOut} signingOut={signingOut} pathname={pathname} className="mt-3 z-10" />
-      {/* Your ON/OFF status (set by the app) and the light/dark switch. */}
-      <div className="mt-2.5 flex items-center justify-between gap-2 px-0.5">
-        <PresenceSwitch />
+      <div className="mt-2.5 flex justify-end px-0.5">
         <ThemeSwitch />
       </div>
 

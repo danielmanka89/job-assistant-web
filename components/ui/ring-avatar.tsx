@@ -24,7 +24,7 @@ export function RingAvatar({
       className={`ring-avatar ${className}`}
       data-ring={ring}
       data-online={online === undefined ? undefined : String(online)}
-      title={online === undefined ? undefined : `${name} · ${online ? "ON, in the app" : "OFF, away"}`}
+      title={online === undefined ? undefined : `${name} · ${online ? "online" : "away"}`}
     >
       <span className="ring-avatar-ring">
         <span className="relative grid size-full place-items-center overflow-hidden rounded-full bg-[radial-gradient(circle_at_50%_35%,#3a3d44_0%,#15161a_80%)] text-neutral-200">

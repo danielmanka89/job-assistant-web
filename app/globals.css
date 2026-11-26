@@ -775,7 +775,7 @@ body {
 
 /*
  * The glass controls (Gray Glass design, available to every theme): pills with a bright lower rim,
- * glowing round "orb" buttons, the ON/OFF status switch, the sun/moon theme switch and the ringed
+ * glowing round "orb" buttons and the ringed
  * profile pictures. Their light and dark looks follow the theme.
  */
 :root {
@@ -897,7 +897,7 @@ body {
   padding: 2.5px;
   background: var(--ring);
 }
-/* Away (OFF): a dimmer ring and no glow. */
+/* Away: a dimmer ring and no glow. */
 .ring-avatar[data-online="false"]::before,
 .ring-avatar[data-ring="NONE"]::before {
   opacity: 0;

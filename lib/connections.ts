@@ -5,10 +5,10 @@ import { prisma } from "@/lib/db";
 import { ringStyleOf } from "@/lib/theme-color";
 import { CONNECTION_KINDS, type ConnectionKind, type Person, type UserRole } from "@/lib/types";
 
-/** How recently someone must have had the app open to show as ON. The app checks in every 30 seconds. */
+/** How recently someone must have had the app open to count as online. The app checks in every 30 seconds. */
 export const ONLINE_WINDOW_MS = 90_000;
 
-/** ON: seen within the last 90 seconds. */
+/** Online: seen within the last 90 seconds. */
 export const isOnline = (lastSeenAt: Date | null | undefined, now = Date.now()) => Boolean(lastSeenAt && now - lastSeenAt.getTime() < ONLINE_WINDOW_MS);
 
 /**
