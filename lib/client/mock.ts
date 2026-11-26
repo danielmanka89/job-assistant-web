@@ -14,8 +14,14 @@
 //     with a new phone, location and skill (red alert); "fail" in the file name -> parse error
 //   learning: Market Reach of the sample resume against the sample jobs; paths kept in memory
 //   profile: read-only, created from the sample resume (empty for "new" users)
+//   my JDs: three sample JDs (to tailor, ready to send, sent; none for "new" users), kept in memory;
+//     details are detected with the pattern reader; "tailor-fail" in a JD -> tailoring error
 //   spreadsheet: starts with two sample rows (none for "new" users); a cell containing "fail" -> save error
 import type {
+  SaveVendorJdRequest,
+  SendVendorJdRequest,
+  VendorJd,
+  VendorJdListResponse,
   AccountResponse,
   ApiError,
   AuthResponse,
@@ -75,6 +81,7 @@ import { marketReach } from "@/lib/market-reach";
 import { isEmptyProfile, profileFromResume, syncProfileToResume } from "@/lib/profile";
 import { SHEETS, buildSubmissionWorkbook, prefillSubmission, rowLabel, validateSheetValues } from "@/lib/spreadsheet";
 import { XLSX_MIME } from "@/lib/xlsx";
+import { detectJdDetails } from "@/lib/jd-details";
 import { addDays, customDeadline, customDeadlineId, localDate, submissionDeadlines } from "@/lib/deadlines";
 import type { CreateDeadlineRequest, DeadlineItem } from "@/lib/types";
 import type { ApiResult } from "./api";
@@ -1226,6 +1233,123 @@ async function deleteSubmission(id: string): Promise<ApiResult<null>> {
   return { ok: true, data: null };
 }
 
+/* ---------- My JDs (kept in memory) ---------- */
+
+let mockJds: VendorJd[] | null = null;
+
+function mockTailored(id: string, createdAt: string, score: number): NonNullable<VendorJd["tailored"]> {
+  return {
+    id,
+    finalMatchPercent: score,
+    createdAt,
+    matchedKeywords: ["Java", "Spring Boot", "REST APIs", "AWS", "Docker"],
+    missingKeywords: ["Kafka", "Kubernetes"],
+    files: [mockFile(id, "pdf", createdAt), mockFile(id, "docx", createdAt)],
+  };
+}
+
+const SAMPLE_JD = `Job Title: Senior Java Developer
+Location: Dallas, TX (Hybrid, 3 days onsite)
+Duration: 12+ months contract
+
+Must have:
+- 8+ years of Java and Spring Boot
+- Microservices, REST APIs, Kafka
+- AWS (EC2, Lambda, S3) and Docker/Kubernetes
+- SQL and NoSQL databases`;
+
+/** Three sample JDs (none for "new" users): one to tailor, one ready to send, one sent. */
+function mockJdRows(): VendorJd[] {
+  if (mockJds) return mockJds;
+  if (isNewUser()) {
+    mockJds = [];
+    return mockJds;
+  }
+  const base = {
+    notes: "",
+    sentAt: null,
+    sentTo: "",
+    submissionId: null,
+    tailored: null,
+  };
+  const at = (days: number) => ({ createdAt: daysAgo(days), updatedAt: daysAgo(days) });
+  const tailored = (id: string, days: number, score: number) => mockTailored(id, daysAgo(days), score);
+  mockJds = [
+    { ...base, ...at(0), id: "jd_mock_1", title: "Senior Java Developer", client: "Capital One", location: "Dallas, TX (Hybrid)", rate: "$65/hr C2C", vendorCompany: "Apex Systems", vendorContact: "Priya Sharma", vendorEmail: "priya@apex.example", jobDescription: SAMPLE_JD },
+    { ...base, ...at(1), id: "jd_mock_2", title: "Data Engineer (Snowflake)", client: "Humana", location: "Remote", rate: "$70/hr", vendorCompany: "TEKsystems", vendorContact: "Mark Lee", vendorEmail: "mark@tek.example", jobDescription: SAMPLE_JD.replace("Senior Java Developer", "Data Engineer (Snowflake)"), tailored: tailored("tailored_jd_2", 1, 84) },
+    { ...base, ...at(4), id: "jd_mock_3", title: "DevOps Engineer", client: "", location: "Austin, TX", rate: "", vendorCompany: "Insight Global", vendorContact: "Ana", vendorEmail: "ana@insight.example", jobDescription: SAMPLE_JD.replace("Senior Java Developer", "DevOps Engineer"), tailored: tailored("tailored_jd_3", 3, 79), sentAt: daysAgo(3), sentTo: "ana@insight.example", submissionId: "sub_mock_1" },
+  ];
+  return mockJds;
+}
+
+async function listVendorJds(): Promise<ApiResult<VendorJdListResponse>> {
+  await delay(300);
+  return { ok: true, data: { jds: mockJdRows(), canSendEmail: false } };
+}
+
+async function createVendorJd(request: SaveVendorJdRequest): Promise<ApiResult<VendorJd>> {
+  await delay(300);
+  const text = (request.jobDescription ?? "").trim();
+  if (text.length < 50) {
+    return fail({ code: "VALIDATION_ERROR", message: "Please fix the highlighted fields", fieldErrors: { jobDescription: "That looks too short." } });
+  }
+  const now = new Date().toISOString();
+  const detected = detectJdDetails(text);
+  const typed = Object.fromEntries(Object.entries(request).filter(([, v]) => v));
+  const jd: VendorJd = {
+    id: `jd_${Date.now()}`,
+    ...detected,
+    notes: "",
+    ...typed,
+    jobDescription: text,
+    sentAt: null,
+    sentTo: "",
+    submissionId: null,
+    tailored: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  mockJds = [jd, ...mockJdRows()];
+  return { ok: true, data: jd };
+}
+
+async function updateVendorJd(id: string, changes: SaveVendorJdRequest): Promise<ApiResult<VendorJd>> {
+  await delay(300);
+  const found = mockJdRows().find((j) => j.id === id);
+  if (!found) return fail({ code: "JD_NOT_FOUND", message: "That JD isn't saved anymore" });
+  const next = { ...found, ...changes, updatedAt: new Date().toISOString() };
+  mockJds = mockJdRows().map((j) => (j.id === id ? next : j));
+  return { ok: true, data: next };
+}
+
+async function tailorVendorJd(id: string): Promise<ApiResult<VendorJd>> {
+  await delay(2500);
+  const found = mockJdRows().find((j) => j.id === id);
+  if (!found) return fail({ code: "JD_NOT_FOUND", message: "That JD isn't saved anymore" });
+  if (found.jobDescription.includes("tailor-fail")) {
+    return fail({ code: "GENERATION_FAILED", message: "We couldn't create your resume files. Please try again." });
+  }
+  const next = { ...found, tailored: mockTailored(`tailored_${id}_${Date.now()}`, new Date().toISOString(), 82) };
+  mockJds = mockJdRows().map((j) => (j.id === id ? next : j));
+  return { ok: true, data: next };
+}
+
+async function deleteVendorJd(id: string): Promise<ApiResult<null>> {
+  await delay(200);
+  mockJds = mockJdRows().filter((j) => j.id !== id);
+  return { ok: true, data: null };
+}
+
+async function sendVendorJd(id: string, request: SendVendorJdRequest): Promise<ApiResult<VendorJd>> {
+  await delay(400);
+  if (request.mode === "email") return fail({ code: "EMAIL_NOT_CONFIGURED", message: "Sending email isn't set up on this server yet." });
+  const found = mockJdRows().find((j) => j.id === id);
+  if (!found) return fail({ code: "JD_NOT_FOUND", message: "That JD isn't saved anymore" });
+  const next = { ...found, sentAt: new Date().toISOString(), sentTo: request.to ?? found.vendorEmail };
+  mockJds = mockJdRows().map((j) => (j.id === id ? next : j));
+  return { ok: true, data: next };
+}
+
 async function exportSubmissions(): Promise<ApiResult<Blob>> {
   const bytes = await buildSubmissionWorkbook(mockSubmissionRows(), window.location.origin);
   return { ok: true, data: new Blob([new Uint8Array(bytes)], { type: XLSX_MIME }) };
@@ -1329,4 +1453,10 @@ export const mockApi = {
   createDeadline,
   updateDeadline,
   deleteDeadline,
+  listVendorJds,
+  createVendorJd,
+  updateVendorJd,
+  deleteVendorJd,
+  sendVendorJd,
+  tailorVendorJd,
 };

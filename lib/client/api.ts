@@ -50,6 +50,10 @@ import type {
   UpdateLearningPathRequest,
   UpdateSubmissionRequest,
   UpdateSummaryRequest,
+  SaveVendorJdRequest,
+  SendVendorJdRequest,
+  VendorJd,
+  VendorJdListResponse,
 } from "@/lib/types";
 import { clearUser } from "./current-user";
 import { toDashboardStats, toTailoredResumeList } from "./dashboard";
@@ -846,4 +850,46 @@ export async function saveJobPitch(jobId: string, text: string): Promise<ApiResu
   }
   const result = await sendJson<{ text: string }, unknown>("PUT", `/api/job-pitches/${encodeURIComponent(jobId)}`, { text });
   return result.ok ? { ok: true, data: null } : result;
+}
+
+/* ---------- My JDs ---------- */
+
+/** Your saved JDs from GET /api/jds, and whether the server can send email. */
+export async function listVendorJds(): Promise<ApiResult<VendorJdListResponse>> {
+  if (USE_MOCK_API) return mockApi.listVendorJds();
+  const result = await getJson("/api/jds");
+  if (!result.ok) return result;
+  const body = result.data as Partial<VendorJdListResponse> | null;
+  return { ok: true, data: { jds: Array.isArray(body?.jds) ? body.jds : [], canSendEmail: body?.canSendEmail === true } };
+}
+
+/** Saves a JD with POST /api/jds. */
+export async function createVendorJd(request: SaveVendorJdRequest): Promise<ApiResult<VendorJd>> {
+  if (USE_MOCK_API) return mockApi.createVendorJd(request);
+  return postJson<SaveVendorJdRequest, VendorJd>("/api/jds", request);
+}
+
+/** Changes a JD with PATCH /api/jds/:id. */
+export async function updateVendorJd(id: string, changes: SaveVendorJdRequest): Promise<ApiResult<VendorJd>> {
+  if (USE_MOCK_API) return mockApi.updateVendorJd(id, changes);
+  return sendJson<SaveVendorJdRequest, VendorJd>("PATCH", `/api/jds/${encodeURIComponent(id)}`, changes);
+}
+
+/** Deletes a JD with DELETE /api/jds/:id. */
+export async function deleteVendorJd(id: string): Promise<ApiResult<null>> {
+  if (USE_MOCK_API) return mockApi.deleteVendorJd(id);
+  const result = await sendJson<Record<string, never>, unknown>("DELETE", `/api/jds/${encodeURIComponent(id)}`, {});
+  return result.ok ? { ok: true, data: null } : result;
+}
+
+/** Sends your resume to the vendor (or records that you did) with POST /api/jds/:id/send. */
+export async function sendVendorJd(id: string, request: SendVendorJdRequest): Promise<ApiResult<VendorJd>> {
+  if (USE_MOCK_API) return mockApi.sendVendorJd(id, request);
+  return postJson<SendVendorJdRequest, VendorJd>(`/api/jds/${encodeURIComponent(id)}/send`, request);
+}
+
+/** Tailors your latest resume to the JD (POST /api/jds/:id/tailor) and returns it with the files. */
+export async function tailorVendorJd(id: string): Promise<ApiResult<VendorJd>> {
+  if (USE_MOCK_API) return mockApi.tailorVendorJd(id);
+  return postJson<Record<string, never>, VendorJd>(`/api/jds/${encodeURIComponent(id)}/tailor`, {});
 }

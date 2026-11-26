@@ -666,3 +666,59 @@ export interface JobPitch {
 export interface JobPitchListResponse {
   pitches: JobPitch[];
 }
+
+/* ---------- My JDs: job descriptions vendors send you ---------- */
+
+/** A JD's details: detected from the pasted text, and editable. */
+export interface VendorJdFields {
+  title: string;
+  client: string;
+  location: string;
+  rate: string;
+  vendorCompany: string;
+  vendorContact: string;
+  vendorEmail: string;
+  notes: string;
+}
+
+export interface VendorJd extends VendorJdFields {
+  id: string;
+  jobDescription: string;
+  /** When your resume went to the vendor (sent from here, or marked as sent); null until then. */
+  sentAt: string | null;
+  sentTo: string;
+  /** The Spreadsheet row made when it was sent. */
+  submissionId: string | null;
+  /** Your resume tailored to this JD (made automatically when it's saved), with its files. */
+  tailored: {
+    id: string;
+    finalMatchPercent: number | null;
+    createdAt: string;
+    matchedKeywords: string[];
+    missingKeywords: string[];
+    files: GeneratedFile[];
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorJdListResponse {
+  jds: VendorJd[];
+  /** Whether this server can send email (otherwise the page offers your own email app). */
+  canSendEmail: boolean;
+}
+
+export type SaveVendorJdRequest = Partial<VendorJdFields> & { jobDescription?: string };
+
+/** "email" sends from your site address with the files attached; "mark" only records that you sent it. */
+export interface SendVendorJdRequest {
+  mode: "email" | "mark";
+  to?: string;
+  subject?: string;
+  body?: string;
+  fileIds?: string[];
+}
+
+export const MAX_VENDOR_JDS = 500;
+export const VENDOR_JD_MIN_CHARS = 50;
+export const VENDOR_JD_MAX_CHARS = 20_000;

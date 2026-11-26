@@ -191,6 +191,8 @@ export async function sendEmail(input: {
   body: string;
   inReplyTo?: string | null;
   idempotencyKey: string;
+  /** Files to attach (sent base64-encoded). */
+  attachments?: { fileName: string; data: Uint8Array }[];
 }): Promise<string | null> {
   // The display name goes in quotes, so drop the characters that would end them.
   const name = input.fromName.replace(/["\\\r\n<>]/g, "").trim();
@@ -205,6 +207,9 @@ export async function sendEmail(input: {
       to: [input.to],
       subject: input.subject,
       text: input.body,
+      ...(input.attachments?.length
+        ? { attachments: input.attachments.map((a) => ({ filename: a.fileName, content: Buffer.from(a.data).toString("base64") })) }
+        : {}),
       ...(inReplyTo ? { headers: { "In-Reply-To": inReplyTo, References: inReplyTo } } : {}),
     }),
   });
