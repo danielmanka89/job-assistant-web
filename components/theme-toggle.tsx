@@ -169,7 +169,7 @@ export function ThemeSwitch({ className = "" }: { className?: string }) {
       aria-label="Dark theme"
       title={dark ? "Switch to light" : "Switch to dark"}
       onClick={() => choose(dark ? "light" : "dark")}
-      className={`relative h-11 w-[5.5rem] shrink-0 rounded-full bg-[#0d0e11] shadow-[0_0_0_3px_#1b1c20,0_8px_20px_rgb(0_0_0/0.3)] outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 ${className}`}
+      className={`mono-grayscale relative h-11 w-[5.5rem] shrink-0 rounded-full bg-[#0d0e11] shadow-[0_0_0_3px_#1b1c20,0_8px_20px_rgb(0_0_0/0.3)] outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 ${className}`}
     >
       {/* Orange glow on the sun side, blue on the moon side. */}
       <span

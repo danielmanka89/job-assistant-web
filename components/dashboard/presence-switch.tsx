@@ -18,7 +18,7 @@ export function PresenceSwitch({ className = "" }: { className?: string }) {
   const label = on ? "Status: ON, you're in the app" : "Status: OFF, away";
   return (
     <div
-      role="status"
+      role="img"
       aria-label={label}
       title={label}
       className={`relative h-10 w-[6.5rem] shrink-0 rounded-full border border-white/10 bg-[#1c1d21] shadow-[inset_0_2px_6px_rgb(0_0_0/0.6),0_1px_0_rgb(255_255_255/0.08)] ${className}`}

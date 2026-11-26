@@ -846,6 +846,15 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 0 22px rgb(var(--orb-glow-color) / calc(var(--orb-glow) + 0.15));
 }
+@media (prefers-reduced-motion: reduce) {
+  .orb:hover {
+    transform: none;
+  }
+}
+/* Black & white: the orbs' teal and pink rims are decoration, so they go gray. */
+:root[data-theme="mono"] .orb {
+  filter: grayscale(1);
+}
 .orb-teal {
   --orb-rim: linear-gradient(160deg, #2b6f78 0%, #164a54 100%);
   --orb-glow-color: 40 120 130;

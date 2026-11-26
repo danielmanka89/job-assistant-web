@@ -69,7 +69,7 @@ export function DashboardOverview() {
       {(stats.status === "error" || resumes.status === "error") && (
         <div className="space-y-3">
           <ErrorAlert>{stats.status === "error" ? stats.message : resumes.status === "error" ? resumes.message : null}</ErrorAlert>
-          <button type="button" onClick={retry} className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
+          <button type="button" onClick={retry} className="rounded text-sm font-semibold text-brand-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:text-brand-400">
             Try again
           </button>
         </div>

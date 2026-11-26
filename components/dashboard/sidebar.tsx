@@ -11,6 +11,7 @@ import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { DeadlineTracker } from "@/components/dashboard/deadline-tracker";
 import { CHAT_CHANGED_EVENT, answerFollowRequest, getChatSummary, logout } from "@/lib/client/api";
 import { useCurrentUser } from "@/lib/client/current-user";
+import { focusFirst, focusLost } from "@/lib/client/a11y";
 import type { ChatSummary, User } from "@/lib/types";
 
 type NavItem = {
@@ -159,7 +160,13 @@ export function Sidebar() {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpenOn(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpenOn(null);
+      requestAnimationFrame(() => {
+        if (focusLost()) focusFirst("mobile-menu-button");
+      });
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
@@ -171,11 +178,12 @@ export function Sidebar() {
         <Logo light />
         <button
           type="button"
+          id="mobile-menu-button"
           onClick={() => setOpen(true)}
           aria-label={waiting ? `Open menu, ${waiting} new notification${waiting === 1 ? "" : "s"}` : "Open menu"}
           aria-expanded={open}
           aria-controls="dashboard-sidebar"
-          className="relative grid size-10 place-items-center rounded-xl text-white transition hover:bg-white/10"
+          className="relative grid size-10 place-items-center rounded-xl text-white transition outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/80"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
@@ -193,6 +201,7 @@ export function Sidebar() {
 
       <aside
         id="dashboard-sidebar"
+        inert={!open}
         className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col pt-(--safe-top) pb-(--safe-bottom) text-white transition-transform duration-200 lg:hidden ${
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
@@ -201,9 +210,12 @@ export function Sidebar() {
           <Logo light />
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              focusFirst("mobile-menu-button");
+            }}
             aria-label="Close menu"
-            className="grid size-9 place-items-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
+            className="grid size-9 place-items-center rounded-lg text-white/80 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/80 lg:hidden"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5" aria-hidden="true">
               <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
@@ -228,7 +240,7 @@ function DesktopTopBar({ pathname, user, chat }: { pathname: string; user: User 
 
   return (
     <header className="pill-glass fixed inset-x-3 top-3 z-40 hidden h-(--topbar-inner-h) items-center gap-3 rounded-full py-2 pr-2 pl-3 lg:flex">
-      <Logo className="shrink-0 [&>span:last-child]:hidden 2xl:[&>span:last-child]:inline" />
+      <Logo className="shrink-0 [&>span:last-child]:sr-only 2xl:[&>span:last-child]:not-sr-only" />
       <nav aria-label="Main" className="min-w-0 flex-1">
         <ul className="flex items-center gap-0.5">
           {items.map((item) => {
@@ -245,7 +257,7 @@ function DesktopTopBar({ pathname, user, chat }: { pathname: string; user: User 
                   }`}
                 >
                   {item.icon}
-                  <span className="hidden xl:inline">{item.label}</span>
+                  <span className="sr-only xl:not-sr-only">{item.label}</span>
                   {count ? (
                     <span className="absolute -top-0.5 right-0.5 rounded-full bg-brand-600 px-1 text-[9px] leading-4 font-bold text-white tabular-nums xl:static xl:ml-0.5 xl:px-1.5">
                       {count > 99 ? "99+" : count}
@@ -319,6 +331,10 @@ function useDismiss(open: boolean, box: React.RefObject<HTMLElement | null>, clo
       if (e.key !== "Escape") return;
       e.stopPropagation();
       close();
+      // Put focus back on the button that opened it, if it was inside the menu.
+      requestAnimationFrame(() => {
+        if (focusLost()) box.current?.querySelector<HTMLElement>("button")?.focus();
+      });
     };
     const onDown = (e: PointerEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) close();
@@ -457,6 +473,10 @@ function UserCard({
       if (e.key !== "Escape") return;
       e.stopPropagation(); // close this menu, not the phone drawer around it
       setOpenOn(null);
+      // Put focus back on the button that opened it, if it was inside the menu.
+      requestAnimationFrame(() => {
+        if (focusLost()) boxRef.current?.querySelector<HTMLElement>("button")?.focus();
+      });
     };
     const onDown = (e: PointerEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpenOn(null);
@@ -560,6 +580,10 @@ function AccountMenu({
     const result = await answerFollowRequest(personId, accept);
     setBusyId(null);
     if (result.ok) setAnswered((a) => ({ ...a, [personId]: accept ? "accepted" : "declined" }));
+    // The Accept/Decline buttons are gone now: keep focus in the menu.
+    requestAnimationFrame(() => {
+      if (focusLost()) document.getElementById(id)?.focus();
+    });
   }
 
   const sectionTitle = "px-2.5 pt-2 pb-1 text-[10px] font-bold tracking-wider text-neutral-500 uppercase dark:text-neutral-400";
@@ -567,7 +591,8 @@ function AccountMenu({
   return (
     <div
       id={id}
-      className={`absolute ${className} top-full z-20 mt-1.5 max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200/80 bg-white p-1.5 text-neutral-900 shadow-xl shadow-neutral-900/15 [scrollbar-width:none] motion-safe:animate-panel-in dark:border-neutral-800 dark:bg-neutral-900 dark:text-white`}
+      tabIndex={-1}
+      className={`absolute ${className} top-full outline-none z-20 mt-1.5 max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200/80 bg-white p-1.5 text-neutral-900 shadow-xl shadow-neutral-900/15 [scrollbar-width:none] motion-safe:animate-panel-in dark:border-neutral-800 dark:bg-neutral-900 dark:text-white`}
     >
       {header && <p className="truncate px-2.5 pt-1.5 pb-1 text-sm font-semibold">{header}</p>}
       <section aria-labelledby={`${id}-notes`}>
