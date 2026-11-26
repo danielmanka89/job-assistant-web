@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/brand";
 import { Avatar } from "@/components/ui/avatar";
 import { SidebarClocks } from "@/components/dashboard/us-clocks";
 import { DeadlineTracker } from "@/components/dashboard/deadline-tracker";
-import { CHAT_CHANGED_EVENT, getChatSummary, logout } from "@/lib/client/api";
+import { CHAT_CHANGED_EVENT, answerFollowRequest, getChatSummary, logout } from "@/lib/client/api";
 import { useCurrentUser } from "@/lib/client/current-user";
 import type { ChatSummary, User } from "@/lib/types";
 
@@ -126,11 +126,10 @@ const NAV: NavItem[] = [
       </svg>
     ),
   },
-  {
-    href: "/dashboard/settings",
-    label: "Settings",
-    match: (p) => under(p, "/dashboard/settings"),
-    icon: (
+];
+
+/** Settings lives in the account menu (click your name), not the main menu. */
+const SETTINGS_ICON = (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={ICON} aria-hidden="true">
         <circle cx="12" cy="12" r="3" />
         <path
@@ -138,9 +137,7 @@ const NAV: NavItem[] = [
           strokeLinejoin="round"
         />
       </svg>
-    ),
-  },
-];
+);
 
 const ROLE_LABEL: Record<User["role"], string> = { SEEKER: "Job Seeker", EMPLOYER: "Employer" };
 
@@ -151,6 +148,9 @@ export function Sidebar() {
   const [openOn, setOpenOn] = useState<string | null>(null);
   const open = openOn === pathname;
   const setOpen = (value: boolean) => setOpenOn(value ? pathname : null);
+  const user = useCurrentUser();
+  const chat = useChatSummary(Boolean(user));
+  const waiting = chat?.requests ?? 0;
 
   useEffect(() => {
     if (!open) return;
@@ -167,14 +167,16 @@ export function Sidebar() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Open menu"
+          aria-label={waiting ? `Open menu, ${waiting} new notification${waiting === 1 ? "" : "s"}` : "Open menu"}
           aria-expanded={open}
           aria-controls="dashboard-sidebar"
-          className="grid size-10 place-items-center rounded-xl text-white transition hover:bg-white/10"
+          className="relative grid size-10 place-items-center rounded-xl text-white transition hover:bg-white/10"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
           </svg>
+          {/* New notifications wait in the account menu (tap your name). */}
+          {waiting > 0 && <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-(--peach) ring-2 ring-white/20" aria-hidden="true" />}
         </button>
       </div>
 
@@ -201,18 +203,16 @@ export function Sidebar() {
             </svg>
           </button>
         </div>
-        <SidebarContent pathname={pathname} />
+        <SidebarContent pathname={pathname} user={user} chat={chat} />
       </aside>
     </>
   );
 }
 
-function SidebarContent({ pathname }: { pathname: string }) {
+function SidebarContent({ pathname, user, chat }: { pathname: string; user: User | null | undefined; chat: ChatSummary | null }) {
   const router = useRouter();
-  const user = useCurrentUser();
   const [signingOut, setSigningOut] = useState(false);
   const items = NAV.filter((item) => !item.employerOnly || user?.role === "EMPLOYER");
-  const chat = useChatSummary(Boolean(user));
 
   async function signOut() {
     setSigningOut(true);
@@ -226,7 +226,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-3">
       <SidebarClocks />
-      <UserCard user={user} chat={chat} onSignOut={signOut} signingOut={signingOut} className="mt-3" />
+      <UserCard user={user} chat={chat} onSignOut={signOut} signingOut={signingOut} pathname={pathname} className="mt-3 z-10" />
 
       <nav aria-label="Main" className="mt-3">
         <ul className="space-y-0.5">
@@ -299,62 +299,188 @@ function UserCard({
   chat,
   onSignOut,
   signingOut,
+  pathname,
   className = "",
 }: {
   user: User | null | undefined;
   chat: ChatSummary | null;
   onSignOut: () => void;
   signingOut: boolean;
+  pathname: string;
   className?: string;
 }) {
+  // The menu remembers the page it was opened on, so navigating closes it.
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === pathname;
+  const boxRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation(); // close this menu, not the phone drawer around it
+      setOpenOn(null);
+    };
+    const onDown = (e: PointerEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpenOn(null);
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [open]);
+
   // undefined while rendering on the server: keep the space so the layout doesn't jump.
   if (user === undefined) {
     return <div className={`h-[58px] animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-900 ${className}`} aria-hidden="true" />;
   }
   const name = user?.name || "Your account";
+  const waiting = chat?.requests ?? 0;
+
   return (
-    <div className={`flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-900/60 ${className}`}>
-      {/* The menu photo, or the portfolio photo until one is set. */}
-      <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} className="size-9 text-sm" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] leading-tight font-semibold text-neutral-900 dark:text-white">{name}</p>
-        <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] leading-tight text-neutral-500 dark:text-neutral-400">
-          {user && <span className="font-semibold text-brand-700 dark:text-brand-300">{ROLE_LABEL[user.role]}</span>}
-          {/* Follower counts (anyone can see these; the names stay private). */}
-          {user && chat && (
-            <Link
-              href={chat.requests ? "/dashboard/chat?tab=people" : "/dashboard/chat"}
-              title={`${chat.connectedToMe} ${chat.connectedToMe === 1 ? "follower" : "followers"} · ${chat.connectedTo} following${chat.requests ? ` · ${chat.requests} waiting for your answer` : ""}`}
-              className="truncate rounded tabular-nums hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none dark:hover:text-white"
-            >
-              <span aria-hidden="true">· </span>
-              {chat.connectedToMe} {chat.connectedToMe === 1 ? "follower" : "followers"}<span aria-hidden="true"> · </span>
-              <span className="sr-only">, </span>
-              {chat.connectedTo} following
-              {chat.requests > 0 && (
-                <span className="ml-1 rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-bold text-white">
-                  {chat.requests}
-                  <span className="sr-only"> follow requests</span>
-                </span>
-              )}
-            </Link>
-          )}
-        </p>
-      </div>
-      {user && (
+    <div ref={boxRef} className={`relative ${className}`}>
+      <div className="flex items-center gap-1 rounded-xl border border-neutral-200/80 bg-neutral-50 p-1.5 dark:border-neutral-800 dark:bg-neutral-900/60">
         <button
           type="button"
-          onClick={onSignOut}
-          disabled={signingOut}
-          aria-label={signingOut ? "Signing out" : "Sign out"}
-          title="Sign out"
-          className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-500 transition hover:bg-brand-50 hover:text-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:opacity-60 dark:text-neutral-400 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
+          onClick={() => setOpenOn(open ? null : pathname)}
+          disabled={!user}
+          aria-expanded={open}
+          aria-controls={menuId}
+          aria-label={`${name}: notifications and settings${waiting ? `, ${waiting} new` : ""}`}
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 text-left transition outline-none hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:hover:bg-neutral-800/70"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-[18px]" aria-hidden="true">
-            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" strokeLinecap="round" strokeLinejoin="round" />
+          <span className="relative shrink-0">
+            {/* The menu photo, or the portfolio photo until one is set. */}
+            <Avatar name={user?.name ?? "?"} photoUrl={user?.avatarUrl ?? user?.profilePictureUrl} className="size-9 text-sm" />
+            {waiting > 0 && (
+              <span className="absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] leading-4 font-bold text-white tabular-nums ring-2 ring-neutral-50 dark:ring-neutral-900">
+                {waiting > 9 ? "9+" : waiting}
+              </span>
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] leading-tight font-semibold text-neutral-900 dark:text-white">{name}</span>
+            <span className="mt-0.5 block truncate text-[11px] leading-tight text-neutral-500 tabular-nums dark:text-neutral-400">
+              {user && <span className="font-semibold text-brand-700 dark:text-brand-300">{ROLE_LABEL[user.role]}</span>}
+              {/* Follower counts (anyone can see these; the names stay private). */}
+              {chat && ` · ${chat.connectedToMe} ${chat.connectedToMe === 1 ? "follower" : "followers"} · ${chat.connectedTo} following`}
+            </span>
+          </span>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className={`size-4 shrink-0 text-neutral-400 transition ${open ? "rotate-180" : ""}`} aria-hidden="true">
+            <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-      )}
+        {user && (
+          <button
+            type="button"
+            onClick={onSignOut}
+            disabled={signingOut}
+            aria-label={signingOut ? "Signing out" : "Sign out"}
+            title="Sign out"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-500 transition hover:bg-brand-50 hover:text-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:outline-none disabled:opacity-60 dark:text-neutral-400 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-[18px]" aria-hidden="true">
+              <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {open && user && <AccountMenu id={menuId} chat={chat} pathname={pathname} />}
+    </div>
+  );
+}
+
+/**
+ * The panel under your name: notifications (follow requests for now) and Settings. Sections are
+ * stacked so more can be added later.
+ */
+function AccountMenu({ id, chat, pathname }: { id: string; chat: ChatSummary | null; pathname: string }) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [answered, setAnswered] = useState<Record<string, "accepted" | "declined">>({});
+  const requesters = chat?.requesters ?? [];
+  const more = Math.max(0, (chat?.requests ?? 0) - requesters.length);
+  const settingsActive = under(pathname, "/dashboard/settings");
+
+  async function answer(personId: string, accept: boolean) {
+    setBusyId(personId);
+    const result = await answerFollowRequest(personId, accept);
+    setBusyId(null);
+    if (result.ok) setAnswered((a) => ({ ...a, [personId]: accept ? "accepted" : "declined" }));
+  }
+
+  const sectionTitle = "px-2.5 pt-2 pb-1 text-[10px] font-bold tracking-wider text-neutral-500 uppercase dark:text-neutral-400";
+
+  return (
+    <div
+      id={id}
+      className="absolute inset-x-0 top-full z-20 mt-1.5 max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200/80 bg-white p-1.5 text-neutral-900 shadow-xl shadow-neutral-900/15 [scrollbar-width:none] motion-safe:animate-panel-in dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
+    >
+      <section aria-labelledby={`${id}-notes`}>
+        <h2 id={`${id}-notes`} className={sectionTitle}>
+          Notifications
+        </h2>
+        {requesters.length === 0 ? (
+          <p className="px-2.5 pb-2 text-xs text-neutral-500 dark:text-neutral-400">You&apos;re all caught up.</p>
+        ) : (
+          <ul className="space-y-1">
+            {requesters.map((person) => {
+              const done = answered[person.id];
+              return (
+                <li key={person.id} className="rounded-lg bg-neutral-50 px-2.5 py-2 dark:bg-neutral-800/60">
+                  <p className="text-xs leading-snug">
+                    <span className="font-semibold">{person.name}</span> {done ? `· request ${done}` : "wants to follow you"}
+                  </p>
+                  {!done && (
+                    <div className="mt-1.5 flex gap-1.5">
+                      <button
+                        type="button"
+                        disabled={busyId === person.id}
+                        onClick={() => void answer(person.id, true)}
+                        className="flex-1 rounded-lg bg-brand-600 py-1 text-[11px] font-semibold text-white transition outline-none hover:bg-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-60"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === person.id}
+                        onClick={() => void answer(person.id, false)}
+                        className="flex-1 rounded-lg border border-neutral-300 py-1 text-[11px] font-semibold text-neutral-700 transition outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {(more > 0 || requesters.length > 0) && (
+          <Link
+            href="/dashboard/chat?tab=people"
+            className="mt-1 block rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-700 outline-none hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:text-brand-300 dark:hover:bg-neutral-800"
+          >
+            {more > 0 ? `See all requests (+${more} more)` : "See all in Chat → People"}
+          </Link>
+        )}
+      </section>
+
+      <div className="my-1.5 border-t border-neutral-200/80 dark:border-neutral-800" />
+
+      <Link
+        href="/dashboard/settings"
+        aria-current={settingsActive ? "page" : undefined}
+        className={`flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${
+          settingsActive ? "bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300" : "hover:bg-neutral-50 dark:hover:bg-neutral-800"
+        }`}
+      >
+        {SETTINGS_ICON}
+        Settings
+      </Link>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { FollowRequestNotice } from "@/components/dashboard/follow-request-notice";
 import { QuoteBanner } from "@/components/dashboard/quote-banner";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { HelpAssistant } from "@/components/help/help-assistant";
@@ -19,7 +18,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="app-window min-h-dvh overflow-x-hidden pb-(--quote-banner-space) lg:fixed lg:inset-(--edge) lg:min-h-0 lg:overflow-y-auto lg:pl-72">{children}</div>
       <QuoteBanner />
       <HelpAssistant />
-      <FollowRequestNotice />
       <div className="app-frame" aria-hidden="true" />
     </div>
   );
