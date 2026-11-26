@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { GeneratedFile, User, VendorJd, VendorJdFields } from "@/lib/types";
 import { VENDOR_JD_MAX_CHARS, VENDOR_JD_MIN_CHARS } from "@/lib/types";
 import { createVendorJd, deleteVendorJd, listVendorJds, logout, sendVendorJd, tailorVendorJd, updateVendorJd } from "@/lib/client/api";
+import { focusFirst, focusLost } from "@/lib/client/a11y";
 import { useCurrentUser } from "@/lib/client/current-user";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
@@ -129,10 +130,14 @@ export function JdsView() {
       return;
     }
     setJds((list) => (list ?? []).filter((j) => j.id !== jd.id));
+    // The row (and the Delete button that had focus) is gone: put focus back on the list's controls.
+    requestAnimationFrame(() => {
+      if (focusLost()) focusFirst("jd-search", "jd-add");
+    });
   }
 
   if (loadError) return <ErrorAlert>{loadError}</ErrorAlert>;
-  if (!jds) return <div className="h-64 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" aria-busy="true" />;
+  if (!jds) return <div role="status" aria-label="Loading your JDs" className="h-64 animate-pulse rounded-3xl bg-neutral-200/60 dark:bg-neutral-800/60" />;
 
   const showForm = adding || jds.length === 0;
 
@@ -156,15 +161,14 @@ export function JdsView() {
         />
       ) : (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div role="tablist" aria-label="Show" className="flex flex-wrap gap-1.5">
+          <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5">
             {FILTERS.map((f) => (
               <button
                 key={f.key}
                 type="button"
-                role="tab"
-                aria-selected={filter === f.key}
+                aria-pressed={filter === f.key}
                 onClick={() => setFilter(f.key)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 ${
                   filter === f.key
                     ? "bg-brand-600 text-white"
                     : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
@@ -176,6 +180,7 @@ export function JdsView() {
           </div>
           <div className="flex gap-2">
             <input
+              id="jd-search"
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -186,6 +191,7 @@ export function JdsView() {
             <Button
               type="button"
               size="sm"
+              id="jd-add"
               onClick={() => {
                 setAdding(true);
                 setNotice(null);
@@ -287,7 +293,7 @@ function AddJd({
           </p>
         </div>
         {canCancel && (
-          <button type="button" onClick={onCancel} className="text-sm font-medium text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200">
+          <button type="button" onClick={onCancel} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 text-sm font-medium text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200">
             Cancel
           </button>
         )}
@@ -343,9 +349,16 @@ function JdRow({ jd, user, canSendEmail, tailoring, problem, panel, onPanel, onT
   const facts = [jd.client, jd.location, jd.rate].filter(Boolean);
   const vendor = [jd.vendorCompany, jd.vendorContact].filter(Boolean).join(" · ");
   const toggle = (p: Panel) => onPanel(panel === p ? null : p);
+  const rowRef = useRef<HTMLLIElement>(null);
+  const used = useRef(false); // set once focus has been inside this row, so loading the page never moves focus
+
+  // Closing a panel or starting a tailor removes the button that had focus: keep focus in this row.
+  useEffect(() => {
+    if (used.current && focusLost()) rowRef.current?.querySelector<HTMLElement>("button, a[href]")?.focus();
+  }, [panel, tailoring, jd]);
 
   return (
-    <li className={`${CARD} p-4 sm:p-5`}>
+    <li ref={rowRef} onFocus={() => (used.current = true)} className={`${CARD} p-4 sm:p-5`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -369,19 +382,19 @@ function JdRow({ jd, user, canSendEmail, tailoring, problem, panel, onPanel, onT
 
       {/* The tailored resume: progress, the downloads, or what went wrong. */}
       {tailoring ? (
-        <p className="mt-4 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:bg-brand-500/10 dark:text-brand-200" aria-live="polite">
+        <p className="mt-4 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:bg-brand-500/10 dark:text-brand-200" role="status">
           <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
           Tailoring your resume to this JD… this takes about a minute.
         </p>
       ) : problem ? (
-        <div className="mt-4 flex flex-col gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between dark:bg-rose-500/10 dark:text-rose-200">
+        <div role="alert" className="mt-4 flex flex-col gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between dark:bg-rose-500/10 dark:text-rose-200">
           <span>{problem.message}</span>
           {problem.noResume ? (
-            <Link href="/dashboard/upload" className="shrink-0 font-semibold underline">
+            <Link href="/dashboard/upload" className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 shrink-0 font-semibold underline">
               Upload your resume
             </Link>
           ) : (
-            <button type="button" onClick={onTailor} className="shrink-0 text-left font-semibold underline">
+            <button type="button" onClick={onTailor} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 shrink-0 text-left font-semibold underline">
               Try again
             </button>
           )}
@@ -411,16 +424,16 @@ function JdRow({ jd, user, canSendEmail, tailoring, problem, panel, onPanel, onT
           Edit details
         </LinkButton>
         {jd.tailored && !tailoring && (
-          <button type="button" onClick={onTailor} className="font-medium text-brand-600 hover:underline dark:text-brand-400" title="Run again, e.g. after updating your resume">
+          <button type="button" onClick={onTailor} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 font-medium text-brand-600 hover:underline dark:text-brand-400" title="Run again, e.g. after updating your resume">
             Tailor again
           </button>
         )}
         {jd.submissionId && (
-          <Link href="/dashboard/spreadsheet" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+          <Link href="/dashboard/spreadsheet" className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 font-medium text-brand-600 hover:underline dark:text-brand-400">
             In Spreadsheet
           </Link>
         )}
-        <button type="button" onClick={onDelete} className="font-medium text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400">
+        <button type="button" onClick={onDelete} aria-label={`Delete ${jd.title}`} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 font-medium text-neutral-500 hover:text-rose-600 dark:text-neutral-400 dark:hover:text-rose-400">
           Delete
         </button>
       </div>
@@ -509,7 +522,7 @@ function DownloadButton({ file, label, primary = false }: { file: GeneratedFile;
 
 function LinkButton({ onClick, expanded, children }: { onClick: () => void; expanded: boolean; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-expanded={expanded} className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+    <button type="button" onClick={onClick} aria-expanded={expanded} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 font-medium text-brand-600 hover:underline dark:text-brand-400">
       {children}
     </button>
   );
@@ -685,7 +698,7 @@ function SendPanel({
                     onChange={(e) => setAttach((a) => (e.target.checked ? [...a, f.id] : a.filter((x) => x !== f.id)))}
                     disabled={!!busy}
                   />
-                  {f.fileName} <span className="text-xs text-neutral-400 uppercase">{f.format}</span>
+                  {f.fileName} <span className="text-xs text-neutral-500 uppercase dark:text-neutral-400">{f.format}</span>
                 </label>
               ))}
             </div>
@@ -695,7 +708,7 @@ function SendPanel({
               type="button"
               onClick={() => send("mark")}
               disabled={!!busy}
-              className="text-sm font-medium text-neutral-500 hover:text-neutral-800 disabled:opacity-50 dark:hover:text-neutral-200"
+              className="rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 text-sm font-medium text-neutral-500 hover:text-neutral-800 disabled:opacity-50 dark:text-neutral-400 dark:hover:text-neutral-200"
             >
               {busy === "mark" ? "Saving…" : "I sent it myself"}
             </button>
@@ -720,7 +733,7 @@ function SendPanel({
             {pdf && <DownloadButton file={pdf} label="1 · Download PDF" />}
             <a
               href={mailto}
-              className="rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-transparent dark:text-neutral-100 dark:hover:bg-neutral-800"
+              className="rounded-xl border border-neutral-300 bg-white px-3.5 py-2 text-sm font-semibold text-neutral-800 outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-transparent dark:text-neutral-100 dark:hover:bg-neutral-800"
             >
               2 · Open in email app
             </a>
