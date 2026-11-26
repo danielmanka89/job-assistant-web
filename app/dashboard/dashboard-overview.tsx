@@ -51,7 +51,6 @@ export function DashboardOverview() {
   }
 
   const firstName = user?.name?.trim().split(/\s+/)[0];
-  const hasResumes = resumes.status === "ready" && resumes.data.length > 0;
 
   return (
     <div className="space-y-5">
@@ -62,15 +61,6 @@ export function DashboardOverview() {
           </h1>
           <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Your resumes and how well they match your jobs.</p>
         </div>
-        {hasResumes && (
-          <Link
-            href="/dashboard/upload"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-500/30 focus-visible:outline-none"
-          >
-            <PlusIcon />
-            Tailor a resume
-          </Link>
-        )}
       </header>
 
       {(stats.status === "error" || resumes.status === "error") && (
